@@ -1,0 +1,263 @@
+import axios from 'axios';
+
+// Enable CORS for all requests
+axios.defaults.withCredentials = true;
+
+const API_BASE_URL = 'https://api.emov.com.pk';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  withCredentials: true
+});
+
+// Log all requests
+api.interceptors.request.use(request => {
+  const fullUrl = `${request.baseURL}${request.url}`;
+  console.log('=== API REQUEST ===');
+  console.log('URL:', fullUrl);
+  console.log('Method:', request.method);
+  console.log('Data:', request.data);
+  console.log('Headers:', request.headers);
+  console.log('===================');
+  return request;
+});
+
+// Log all responses
+api.interceptors.response.use(
+  response => {
+    console.log('=== API RESPONSE ===');
+    console.log('URL:', response.config.url);
+    console.log('Status:', response.status);
+    console.log('Data:', response.data);
+    console.log('===================');
+    return response;
+  },
+  error => {
+    console.error('=== API ERROR ===');
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error('Status:', error.response.status);
+      console.error('Data:', error.response.data);
+      console.error('Headers:', error.response.headers);
+      console.error('Request URL:', error.config?.url);
+      console.error('Request Method:', error.config?.method);
+      console.error('Request Data:', error.config?.data);
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('No response received:', error.request);
+      console.error('Request URL:', error.config?.url);
+      console.error('Request Method:', error.config?.method);
+      console.error('Request Data:', error.config?.data);
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error:', error.message);
+    }
+    console.error('=================');
+    return Promise.reject(error);
+  }
+);
+
+// Add token to requests if available
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor to handle errors
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      // Only handle 401 for non-login requests to prevent infinite redirects
+      const isLoginRequest = error.config?.url?.includes('/login');
+      if (!isLoginRequest) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        // Use a small timeout to allow the error to be processed
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 100);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Create the authApi object with all methods
+const authApi = {
+  // Login API
+  login: async (email, password) => {
+    try {
+      const loginData = {
+        email: email.trim(),
+        password: password.trim()
+      };
+      
+      console.log('Sending login request with:', { ...loginData, password: '***' });
+      
+      // Use the configured axios instance
+      const response = await api.post('/v2/login', loginData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        withCredentials: true
+      });
+      
+      console.log('Login successful, response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Login error details:', error);
+      
+      // Default error message
+      let errorMessage = 'Login failed. Please check your credentials and try again.';
+      
+      // Extract the error message from the response if available
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data || {};
+        
+        console.log('Error response data:', errorData);
+        
+        // Handle different status codes
+        switch(status) {
+          case 401:
+            errorMessage = errorData.message || 'Invalid email or password. Please try again.';
+            break;
+          case 400:
+            errorMessage = errorData.message || 'Invalid request. Please check your input.';
+            break;
+          case 500:
+            errorMessage = 'Server error. Please try again later.';
+            break;
+          default:
+            errorMessage = errorData.message || errorData.error || error.message || errorMessage;
+        }
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+        errorMessage = 'No response from server. Please check your internet connection.';
+      } else {
+        console.error('Error setting up the request:', error.message);
+        errorMessage = error.message || 'An error occurred. Please try again.';
+      }
+      
+      // Create a new error with the extracted message
+      const loginError = new Error(errorMessage);
+      loginError.status = error.response?.status;
+      
+      console.error('Login error:', loginError);
+      throw loginError;
+    }
+  },
+
+  // Signup API - Updated with your payload structure
+  signup: async (userData) => {
+    try {
+      const response = await api.post('/v2/signup', {
+        username: userData.fullName,
+        email: userData.email,
+        password: userData.password,
+        mobileNo: userData.mobileNumber
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Signup failed' };
+    }
+  },
+
+  // Forgot Password API
+  forgotPassword: async (email) => {
+    try {
+      console.log('Sending forget password request for email:', email);
+      const response = await api.post('/v2/forget-password', { 
+        email: email.trim() 
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
+      console.log('Forget password response:', response.data);
+      
+      // Handle the expected response format
+      if (response.data && response.data.message === 'OTP sent to your email') {
+        return { success: true, message: response.data.message };
+      }
+      
+      return response.data;
+      
+    } catch (error) {
+      console.error('Forget password error:', error);
+      
+      // Handle different types of errors
+      let errorMessage = 'Failed to process forgot password request. Please try again.';
+      
+      if (error.response) {
+        // Server responded with an error status
+        if (error.response.status === 404) {
+          errorMessage = 'The requested resource was not found. Please check the endpoint URL.';
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = 'No response from server. Please check your internet connection.';
+      }
+      
+      throw new Error(errorMessage);
+    }
+  },
+
+  // Verify OTP API
+  verifyOtp: async (email, otp) => {
+    try {
+      const response = await api.post('/v2/verify-otp', { email, otp });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: error.message || 'OTP verification failed' };
+    }
+  },
+
+  // Resend OTP API
+  resendOtp: async (email) => {
+    try {
+      const response = await api.post('/v2/resend-otp', { email });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: error.message || 'Failed to resend OTP' };
+    }
+  },
+
+  // Reset Password API
+  resetPassword: async (email, newPassword, confirmPassword) => {
+    try {
+      const response = await api.post('/v2/reset-password', {
+        email,
+        newPassword,
+        confirmPassword
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Password reset failed' };
+    }
+  }
+};
+
+export { authApi };
+export default authApi;
