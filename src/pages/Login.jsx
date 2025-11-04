@@ -90,13 +90,16 @@ const Login = ({ onLogin }) => {
       
       if (token) {
         console.log('Login successful, token received:', token);
+        console.log('Full API response:', response);
         
         // Store the token in localStorage for persistence
         localStorage.setItem('token', token);
         
-        // Store user data if available
-        if (response.user) {
-          localStorage.setItem('user', JSON.stringify(response.user));
+        // The user data is in response.data
+        if (response.data) {
+          console.log('Storing user data:', response.data);
+          // Store the entire data object as it contains all user information
+          localStorage.setItem('user', JSON.stringify(response.data));
         }
         
         // Call the onLogin callback with the token

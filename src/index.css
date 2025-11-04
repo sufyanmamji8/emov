@@ -15,6 +15,7 @@
   --bg-primary: #f9fafb;
   --bg-secondary: #ffffff;
   --bg-tertiary: #f3f4f6;
+  --bg-card: #ffffff;
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
@@ -24,75 +25,84 @@
 }
 
 [data-theme="dark"] {
-  /* Dark Theme Colors (your brand colors remain the same) */
-  --emov-purple: #935eef;
-  --emov-green: #00FFA9;
+  /* Dark Theme Colors */
+  --emov-purple: #a67af5;
+  --emov-green: #00e69a;
   --emov-gradient: linear-gradient(135deg, #2bd6a8 0%, #bda8e9 100%);
   
   /* Dark Theme Variables */
-  --bg-primary: #111827;
-  --bg-secondary: #1f2937;
-  --bg-tertiary: #374151;
-  --text-primary: #f9fafb;
-  --text-secondary: #d1d5db;
-  --text-tertiary: #9ca3af;
-  --border-primary: #374151;
-  --border-secondary: #4b5563;
-  --shadow-color: rgba(0, 0, 0, 0.3);
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  --shadow-color: rgba(0, 0, 0, 0.4);
 }
 
-/* Apply theme variables to base elements */
+/* Base styles */
 @layer base {
   html {
     font-family: 'Montserrat', sans-serif;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
   }
-
+  
   body {
+    min-height: 100vh;
     background-color: var(--bg-primary);
     color: var(--text-primary);
-    transition: background-color 0.3s ease, color 0.3s ease;
     margin: 0;
     padding: 0;
   }
-
-  /* Apply theme to common elements */
-  h1, h2, h3, h4, h5, h6 {
+  
+  h1, h2, h3, h4, h5, h6, p, span, div {
     color: var(--text-primary);
   }
-
-  p, span, div {
-    color: var(--text-primary);
-  }
-
-  /* Form elements */
+  
   input, textarea, select {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
-    border-color: var(--border-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    outline: none;
   }
-
+  
   input:focus, textarea:focus, select:focus {
     border-color: var(--emov-purple);
-    background-color: var(--bg-secondary);
+    box-shadow: 0 0 0 2px rgba(147, 94, 239, 0.5);
+  }
+  
+  button {
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
   }
 }
 
-/* Custom component classes with theme support */
+/* Component styles */
 @layer components {
-  .btn-primary {
-    background: var(--emov-gradient);
-    color: white;
-    border: none;
-    font-weight: 600;
-  }
-
-  .btn-secondary {
+  .card {
     background-color: var(--bg-secondary);
-    color: var(--text-primary);
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 var(--shadow-color);
+    padding: 1.5rem;
     border: 1px solid var(--border-primary);
+  }
+  
+  .btn {
+    @apply px-4 py-2 rounded-md font-medium transition-colors duration-200 cursor-pointer;
+  }
+  
+  .btn-primary {
+    @apply bg-emov-purple text-white hover:bg-opacity-90;
+  }
+  
+  .btn-secondary {
+    @apply bg-bg-tertiary text-text-primary border border-border-primary hover:opacity-90;
   }
 
   .surface-primary {
@@ -130,26 +140,21 @@
   .shadow-theme {
     box-shadow: 0 4px 6px var(--shadow-color);
   }
-
-  .card {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    border-radius: 12px;
-  }
 }
 
-/* Hide scrollbar for Chrome, Safari and Opera */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-/* Hide scrollbar for IE, Edge and Firefox */
+/* Utility classes */
 .no-scrollbar {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  
+  /* Hide scrollbar for IE, Edge and Firefox */
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
 
-/* Smooth transitions for theme switching */
+/* Global transitions */
 * {
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaSpinner, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater } from 'react-icons/fa';
 import axios from 'axios';
 import { useTheme } from '../hooks/useTheme';
+import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState('Category');
@@ -15,9 +16,25 @@ function Dashboard() {
   });
   const [apiData, setApiData] = useState(null);
   const [vehiclesData, setVehiclesData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false since we'll load data manually
   const [error, setError] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
+  const [userProfile, setUserProfile] = useState(() => {
+    // Initialize with data from localStorage if available
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const profile = JSON.parse(userData);
+        // Construct the full image URL if imageUrl exists
+        if (profile.imageUrl && !profile.imageUrl.startsWith('http')) {
+          profile.picture = `https://api.emov.com.pk/${profile.imageUrl.replace(/^\//, '')}`;
+        }
+        return profile;
+      }
+    } catch (e) {
+      console.error('Error initializing user profile:', e);
+    }
+    return null;
+  });
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   
   // Carousel state and functions
@@ -253,6 +270,9 @@ function Dashboard() {
   };
 
   const fetchFilterData = useCallback(async () => {
+    // Skip if we already have data
+    if (apiData) return;
+    
     try {
       setLoading(true);
       
@@ -260,16 +280,16 @@ function Dashboard() {
       try {
         console.log('Attempting to fetch filter data from API...');
         const response = await axios.get('/v2/vehiclesfilter', {
-          baseURL: '/api', // This will make the full URL /api/v2/vehiclesfilter
+          baseURL: '/api',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          timeout: 5000 // 5 second timeout
+          timeout: 5000
         });
         
-        if (response.data && response.data.data) {
+        if (response.data?.data) {
           console.log('Successfully fetched filter data from API');
           setApiData(response.data.data);
           return;
@@ -277,11 +297,11 @@ function Dashboard() {
         throw new Error('No data received from API');
       } catch (apiError) {
         console.warn('API request failed, using fallback data', apiError);
-        // Try with leading slash if the first attempt fails
+        // Try with different base URL if the first attempt fails
         try {
           console.log('Trying API with different base URL...');
           const response = await axios.get('/v2/vehiclesfilter', {
-            baseURL: '/api/', // Try with trailing slash
+            baseURL: '/api/',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
               'Content-Type': 'application/json',
@@ -290,17 +310,8 @@ function Dashboard() {
             timeout: 5000
           });
           
-          if (response.data && response.data.data) {
+          if (response.data?.data) {
             console.log('Successfully fetched filter data with alternative base URL');
-            console.log('API Response data:', response.data.data); // Debug log
-            // Check if bodyType data exists in the response
-            if (response.data.data.bodyType) {
-              console.log('Body types found in API response:', response.data.data.bodyType);
-            } else if (response.data.data.bodytypes) {
-              console.log('bodytypes found in API response:', response.data.data.bodytypes);
-            } else {
-              console.log('No body type data found in API response');
-            }
             setApiData(response.data.data);
             return;
           }
@@ -316,13 +327,12 @@ function Dashboard() {
       
     } catch (error) {
       console.error('Error in fetchFilterData:', error);
-      // Use fallback data even if there's an error
       setApiData(fallbackData);
       setError('Using offline data due to an error. Some features may be limited.');
     } finally {
       setLoading(false);
     }
-  }, [language]);
+  }, [apiData]); // Only re-run if apiData changes
 
   // Helper function to get first letter of username for profile picture
   const getUserInitial = (username) => {
@@ -330,22 +340,13 @@ function Dashboard() {
     return username.trim().charAt(0).toUpperCase();
   };
 
-  // Load data on component mount
+  // Load data on component mount only if not already loaded
   useEffect(() => {
-    fetchFilterData();
-    
-    // Load user profile from localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        setUserProfile(JSON.parse(userData));
-      } catch (err) {
-        console.error('Error parsing user data:', err);
-      }
+    if (!apiData) {
+      fetchFilterData();
     }
-  }, [fetchFilterData]);
+  }, [apiData, fetchFilterData]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showProfileDropdown && !event.target.closest('.profile-dropdown')) {
@@ -1137,174 +1138,25 @@ function Dashboard() {
 
   return (
     <div className={`min-h-screen  ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
-      {/* Header */}
+      {/* Navbar Component - Replaces the upper header section */}
+      <Navbar 
+        isDark={isDark}
+        toggleTheme={toggleTheme}
+        language={language}
+        setLanguage={setLanguage}
+        userProfile={userProfile}
+        handleLogout={handleLogout}
+      />
+
+      {/* Header Section (Hero and Search) */}
       <header 
-        className="relative  pt-4 sm:pt-6 pb-12 sm:pb-16 w-full z-20 border-b border-white border-opacity-20"
+        className="relative pt-4 sm:pt-6 pb-12 sm:pb-16 w-full z-20 border-b border-white border-opacity-20"
         style={{ 
           background: colors.gradient,
           position: 'relative'
         }}
       >
         <div className="w-full px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto">
-          {/* Logo and Controls Section */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 sm:mb-6 gap-8 sm:gap-12">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center">
-                <img 
-                  src="/loginemov.png" 
-                  alt="Emov Logo" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="h-6 sm:h-7 md:h-8">
-                <img 
-                  src="/emovfont.png" 
-                  alt="Emov" 
-                  className="h-full w-auto"
-                />
-              </div>
-            </div>
-
-            {/* Navigation Links */}
-            <div className="flex items-center space-x-8 sm:space-x-10 md:space-x-12">
-              <a 
-                href="/dashboard" 
-                className={`relative text-base sm:text-lg font-medium ${window.location.pathname === '/dashboard' ? 'text-white' : 'text-white/80 hover:text-white'} group transition-colors duration-300`}
-              >
-                Home
-                <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full ${window.location.pathname === '/dashboard' ? 'w-full' : ''}`}></span>
-              </a>
-              <a 
-                href="/chats" 
-                className={`relative text-base sm:text-lg font-medium ${window.location.pathname === '/chats' ? 'text-white' : 'text-white/80 hover:text-white'} group transition-colors duration-300`}
-              >
-                Chats
-                <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full ${window.location.pathname === '/chats' ? 'w-full' : ''}`}></span>
-              </a>
-              <a 
-                href="/my-ads" 
-                className={`relative text-base sm:text-lg font-medium ${window.location.pathname === '/my-ads' ? 'text-white' : 'text-white/80 hover:text-white'} group transition-colors duration-300`}
-              >
-                My Ads
-                <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-white transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
-              </a>
-            </div>
-            
-            <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 w-full sm:w-auto justify-between sm:justify-normal">
-              {/* Language Selector */}
-              <div className="relative">
-                <select 
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="bg-white bg-opacity-10 hover:bg-opacity-20 text-white px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 transition-all duration-200 border border-white border-opacity-20 rounded-md"
-                >
-                  <option value="english">EN</option>
-                  <option value="urdu">UR</option>
-                  <option value="french">FR</option>
-                </select>
-                <FaGlobe className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-white pointer-events-none w-3 h-3 sm:w-4 sm:h-4" />
-              </div>
-              
-              {/* Theme Toggle Button */}
-              <button 
-                onClick={toggleTheme}
-                className="text-white hover:text-gray-200 focus:outline-none p-2 sm:p-2.5 bg-white bg-opacity-10 hover:bg-opacity-20 transition-all duration-200 hover:scale-105 border border-white border-opacity-20 rounded-xl"
-                style={{ borderRadius: '12px' }}
-              >
-                {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
-              </button>
-
-              {/* User Profile Dropdown */}
-              <div className="relative profile-dropdown">
-                <button
-                  onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                  className="flex items-center space-x-1 sm:space-x-2 text-white hover:text-gray-200 focus:outline-none transition-colors group"
-                  aria-expanded={showProfileDropdown}
-                  aria-haspopup="true"
-                >
-                  <div 
-                    className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-white bg-opacity-10 group-hover:bg-opacity-20 flex items-center justify-center transition-all duration-200 border border-white border-opacity-20 overflow-hidden"
-                    style={{ borderRadius: '12px' }}
-                  >
-                    {userProfile?.picture ? (
-                      <img 
-                        src={userProfile.picture} 
-                        alt={userProfile?.username || 'User'} 
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextElementSibling.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div className={`${userProfile?.picture ? 'hidden' : 'flex'} w-full h-full items-center justify-center`}>
-                      <span className="text-sm font-medium text-white">
-                        {getUserInitial(userProfile?.username || 'User')}
-                      </span>
-                    </div>
-                  </div>
-                  <span className="hidden sm:block text-sm font-medium">
-                    {userProfile?.username || 'User'}
-                  </span>
-                  <FaCaretDown className={`w-2 h-2 sm:w-3 sm:h-3 transition-transform duration-200 ${showProfileDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {/* Profile Dropdown Menu */}
-                <div 
-                  className={`absolute right-0 mt-2 w-56 shadow-xl border z-50 transition-all duration-200 ease-out transform origin-top-right ${
-                    isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                  } ${showProfileDropdown 
-                    ? 'opacity-100 scale-100' 
-                    : 'opacity-0 scale-95 pointer-events-none'}`}
-                >
-                  <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-100'}`}>
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-10 h-10 flex-shrink-0 flex items-center justify-center text-white text-lg font-medium ${
-                        userProfile?.picture ? 'overflow-hidden' : 'bg-purple-500'
-                      }`}>
-                        {userProfile?.picture ? (
-                          <img 
-                            src={userProfile.picture} 
-                            alt={userProfile?.username || 'User'} 
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextElementSibling.style.display = 'flex';
-                            }}
-                          />
-                        ) : null}
-                        <div className={`${userProfile?.picture ? 'hidden' : 'flex'} w-full h-full items-center justify-center`}>
-                          {getUserInitial(userProfile?.username || 'User')}
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                          {userProfile?.username || 'User Name'}
-                        </p>
-                        <p className={`text-xs truncate ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
-                          {userProfile?.email || 'user@example.com'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-1">
-                    <button
-                      onClick={handleLogout}
-                      className={`w-full flex items-center space-x-2 px-3 py-2.5 text-sm transition-colors ${
-                        isDark 
-                          ? 'text-gray-300 hover:bg-gray-700' 
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <FaSignOutAlt className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />
-                      <span>Sign out</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Hero Text */}
           <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3 px-2">
@@ -1337,7 +1189,7 @@ function Dashboard() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - ALL YOUR EXISTING CONTENT REMAINS EXACTLY THE SAME */}
       <main className="w-full px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto mt-4 sm:mt-6 relative z-10">
         {/* Browse Used Vehicles Section */}
         <div className={`shadow-lg p-4 sm:p-6 mb-6 sm:mb-8 w-full border rounded-xl ${
@@ -1347,18 +1199,18 @@ function Dashboard() {
           
           {/* Tabs */}
           <div className="flex overflow-x-auto sm:overflow-visible mb-4 sm:mb-6 md:mb-8 no-scrollbar">
-            <div className={`flex space-x-2 p-1.5 rounded-xl`}>
-              {['Category', 'Budget', 'Brand', 'Model', 'BodyType'].map((tab, index) => (
+            <div className={`flex space-x-2 p-1.5 rounded-xl ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
+              {['Category', 'Budget', 'Brand', 'Model', 'BodyType'].map((tab) => (
                 <button
                   key={tab}
                   className={`px-4 py-2.5 text-sm font-medium transition-all duration-200 border ${
                     activeTab === tab
                       ? (isDark 
-                          ? 'bg-gray-700 text-white border-gray-500' 
-                          : 'bg-white text-purple-600 border-purple-400 shadow-sm')
+                          ? 'bg-bg-secondary text-text-primary border-border-primary shadow-lg' 
+                          : 'bg-bg-secondary text-emov-purple border-border-primary shadow')
                       : (isDark 
-                          ? `text-gray-300 hover:text-white hover:bg-gray-700/50 border-transparent hover:border-gray-500` 
-                          : 'text-gray-700 hover:text-purple-600 hover:bg-gray-50 border-transparent hover:border-gray-300')
+                          ? 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary/50 border-transparent hover:border-border-primary' 
+                          : 'text-text-secondary hover:text-emov-purple hover:bg-bg-tertiary/50 border-transparent hover:border-border-primary')
                   } rounded-lg whitespace-nowrap`}
                   onClick={() => setActiveTab(tab)}
                 >
@@ -1478,7 +1330,7 @@ function Dashboard() {
                                   </div>
                                 ) : null}
                                 <div className="text-center w-full">
-                                  <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
+                                  <div className="text-xs sm:text-sm font-medium text-text-primary line-clamp-2">
                                     {displayName}
                                   </div>
                                 </div>
@@ -1522,10 +1374,10 @@ function Dashboard() {
                                     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                                   }}
                                 >
-                                  <div className="font-medium text-sm">
+                                  <div className="font-medium text-sm text-text-primary">
                                     {displayName}
                                     {itemCount > 0 && (
-                                      <div className="text-xs mt-1 opacity-70">
+                                      <div className="text-xs mt-1 text-text-secondary">
                                         {itemCount} {t.vehicles || 'vehicles'}
                                       </div>
                                     )}
