@@ -9,6 +9,10 @@ import Dashboard from './pages/Dashboard';
 import Vehicles from './pages/Vehicles';
 import FeaturedVehicles from './pages/FeaturedVehicles';
 import Service from "./pages/Service";
+import Chats from './pages/Chats';
+import Ads from './pages/Ads';
+import './index.css'; 
+
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -92,6 +96,8 @@ function App() {
           <Route path="/vehicles" element={isAuthenticated ? <Vehicles /> : <Navigate to="/login" />} />
           <Route path="/featured-vehicles" element={isAuthenticated ? <FeaturedVehicles /> : <Navigate to="/login" />} />
           <Route path="/service" element={isAuthenticated ? <Service /> : <Navigate to="/login" />} />
+          <Route path="/chats" element={isAuthenticated ? <Chats /> : <Navigate to="/login" />} />
+          <Route path="/my-ads" element={isAuthenticated ? <Ads /> : <Navigate to="/login" />} />
           <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
         </Routes>
       </div>
