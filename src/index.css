@@ -7,9 +7,11 @@
 
 :root {
   /* Light Theme Colors */
-  --emov-purple: #935eef;
-  --emov-green: #00FFA9;
-  --emov-gradient: linear-gradient(135deg, #2bd6a8 0%, #bda8e9 100%);
+  --emov-purple: #7B3DFF;
+;
+  --emov-green:  #0DFF9A;
+;
+  --emov-gradient: linear-gradient(135deg, #2bd6a8 0%, #7B3DFF 100%);
   
   /* Light Theme Variables */
   --bg-primary: #f9fafb;

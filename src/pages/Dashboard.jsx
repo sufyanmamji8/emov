@@ -4,6 +4,28 @@ import axios from 'axios';
 import { useTheme } from '../hooks/useTheme';
 import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
 
+// Carousel Navigation Component
+const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) => (
+  <>
+    <button
+      onClick={onPrev}
+      disabled={!canGoPrev}
+      className={`absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white/90 shadow-lg ${!canGoPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
+      aria-label={`Previous ${section}`}
+    >
+      <FaChevronLeft className="w-5 h-5 text-gray-700" />
+    </button>
+    <button
+      onClick={onNext}
+      disabled={!canGoNext}
+      className={`absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white/90 shadow-lg ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
+      aria-label={`Next ${section}`}
+    >
+      <FaChevronRight className="w-5 h-5 text-gray-700" />
+    </button>
+  </>
+);
+
 function Dashboard() {
   const [activeTab, setActiveTab] = useState('Category');
   const [language, setLanguage] = useState('english');
@@ -38,7 +60,15 @@ function Dashboard() {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   
   // Carousel state and functions
-  const [currentSlide, setCurrentSlide] = useState(0);
+  const [currentSlides, setCurrentSlides] = useState({
+    'Category': 0,
+    'Budget': 0,
+    'Brand': 0,
+    'Model': 0,
+    'Body Type': 0,
+    'Recently Added': 0,
+    'Featured Vehicles': 0
+  });
   const [itemsPerRow, setItemsPerRow] = useState(5); // Default for desktop
   const itemsPerPage = itemsPerRow * 2; // 2 rows of items
   
@@ -68,47 +98,66 @@ function Dashboard() {
   const slideRef = useRef(null);
   
   // Update scrollLeft and scrollRight to work with carousel
-  const scrollLeft = (tab) => {
-    setCurrentSlide(prev => {
-      const transformedData = transformApiData();
-      const currentTabData = tab === 'Category' 
-        ? transformedData.categories || [] 
-        : transformedData[`${tab.toLowerCase()}s`] || [];
-      const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
-      return Math.max(prev - 1, 0);
+  const scrollLeft = (tab, items = null, itemsPerRow = 4) => {
+    setCurrentSlides(prevSlides => {
+      if (tab === 'Recently Added' || tab === 'Featured Vehicles') {
+        const maxSlide = Math.ceil((items || []).length / (itemsPerRow * 2)) - 1;
+        const newSlide = Math.max(prevSlides[tab] - 1, 0);
+        return { ...prevSlides, [tab]: newSlide };
+      } else {
+        const transformedData = transformApiData();
+        const currentTabData = tab === 'Category' 
+          ? transformedData.categories || [] 
+          : transformedData[`${tab.toLowerCase()}s`] || [];
+        const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
+        const newSlide = Math.max(prevSlides[tab] - 1, 0);
+        return { ...prevSlides, [tab]: newSlide };
+      }
     });
   };
 
-  const scrollRight = (tab) => {
-    setCurrentSlide(prev => {
-      const transformedData = transformApiData();
-      const currentTabData = tab === 'Category' 
-        ? transformedData.categories || [] 
-        : transformedData[`${tab.toLowerCase()}s`] || [];
-      const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
-      return Math.min(prev + 1, maxSlide);
+  const scrollRight = (tab, items = null, itemsPerRow = 4) => {
+    setCurrentSlides(prevSlides => {
+      if (tab === 'Recently Added' || tab === 'Featured Vehicles') {
+        const maxSlide = Math.ceil((items || []).length / (itemsPerRow * 2)) - 1;
+        const newSlide = Math.min(prevSlides[tab] + 1, maxSlide);
+        return { ...prevSlides, [tab]: newSlide };
+      } else {
+        const transformedData = transformApiData();
+        const currentTabData = tab === 'Category' 
+          ? transformedData.categories || [] 
+          : transformedData[`${tab.toLowerCase()}s`] || [];
+        const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
+        const newSlide = Math.min(prevSlides[tab] + 1, maxSlide);
+        return { ...prevSlides, [tab]: newSlide };
+      }
     });
   };
   
   // Handle smooth scrolling for carousel
   useEffect(() => {
     if (slideRef.current) {
-      slideRef.current.style.transform = `translateX(-${currentSlide * 100}%)`;
+      slideRef.current.style.transform = `translateX(-${currentSlides[activeTab] * 100}%)`;
     }
-  }, [currentSlide]);
+  }, [currentSlides, activeTab]);
   
   // Update canScrollLeft and canScrollRight to work with carousel
   const canScrollLeft = (tab) => {
-    return currentSlide > 0;
+    return currentSlides[tab] > 0;
   };
   
-  const canScrollRight = (tab) => {
-    const transformedData = transformApiData();
-    const currentTabData = tab === 'Category' 
-      ? transformedData.categories || [] 
-      : transformedData[`${tab.toLowerCase()}s`] || [];
-    const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
-    return currentSlide < maxSlide;
+  const canScrollRight = (tab, items = null, itemsPerRow = 4) => {
+    if (tab === 'Recently Added' || tab === 'Featured Vehicles') {
+      const maxSlide = Math.ceil((items || []).length / (itemsPerRow * 2)) - 1;
+      return currentSlides[tab] < maxSlide;
+    } else {
+      const transformedData = transformApiData();
+      const currentTabData = tab === 'Category' 
+        ? transformedData.categories || [] 
+        : transformedData[`${tab.toLowerCase()}s`] || [];
+      const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
+      return currentSlides[tab] < maxSlide;
+    }
   };
   
   // Use the theme hook
@@ -269,70 +318,61 @@ function Dashboard() {
     ]
   };
 
+  const [apiError, setApiError] = useState(null);
+  const [isFetching, setIsFetching] = useState(false);
+
   const fetchFilterData = useCallback(async () => {
-    // Skip if we already have data
-    if (apiData) return;
+    // Skip if we already have data or already fetching
+    if (apiData || isFetching) return;
+    
+    setIsFetching(true);
+    setLoading(true);
     
     try {
-      setLoading(true);
-      
-      // Try the correct API endpoint
-      try {
-        console.log('Attempting to fetch filter data from API...');
-        const response = await axios.get('/v2/vehiclesfilter', {
-          baseURL: '/api',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          timeout: 5000
-        });
-        
-        if (response.data?.data) {
-          console.log('Successfully fetched filter data from API');
-          setApiData(response.data.data);
-          return;
-        }
-        throw new Error('No data received from API');
-      } catch (apiError) {
-        console.warn('API request failed, using fallback data', apiError);
-        // Try with different base URL if the first attempt fails
+      console.log('Fetching filter data...');
+      const endpoints = [
+        { baseURL: '/api', path: '/v2/vehiclesfilter' },
+        { baseURL: '/api/', path: '/v2/vehiclesfilter' },
+      ];
+
+      for (const endpoint of endpoints) {
         try {
-          console.log('Trying API with different base URL...');
-          const response = await axios.get('/v2/vehiclesfilter', {
-            baseURL: '/api/',
+          const response = await axios.get(endpoint.path, {
+            baseURL: endpoint.baseURL,
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('token')}`,
               'Content-Type': 'application/json',
               'Accept': 'application/json'
             },
-            timeout: 5000
+            timeout: 8000 // Increased timeout to 8 seconds
           });
           
           if (response.data?.data) {
-            console.log('Successfully fetched filter data with alternative base URL');
+            console.log('Successfully fetched filter data');
             setApiData(response.data.data);
+            setApiError(null);
             return;
           }
-        } catch (secondApiError) {
-          console.warn('Alternative API URL also failed', secondApiError);
+        } catch (err) {
+          console.warn(`API request to ${endpoint.baseURL} failed:`, err.message);
+          // Continue to next endpoint if this one fails
         }
       }
       
       // If all API attempts fail, use fallback data
-      console.log('Using fallback data');
+      console.log('All API attempts failed, using fallback data');
       setApiData(fallbackData);
-      setError('Using offline data. Some features may be limited.');
+      setApiError('Using offline data. Some features may be limited.');
       
     } catch (error) {
-      console.error('Error in fetchFilterData:', error);
+      console.error('Unexpected error in fetchFilterData:', error);
       setApiData(fallbackData);
-      setError('Using offline data due to an error. Some features may be limited.');
+      setApiError('Failed to load data. Using limited offline mode.');
     } finally {
+      setIsFetching(false);
       setLoading(false);
     }
-  }, [apiData]); // Only re-run if apiData changes
+  }, [apiData, isFetching]);
 
   // Helper function to get first letter of username for profile picture
   const getUserInitial = (username) => {
@@ -342,10 +382,17 @@ function Dashboard() {
 
   // Load data on component mount only if not already loaded
   useEffect(() => {
-    if (!apiData) {
+    const controller = new AbortController();
+    
+    if (!apiData && !isFetching) {
       fetchFilterData();
     }
-  }, [apiData, fetchFilterData]);
+    
+    // Cleanup function to cancel any pending requests
+    return () => {
+      controller.abort();
+    };
+  }, [apiData, fetchFilterData, isFetching]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -433,7 +480,6 @@ function Dashboard() {
           return;
         }
 
-        console.log('Fetching filter data from vehiclesfilter endpoint...');
         const response = await axios.get('/api/v2/vehiclesfilter', {
           headers: {
             'Content-Type': 'application/json',
@@ -444,30 +490,23 @@ function Dashboard() {
           timeout: 30000
         });
         
-        console.log('Filter API response received:', response.data);
-        
-        if (response.data && response.data.data) {
+        if (response.data?.data) {
           setApiData(response.data.data);
-          
-          // Generate realistic vehicles data from filter data with proper images
           const vehicles = generateVehiclesFromFilterData(response.data.data);
           setVehiclesData(vehicles);
-          console.log(`Generated ${vehicles.length} vehicles with images`);
         } else {
           throw new Error('Invalid API response structure');
         }
       } catch (err) {
-        console.error('Error fetching filter data:', {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data
-        });
-
-        if (err.response && err.response.status === 401) {
+        if (err.response?.status === 401) {
           handleUnauthorized();
-        } else {
-          setError('Failed to load vehicle data. Please try again later.');
+        } else if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching filter data:', {
+            message: err.message,
+            status: err.response?.status
+          });
         }
+        setError('Failed to load vehicle data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -546,25 +585,7 @@ function Dashboard() {
   const transformApiData = useCallback(() => {
     // If no API data, return empty object to prevent errors
     if (!apiData || Object.keys(apiData).length === 0) {
-      console.log('No API data available for transformation');
       return {};
-    }
-
-    console.log('Transforming API data. Available keys:', Object.keys(apiData)); // Debug log
-    
-    // Debug: Log the structure of the bodyType data if it exists
-    if (apiData.bodyType) {
-      console.log('Body type data found in apiData.bodyType:', apiData.bodyType);
-      if (Array.isArray(apiData.bodyType) && apiData.bodyType.length > 0) {
-        console.log('First body type item:', apiData.bodyType[0]);
-      }
-    } else if (apiData.bodytypes) {
-      console.log('Body type data found in apiData.bodytypes:', apiData.bodytypes);
-      if (Array.isArray(apiData.bodytypes) && apiData.bodytypes.length > 0) {
-        console.log('First body type item:', apiData.bodytypes[0]);
-      }
-    } else {
-      console.log('No body type data found in apiData');
     }
 
     // Helper function to get localized name for different item types
@@ -606,7 +627,6 @@ function Dashboard() {
 
     // Check if categories exist in the API response
     const categoriesData = apiData.category || apiData.categories || [];
-    console.log('Categories data:', categoriesData); // Debug log
 
     const processedData = {
       categories: categoriesData.map((item, index) => {
@@ -691,7 +711,6 @@ function Dashboard() {
       bodytypes: (() => {
         // Check both possible property names for body types
         const bodyTypesData = apiData.bodyType || apiData.bodytypes || [];
-        console.log('Body types data:', bodyTypesData); // Debug log
         
         return bodyTypesData.map((item, index) => ({
           id: item.BodyTypeID || item.id || `body-${index + 1}`,
@@ -712,7 +731,6 @@ function Dashboard() {
 
   // Handle image errors with better fallback
   const handleImageError = (e, item, type = 'category') => {
-    console.log(`Image failed to load for ${item.name || item.title || 'item'}, type: ${type}`, item);
     e.target.onerror = null; // Prevent infinite loop
     
     const baseUrl = 'https://api.emov.com.pk/image/';
@@ -988,7 +1006,7 @@ function Dashboard() {
       id: 1,
       title: 'Toyota Corolla 2022',
       price: '$24,500',
-      image: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2022',
       mileage: '15,000 km',
       location: 'Karachi',
@@ -998,7 +1016,7 @@ function Dashboard() {
       id: 2,
       title: 'Honda Civic 2021',
       price: '$22,300',
-      image: 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2021',
       mileage: '25,000 km',
       location: 'Lahore',
@@ -1008,7 +1026,7 @@ function Dashboard() {
       id: 3,
       title: 'Suzuki Alto 2023',
       price: '$12,500',
-      image: 'https://images.unsplash.com/photo-1603584173870-7f23fdae1b7a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2023',
       mileage: '5,000 km',
       location: 'Islamabad',
@@ -1018,9 +1036,49 @@ function Dashboard() {
       id: 4,
       title: 'Toyota Fortuner 2020',
       price: '$35,000',
-      image: 'https://images.unsplash.com/photo-1605296830714-7b02d5cbf1e6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2020',
       mileage: '45,000 km',
+      location: 'Rawalpindi',
+      isNew: false
+    },
+    {
+      id: 5,
+      title: 'Hyundai Elantra 2021',
+      price: '$18,500',
+      image: '/mockvehicle.png',
+      year: '2021',
+      mileage: '20,000 km',
+      location: 'Karachi',
+      isNew: false
+    },
+    {
+      id: 6,
+      title: 'Kia Sportage 2022',
+      price: '$28,000',
+      image: '/mockvehicle.png',
+      year: '2022',
+      mileage: '12,000 km',
+      location: 'Lahore',
+      isNew: true
+    },
+    {
+      id: 7,
+      title: 'Honda City 2020',
+      price: '$16,800',
+      image: '/mockvehicle.png',
+      year: '2020',
+      mileage: '35,000 km',
+      location: 'Islamabad',
+      isNew: false
+    },
+    {
+      id: 8,
+      title: 'Toyota Hilux 2021',
+      price: '$32,000',
+      image: '/mockvehicle.png',
+      year: '2021',
+      mileage: '30,000 km',
       location: 'Rawalpindi',
       isNew: false
     }
@@ -1032,7 +1090,7 @@ function Dashboard() {
       id: 101,
       title: 'Mercedes-Benz S-Class 2023',
       price: '$120,000',
-      image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2023',
       mileage: '2,500 km',
       location: 'Karachi',
@@ -1044,7 +1102,7 @@ function Dashboard() {
       id: 102,
       title: 'BMW X7 2022',
       price: '$95,000',
-      image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2022',
       mileage: '12,000 km',
       location: 'Lahore',
@@ -1056,7 +1114,7 @@ function Dashboard() {
       id: 103,
       title: 'Audi e-tron 2023',
       price: '$85,000',
-      image: 'https://images.unsplash.com/photo-1622049599805-7635cbd00a6d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2023',
       mileage: '3,200 km',
       location: 'Islamabad',
@@ -1068,13 +1126,61 @@ function Dashboard() {
       id: 104,
       title: 'Range Rover Sport 2022',
       price: '$110,000',
-      image: 'https://images.unsplash.com/photo-1583121274602-3e2820c69888?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+      image: '/mockvehicle.png',
       year: '2022',
       mileage: '8,500 km',
       location: 'Karachi',
       isFeatured: true,
       rating: 4.6,
       features: ['Terrain Response', 'Air Suspension', 'Meridian Sound']
+    },
+    {
+      id: 105,
+      title: 'Porsche 911 2023',
+      price: '$145,000',
+      image: '/mockvehicle.png',
+      year: '2023',
+      mileage: '1,200 km',
+      location: 'Lahore',
+      isFeatured: true,
+      rating: 4.9,
+      features: ['Sport Chrono', 'PDK Transmission', 'Active Suspension']
+    },
+    {
+      id: 106,
+      title: 'Tesla Model X 2023',
+      price: '$99,000',
+      image: '/mockvehicle.png',
+      year: '2023',
+      mileage: '5,000 km',
+      location: 'Islamabad',
+      isFeatured: true,
+      rating: 4.8,
+      features: ['Ludicrous Mode', 'Autopilot', 'Falcon Wing Doors']
+    },
+    {
+      id: 107,
+      title: 'Lamborghini Urus 2022',
+      price: '$250,000',
+      image: '/mockvehicle.png',
+      year: '2022',
+      mileage: '7,500 km',
+      location: 'Karachi',
+      isFeatured: true,
+      rating: 4.7,
+      features: ['4-Wheel Steering', 'Carbon Ceramic Brakes', 'Alcantara Interior']
+    },
+    {
+      id: 108,
+      title: 'Rolls-Royce Cullinan 2023',
+      price: '$350,000',
+      image: '/mockvehicle.png',
+      year: '2023',
+      mileage: '3,500 km',
+      location: 'Lahore',
+      isFeatured: true,
+      rating: 4.9,
+      features: ['Bespoke Interior', 'Starlight Headliner', 'Air Suspension']
     }
   ];
 
@@ -1122,7 +1228,7 @@ function Dashboard() {
       <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="text-center">
           <div className={`border rounded-lg max-w-md p-6 ${isDark ? 'bg-gray-800 border-gray-700 text-red-400' : 'bg-red-50 border-red-400 text-red-700'}`}>
-            <p className="font-bold mb-2">Error</p>
+            <p className="font-bold mb-2">Network Error</p>
             <p className="mb-4">{error}</p>
             <button 
               onClick={() => window.location.reload()} 
@@ -1137,122 +1243,224 @@ function Dashboard() {
   }
 
   return (
-    <div className={`min-h-screen  ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-800'}`}>
-      {/* Navbar Component - Replaces the upper header section */}
-      <Navbar 
-        isDark={isDark}
-        toggleTheme={toggleTheme}
-        language={language}
-        setLanguage={setLanguage}
-        userProfile={userProfile}
-        handleLogout={handleLogout}
-      />
-
-      {/* Header Section (Hero and Search) */}
-      <header 
-        className="relative pt-4 sm:pt-6 pb-12 sm:pb-16 w-full z-20 border-b border-white border-opacity-20"
-        style={{ 
-          background: colors.gradient,
-          position: 'relative'
-        }}
-      >
-        <div className="w-full px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto">
-          {/* Hero Text */}
-          <div className="text-center mb-6 sm:mb-8">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2 sm:mb-3 px-2">
-              {t.findVehicles}
-            </h1>
-            <p className="text-blue-100 text-sm sm:text-base px-2">
-              {t.tagline}
-            </p>
-          </div>
-
-          {/* Search Bar */}
-          <div className="max-w-2xl mx-auto px-2 sm:px-0">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
-                <FaSearch className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="w-full pl-10 sm:pl-12 pr-12 sm:pr-14 py-2 sm:py-3 bg-white shadow-lg border-0 focus:ring-2 focus:ring-purple-500 text-sm sm:text-base"
-                style={{ borderRadius: '12px' }}
-                placeholder={t.searchPlaceholder}
-              />
-              <button className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center focus:outline-none">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                </svg>
+    <div className="min-h-screen bg-white text-gray-800">
+      {/* Top Header Section */}
+      <div className="bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex justify-between items-center h-8 sm:h-10">
+            <div className="flex items-center space-x-2">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <span className="text-sm font-medium text-gray-700">Download App</span>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <button className="text-sm font-medium text-gray-700">
+                Sign In
+              </button>
+              <button className="text-white px-4 py-1 rounded text-sm font-medium transition-colors"
+                style={{
+                  backgroundColor: 'var(--emov-green, #0DFF9A)',
+                }}
+                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+              >
+                Sign Up
               </button>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content - ALL YOUR EXISTING CONTENT REMAINS EXACTLY THE SAME */}
-      <main className="w-full px-3 sm:px-4 lg:px-6 max-w-7xl mx-auto mt-4 sm:mt-6 relative z-10">
-        {/* Browse Used Vehicles Section */}
-        <div className={`shadow-lg p-4 sm:p-6 mb-6 sm:mb-8 w-full border rounded-xl ${
-          isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'
-        }`}>
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{t.browseUsedVehicles}</h2>
+      {/* Navbar Section with Gradient Background */}
+      <div className="relative">
+        {/* Gradient Background for Navbar */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-0 left-0 w-1/2 h-full" style={{
+            backgroundImage: 'url(/gradientleft.png)',
+            backgroundPosition: 'left top',
+            backgroundSize: 'cover',
+            backgroundRepeat: 'no-repeat',
+            zIndex: 0,
+            backgroundColor: 'transparent'
+          }}></div>
           
-          {/* Tabs */}
-          <div className="flex overflow-x-auto sm:overflow-visible mb-4 sm:mb-6 md:mb-8 no-scrollbar">
-            <div className={`flex space-x-2 p-1.5 rounded-xl ${isDark ? 'bg-gray-800/50' : 'bg-gray-100'}`}>
-              {['Category', 'Budget', 'Brand', 'Model', 'BodyType'].map((tab) => (
-                <button
-                  key={tab}
-                  className={`px-4 py-2.5 text-sm font-medium transition-all duration-200 border ${
-                    activeTab === tab
-                      ? (isDark 
-                          ? 'bg-bg-secondary text-text-primary border-border-primary shadow-lg' 
-                          : 'bg-bg-secondary text-emov-purple border-border-primary shadow')
-                      : (isDark 
-                          ? 'text-text-secondary hover:text-text-primary hover:bg-bg-tertiary/50 border-transparent hover:border-border-primary' 
-                          : 'text-text-secondary hover:text-emov-purple hover:bg-bg-tertiary/50 border-transparent hover:border-border-primary')
-                  } rounded-lg whitespace-nowrap`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {t.tabs[tab.toLowerCase()] || tab}
-                </button>
-              ))}
+          <div className="absolute bottom-0 right-0 w-1/2 h-full" style={{
+            backgroundImage: 'url(/gradientright bottom.png)',
+            backgroundPosition: 'right bottom',
+            backgroundSize: 'cover',
+            backgroundRepeat: 'no-repeat',
+            zIndex: 0,
+            backgroundColor: 'transparent'
+          }}></div>
+          
+          {/* White overlay with opacity */}
+          <div className="absolute inset-0 bg-white/90"></div>
+        </div>
+        
+        <Navbar 
+          isDark={isDark}
+          toggleTheme={toggleTheme}
+          language={language}
+          setLanguage={setLanguage}
+          userProfile={userProfile}
+          handleLogout={handleLogout}
+        />
+      </div>
+
+      {/* Main Content */}
+      {/* Hero Section with Gradient Background */}
+      <section className="relative w-full bg-white">
+        <div className="relative max-w-[2000px] mx-auto">
+          <div className="relative w-full z-10 min-h-[250px] sm:min-h-[300px]">
+            {/* Background with white overlay */}
+            <div className="absolute inset-0 bg-white/80 z-0"></div>
+            
+            {/* Left gradient background */}
+            <div 
+              className="absolute top-0 left-0 w-1/3 h-full"
+              style={{
+                background: 'url(/gradientleft.png) left top/contain no-repeat',
+                zIndex: 1
+              }}
+            ></div>
+            
+            {/* Right gradient background */}
+            <div 
+              className="absolute bottom-0 right-0 w-1/3 h-full"
+              style={{
+                background: 'url(/gradientright%20bottom.png) right bottom/contain no-repeat',
+                zIndex: 1
+              }}
+            ></div>
+            
+            {/* Content */}
+            <div className="relative z-10 pt-8 sm:pt-12 pb-12 sm:pb-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              {/* Hero Text */}
+              <div className="text-center mb-4 sm:mb-6">
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-3">
+                  {t.findVehicles}
+                </h1>
+                <p className="text-gray-800 text-base sm:text-lg max-w-2xl mx-auto">
+                  {t.tagline}
+                </p>
+              </div>
+
+              {/* Search Bar */}
+              <div className="max-w-2xl mx-auto px-4 sm:px-6">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none z-10">
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className="h-6 w-6 text-emov-purple" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                      style={{
+                        minWidth: '24px',
+                        minHeight: '24px'
+                      }}
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+                      />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full pl-10 sm:pl-12 pr-12 sm:pr-14 py-3 sm:py-4 bg-white/90 backdrop-blur-sm border-2 border-white/80 focus:border-emov-purple/70 focus:ring-2 focus:ring-emov-purple/30 text-sm sm:text-base placeholder-gray-500 text-gray-800"
+                    style={{ 
+                      borderRadius: '12px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                      transition: 'all 0.2s ease-in-out'
+                    }}
+                    placeholder={t.searchPlaceholder}
+                  />
+                  <button className="absolute inset-y-0 right-0 pr-4 sm:pr-5 flex items-center focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-emov-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Tab Content with 2-line Navigation */}
-          <div className="relative">
-            <button
-              onClick={() => scrollLeft(activeTab)}
-              className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white dark:bg-gray-800 p-2 rounded-full shadow-lg hover:shadow-xl border-2 ${
-                isDark 
-                  ? 'border-gray-600 hover:border-gray-500 text-white hover:bg-gray-700' 
-                  : 'border-gray-200 hover:border-gray-300 text-gray-800 hover:bg-gray-50'
-              } transition-all duration-200 ${!canScrollLeft(activeTab) ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={!canScrollLeft(activeTab)}
-            >
-              <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5 transform rotate-180" />
-            </button>
+      {/* Banner Section */}
+      <section className="w-full bg-white py-6 sm:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full rounded-xl overflow-hidden shadow-sm">
+            <img 
+              src="/banner.png" 
+              alt="Special Offers" 
+              className="w-full h-auto"
+              style={{ maxHeight: '300px', objectFit: 'cover' }}
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </section>
 
-            <button
-              onClick={() => scrollRight(activeTab)}
-              className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white dark:bg-gray-800 p-2 rounded-full shadow-lg hover:shadow-xl border-2 ${
-                isDark 
-                  ? 'border-gray-600 hover:border-gray-500 text-white hover:bg-gray-700' 
-                  : 'border-gray-200 hover:border-gray-300 text-gray-800 hover:bg-gray-50'
-              } transition-all duration-200 ${!canScrollRight(activeTab) ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={!canScrollRight(activeTab)}
-            >
-              <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-            </button>
+      {/* Main Content */}
+      <main className="w-full relative z-10">
+        {/* Browse Used Vehicles Section with Tabs */}
+        <section className="w-full bg-gray-100 py-12 sm:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="w-full bg-transparent rounded-xl overflow-hidden">
+              <div className="w-full p-6 bg-gray-100 rounded-t-lg">
+                <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.browseUsedVehicles}</h2>
+                
+                {/* Tabs with underline for active state */}
+                <div className="w-full overflow-x-auto pb-1">
+                  <div className="flex space-x-1 border-b border-gray-100 w-max min-w-full">
+                    {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
+                      <button
+                        key={tab}
+                        className={`px-4 py-3 text-sm sm:text-base font-medium whitespace-nowrap relative ${
+                          activeTab === tab
+                            ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
+                            : 'text-gray-600'
+                        }`}
+                        onClick={() => setActiveTab(tab)}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Tab Content with 2-line Navigation */}
+              <div className="relative w-full pb-6 px-6 bg-gray-100 rounded-lg shadow-sm">
+                <button
+                  onClick={() => scrollLeft(activeTab)}
+                  className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg border-2 border-gray-100 text-gray-800 ${!canScrollLeft(activeTab) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canScrollLeft(activeTab)}
+                >
+                  <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5 transform rotate-180" />
+                </button>
 
-            {/* Carousel Container */}
-            <div className="relative w-full overflow-hidden">
+                <button
+                  onClick={() => scrollRight(activeTab)}
+                  className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg border-2 border-gray-100 text-gray-800 ${!canScrollRight(activeTab) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={!canScrollRight(activeTab)}
+                >
+                  <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+
+              {/* Carousel Container */}
+              <div className="relative w-full overflow-hidden">
               {/* Carousel Track */}
               <div 
                 ref={slideRef}
                 className="flex transition-transform duration-300 ease-in-out w-full"
-                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                style={{ transform: `translateX(-${currentSlides[activeTab] * 100}%)` }}
               >
                 {(() => {
                   const transformedData = transformApiData();
@@ -1263,11 +1471,21 @@ function Dashboard() {
                     'Category': 'categories',
                     'Model': 'models',
                     'Brand': 'brands',
-                    'BodyType': 'bodytypes',  // Changed from 'bodyTypes' to 'bodytypes' to match the transformed data key
+                    'Body Type': 'bodytypes',  // Match the exact tab name 'Body Type' with the data key 'bodytypes'
                     'Budget': 'budgets'
                   };
                   
-                  const dataKey = tabDataMap[activeTab] || `${activeTab.toLowerCase()}s`;
+                  // Convert activeTab to match the expected format (handle spaces)
+                  const normalizedTab = activeTab.replace(/\s+/g, ' ');
+                  let dataKey = tabDataMap[normalizedTab];
+                  
+                  // If no direct match, try to find a matching key
+                  if (!dataKey) {
+                    const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
+                    dataKey = Object.entries(tabDataMap).find(([key]) => 
+                      key.toLowerCase().replace(/\s+/g, '') === lowerTab
+                    )?.[1];
+                  }
                   currentTabData = Array.isArray(transformedData[dataKey]) ? 
                     transformedData[dataKey] : [];
 
@@ -1342,10 +1560,10 @@ function Dashboard() {
                               return (
                                 <div 
                                   key={`${item.id || index}-${activeTab}`}
-                                  className={`relative flex flex-col h-full rounded-lg cursor-pointer transition-all duration-200 ${
+                                  className={`relative flex flex-col h-full rounded-lg cursor-pointer ${
                                     isDark 
-                                      ? 'bg-gray-800 hover:bg-gray-700 border border-gray-600' 
-                                      : 'bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-purple-300'
+                                      ? 'bg-gray-800 border border-gray-600' 
+                                      : 'bg-white border-2 border-gray-100'
                                   }`}
                                   style={{
                                     minHeight: '90px',
@@ -1364,23 +1582,47 @@ function Dashboard() {
                               return (
                                 <div 
                                   key={`${item.id || index}-${activeTab}`}
-                                  className={`flex items-center justify-center p-3 rounded-lg text-center cursor-pointer transition-all duration-200 h-full ${
+                                  className={`flex items-center justify-center p-4 rounded-lg text-center cursor-pointer h-full ${
                                     isDark 
-                                      ? 'bg-gray-700 hover:bg-gray-600 text-white border border-gray-500' 
-                                      : 'bg-white hover:bg-gray-50 text-gray-800 border-2 border-gray-300 hover:border-purple-300'
+                                      ? 'bg-gray-700 text-white border border-gray-500' 
+                                      : 'bg-white text-gray-800 border-2 border-gray-300'
                                   }`}
                                   style={{
-                                    minHeight: '80px',
-                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                    minHeight: '100px',
+                                    minWidth: '140px',
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
                                   }}
                                 >
-                                  <div className="font-medium text-sm text-text-primary">
+                                  <div className="font-medium text-sm">
                                     {displayName}
                                     {itemCount > 0 && (
-                                      <div className="text-xs mt-1 text-text-secondary">
+                                      <div className="text-xs mt-2 text-gray-500">
                                         {itemCount} {t.vehicles || 'vehicles'}
                                       </div>
                                     )}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            // Card layout for Body Type tab (similar to Model but without vehicle count)
+                            if (activeTab === 'Body Type') {
+                              return (
+                                <div 
+                                  key={`${item.id || index}-${activeTab}`}
+                                  className={`flex items-center justify-center p-4 rounded-lg text-center cursor-pointer h-full ${
+                                    isDark 
+                                      ? 'bg-gray-700 text-white border border-gray-500' 
+                                      : 'bg-white text-gray-800 border-2 border-gray-300'
+                                  }`}
+                                  style={{
+                                    minHeight: '100px',
+                                    minWidth: '140px',
+                                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                                  }}
+                                >
+                                  <div className="font-medium text-sm">
+                                    {displayName}
                                   </div>
                                 </div>
                               );
@@ -1390,10 +1632,10 @@ function Dashboard() {
                             return (
                               <div 
                                 key={`${item.id || index}-${activeTab}`}
-                                className={`relative flex flex-col h-full rounded-xl overflow-hidden transition-all duration-300 cursor-pointer transform hover:-translate-y-1 hover:shadow-md ${
+                                className={`relative flex flex-col h-full rounded-xl overflow-hidden cursor-pointer ${
                                   isDark 
                                     ? 'bg-gray-700 border border-gray-600' 
-                                    : 'bg-white border-2 border-gray-200 hover:border-purple-300'
+                                    : 'bg-white border-2 border-gray-100'
                                 }`}
                                 style={{
                                   boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
@@ -1434,202 +1676,331 @@ function Dashboard() {
 
                   return slides;
                 })()}
-              </div>
-
-            </div>
-          </div>
-        </div>
-
-        {/* Recently Added Section */}
-        <div className="mb-6 sm:mb-8 w-full border rounded-xl overflow-hidden">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-            <h2 className="text-xl sm:text-2xl font-bold">{t.recentlyAdded}</h2>
-            <button 
-              className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 transition-all duration-300 hover:shadow-lg w-full sm:w-auto text-center"
-              style={{ 
-                backgroundColor: colors.purple,
-                color: 'white'
-              }}
-            >
-              {t.viewAll}
-              <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {recentlyAddedVehicles.map((vehicle) => (
-              <div 
-                key={vehicle.id} 
-                className={`overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 border ${
-                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}
-              >
-                <div className="h-48 sm:h-56 md:h-64 relative overflow-hidden">
-                  <img 
-                    src={vehicle.image} 
-                    alt={vehicle.title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    onError={(e) => handleImageError(e, vehicle)}
-                    loading="lazy"
-                  />
-                  {vehicle.isNew && (
-                    <div 
-                      className="absolute top-3 right-3 px-2 py-1 text-xs font-semibold text-white"
-                      style={{ backgroundColor: colors.purple }}
-                    >
-                      {t.new}
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 sm:p-6">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-3 gap-2 sm:gap-0">
-                    <h3 className={`text-base sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      {vehicle.title}
-                    </h3>
-                    <span 
-                      className="text-lg font-bold text-right sm:text-left"
-                      style={{ color: colors.purple }}
-                    >
-                      {vehicle.price}
-                    </span>
-                  </div>
-                  <div className={`flex items-center text-xs sm:text-sm space-x-2 mb-3 sm:mb-4 ${
-                    isDark ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                    <span>{vehicle.year}</span>
-                    <span>•</span>
-                    <span>{vehicle.mileage}</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                    <span className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {vehicle.location}
-                    </span>
-                    <button 
-                      className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 transition-all duration-300 hover:shadow-lg w-full sm:w-auto text-center"
-                      style={{ 
-                        backgroundColor: colors.purple,
-                        color: 'white'
-                      }}
-                    >
-                      {t.viewDetails}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Featured Vehicles Section */}
-        <div className="mb-6 sm:mb-8 w-full border rounded-xl overflow-hidden">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{t.featuredVehicles}</h2>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {featuredVehicles.map((vehicle) => (
-              <div 
-                key={vehicle.id} 
-                className={`overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-1 border ${
-                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}
-              >
-                <div className="h-48 sm:h-56 md:h-64 relative overflow-hidden">
-                  <img 
-                    src={vehicle.image} 
-                    alt={vehicle.title}
-                    className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                    onError={(e) => handleImageError(e, vehicle)}
-                    loading="lazy"
-                  />
-                  {vehicle.isNew && (
-                    <div 
-                      className="absolute top-3 right-3 px-2 py-1 text-xs font-semibold text-white"
-                      style={{ backgroundColor: colors.purple }}
-                    >
-                      {t.new}
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 sm:p-4">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-2 gap-1 sm:gap-0">
-                    <h3 className={`text-sm sm:text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'} line-clamp-2`}>
-                      {vehicle.title}
-                    </h3>
-                    <span 
-                      className="text-base sm:text-lg font-bold text-right sm:text-left"
-                      style={{ color: colors.purple }}
-                    >
-                      {vehicle.price}
-                    </span>
-                  </div>
-                  <div className={`flex items-center text-xs sm:text-sm space-x-2 mb-3 sm:mb-4 ${
-                    isDark ? 'text-gray-400' : 'text-gray-500'
-                  }`}>
-                    <span>{vehicle.year}</span>
-                    <span>•</span>
-                    <span>{vehicle.mileage}</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                    <span className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {vehicle.location}
-                    </span>
-                    <button 
-                      className="text-xs sm:text-sm font-semibold px-3 sm:px-4 py-2 transition-all duration-300 hover:shadow-lg w-full sm:w-auto text-center"
-                      style={{ 
-                        backgroundColor: colors.purple,
-                        color: 'white'
-                      }}
-                    >
-                      {t.viewDetails}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              </div> {/* End of carousel track */}
+            </div> {/* End of carousel container */}
+          </div> {/* End of tab content */}
+        </div> {/* End of white rounded container */}
+      </div> {/* End of max-w-7xl container */}
+    </section>
 
         {/* Other Services Section */}
-        <div className="mb-6 sm:mb-8 w-full border rounded-xl overflow-hidden">
-          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{t.otherServices}</h2>
-          
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-            {otherServices.map((service, index) => (
-              <div 
-                key={index}
-                className={`border p-3 sm:p-4 md:p-6 text-center cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 ${
-                  isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
-                }`}
-                style={{ borderColor: colors.purple + '20' }}
-              >
-                <div className="text-2xl sm:text-3xl mb-2 sm:mb-3">{service.icon}</div>
-                <span className="text-xs sm:text-sm font-semibold">{service.name}</span>
-              </div>
-            ))}
+        <section className="w-full bg-white py-12 sm:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+              {otherServices.map((service, index) => (
+                <div 
+                  key={index}
+                  className={`overflow-hidden rounded-lg shadow-lg border p-4 sm:p-5 text-center cursor-pointer ${
+                    isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-100 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="text-2xl sm:text-3xl mb-3 text-emov-purple">{service.icon}</div>
+                  <span className="text-sm sm:text-base font-medium text-gray-800">{service.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* Sell Your Vehicle Section */}
-        <div 
-          className="p-4 sm:p-6 md:p-8 text-white mb-6 sm:mb-8 overflow-hidden relative w-full"
-          style={{ background: colors.gradient }}
-        >
-          <div className="relative z-10 text-center">
-            <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4">{t.sellVehicle}</h2>
-            <p className="text-blue-100 mb-4 sm:mb-6 text-sm sm:text-base md:text-lg">
-              {t.sellDescription}
-            </p>
-            <button 
-              className="bg-white px-4 sm:px-6 md:px-8 py-2 sm:py-3 font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl text-sm sm:text-base"
-              style={{ color: colors.purple }}
-            >
-              {t.postAd}
-            </button>
+        {/* Recently Added Section */}
+        <section className="w-full bg-gray-100 py-12 sm:py-16 relative">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">{t.recentlyAdded}</h2>
+            </div>
+            
+            <div className="relative">
+              <CarouselNavigation
+                onPrev={() => scrollLeft('Recently Added', recentlyAddedVehicles, 4)}
+                onNext={() => scrollRight('Recently Added', recentlyAddedVehicles, 4)}
+                canGoPrev={canScrollLeft('Recently Added')}
+                canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, 4)}
+                section="recently added vehicles"
+              />
+              
+              <div className="relative overflow-hidden">
+                <div 
+                  className="flex transition-transform duration-300"
+                  style={{
+                    transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
+                    width: '100%',
+                    transition: 'transform 0.3s ease-in-out'
+                  }}
+                >
+                  {Array(Math.ceil(recentlyAddedVehicles.length / 4)).fill().map((_, groupIndex) => (
+                    <div 
+                      key={groupIndex}
+                      className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+                      style={{ minWidth: '100%' }}
+                    >
+                      {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle) => (
+                        <div 
+                          key={vehicle.id} 
+                          className="group bg-white rounded-xl overflow-hidden border border-gray-200 flex flex-col h-full transition-shadow duration-300 hover:shadow-md"
+                        >
+                          <div className="relative h-48 w-full overflow-hidden">
+                            <img 
+                              src="/mockvehicle.png" 
+                              alt={vehicle.title}
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              loading="lazy"
+                            />
+                            {vehicle.isNew && (
+                              <div className="absolute top-3 left-3 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
+                                {t.new}
+                              </div>
+                            )}
+                          </div>
+                            <div className="p-4 flex-grow flex flex-col">
+                              <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-lg font-bold text-gray-900">{vehicle.title}</h3>
+                                <span className="text-lg font-bold text-emov-purple">{vehicle.price}</span>
+                              </div>
+                              
+                              <div className="flex items-center text-sm text-gray-500 mb-4">
+                                <span>{vehicle.year}</span>
+                                <span className="mx-2">•</span>
+                                <span className="flex items-center">
+                                  <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  {vehicle.mileage}
+                                </span>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 gap-2 text-xs text-gray-500 mb-4">
+                                <div className="flex flex-col items-center p-2 bg-gray-50 rounded">
+                                  <svg className="w-4 h-4 mb-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                  </svg>
+                                  <span>{vehicle.transmission}</span>
+                                </div>
+                                <div className="flex flex-col items-center p-2 bg-gray-50 rounded">
+                                  <svg className="w-4 h-4 mb-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                  </svg>
+                                  <span>{vehicle.fuel}</span>
+                                </div>
+                                <div className="flex flex-col items-center p-2 bg-gray-50 rounded">
+                                  <svg className="w-4 h-4 mb-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  </svg>
+                                  <span>{vehicle.location}</span>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-auto pt-3 border-t border-gray-100">
+                                <button className="w-full py-2 bg-emov-purple text-white font-medium rounded hover:bg-opacity-90 transition-colors">
+                                  View Details
+                                </button>
+                              </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="absolute -bottom-8 -right-8 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 bg-white opacity-10"></div>
-          <div className="absolute -top-8 -left-8 w-20 h-20 sm:w-24 sm:h-24 md:w-32 md:h-32 bg-white opacity-10"></div>
-        </div>
+        </section>
+
+        {/* Featured Vehicles Section */}
+        <section className="w-full bg-white py-12 sm:py-16 relative">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">{t.featuredVehicles}</h2>
+            </div>
+            
+            <div className="relative">
+              <CarouselNavigation
+                onPrev={() => scrollLeft('Featured Vehicles', featuredVehicles, 4)}
+                onNext={() => scrollRight('Featured Vehicles', featuredVehicles, 4)}
+                canGoPrev={canScrollLeft('Featured Vehicles')}
+                canGoNext={canScrollRight('Featured Vehicles', featuredVehicles, 4)}
+                section="featured vehicles"
+              />
+              
+              <div className="relative overflow-hidden">
+                
+                <div 
+                  className="flex transition-transform duration-300"
+                  style={{
+                    transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)`,
+                    width: '100%',
+                    transition: 'transform 0.3s ease-in-out'
+                  }}
+                >
+                  {Array(Math.ceil(featuredVehicles.length / 4)).fill().map((_, groupIndex) => (
+                    <div 
+                      key={groupIndex}
+                      className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+                      style={{ minWidth: '100%' }}
+                    >
+                      {[
+                        {
+                          id: 1,
+                          title: 'Toyota Camry 2020',
+                          price: '$24,000',
+                          year: '2020',
+                          mileage: '35,000 km',
+                          transmission: 'Automatic',
+                          fuel: 'Petrol',
+                          location: 'New York',
+                          isNew: true
+                        },
+                        {
+                          id: 2,
+                          title: 'Honda Civic 2021',
+                          price: '$22,500',
+                          year: '2021',
+                          mileage: '25,000 km',
+                          transmission: 'Automatic',
+                          fuel: 'Hybrid',
+                          location: 'Los Angeles',
+                          isNew: false
+                        },
+                        {
+                          id: 3,
+                          title: 'BMW 3 Series 2019',
+                          price: '$32,000',
+                          year: '2019',
+                          mileage: '28,000 km',
+                          transmission: 'Automatic',
+                          fuel: 'Diesel',
+                          location: 'Miami',
+                          isNew: true
+                        },
+                        {
+                          id: 4,
+                          title: 'Mercedes C-Class 2020',
+                          price: '$38,500',
+                          year: '2020',
+                          mileage: '18,000 km',
+                          transmission: 'Automatic',
+                          fuel: 'Petrol',
+                          location: 'Chicago',
+                          isNew: false
+                        }
+                      ].map((vehicle) => (
+                        <div 
+                          key={vehicle.id} 
+                          className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-300 flex flex-col h-full"
+                        >
+                          <div className="relative h-48 w-full overflow-hidden">
+                            <img 
+                              src="/mockvehicle.png" 
+                              alt={vehicle.title}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                            {vehicle.isNew && (
+                              <div className="absolute top-3 left-3 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
+                                {t.new}
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-5">
+                            <div className="flex justify-between items-start mb-3">
+                              <h3 className="text-sm font-medium text-gray-900 line-clamp-1 pr-2">{vehicle.title}</h3>
+                              <span className="text-sm font-medium text-emov-purple whitespace-nowrap">{vehicle.price}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Banner 2 - Full Width */}
+        <section className="w-full bg-gray-100 py-6 sm:py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="w-full rounded-xl overflow-hidden">
+              <img 
+                src="/banner2.png" 
+                alt="Special Offers" 
+                className="w-full h-auto"
+                style={{ maxHeight: '300px', objectFit: 'cover' }}
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Featured Brands Section */}
+        <section className="w-full bg-white py-12 sm:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Featured Brands</h2>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-6 gap-8">
+              {(() => {
+                const allBrands = apiData?.brand || [];
+                const uniqueBrands = [];
+                const brandNames = new Set();
+                
+                allBrands.forEach(brand => {
+                  if (brand.BrandName && brand.BrandName !== 'Various' && !brandNames.has(brand.BrandName)) {
+                    brandNames.add(brand.BrandName);
+                    uniqueBrands.push({
+                      id: brand.BrandID,
+                      name: brand.BrandName,
+                      nameUrdu: brand.BrandNameUrdu,
+                      nameFrench: brand.BrandNameFrench,
+                      image: brand.BrandImage ? `https://api.emov.com.pk/image/${brand.BrandImage}` : null
+                    });
+                  }
+                });
+
+                return uniqueBrands.map((brand) => (
+                  <div key={brand.id} className="flex flex-col items-center group">
+                    <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-gray-100 p-2 flex items-center justify-center mb-2">
+                      {brand.image ? (
+                        <img 
+                          src={brand.image} 
+                          alt={brand.name}
+                          className="h-12 w-auto object-contain bg-gray-100"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '/placeholder-car.png';
+                          }}
+                        />
+                      ) : (
+                        <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center">
+                          <FaCar className="text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 text-center mt-2">{brand.name}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        </section>
+
+        {/* Sell Your Vehicle Section with Banner */}
+        <section className="w-full bg-gray-100 py-6 sm:py-8">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="w-full rounded-xl overflow-hidden shadow-sm">
+              <img 
+                src="/banner3.png" 
+                alt="Sell Your Vehicle" 
+                className="w-full h-auto"
+                style={{ maxHeight: '300px', objectFit: 'cover' }}
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Enhanced Footer */}

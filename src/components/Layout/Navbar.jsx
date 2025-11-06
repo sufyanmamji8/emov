@@ -1,22 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { FaSun, FaMoon, FaGlobe, FaCaretDown, FaSignOutAlt } from 'react-icons/fa';
+import { FaSun, FaMoon, FaGlobe, FaCaretDown, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
 import { useTheme } from '../../hooks/useTheme';
 import axios from 'axios';
 
 function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handleLogout }) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Helper function to get first letter of username for profile picture
-  const getUserInitial = (username) => {
-    if (!username || typeof username !== 'string') return 'U';
-    return username.trim().charAt(0).toUpperCase();
-  };
+  // Check screen size on mount and resize
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768); // md breakpoint
+    };
 
-  // Close dropdown when clicking outside
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => {
+      window.removeEventListener('resize', checkScreenSize);
+    };
+  }, []);
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showProfileDropdown && !event.target.closest('.profile-dropdown')) {
         setShowProfileDropdown(false);
+      }
+      if (isMobileMenuOpen && !event.target.closest('.mobile-menu') && !event.target.closest('.hamburger-menu')) {
+        setIsMobileMenuOpen(false);
       }
     };
 
@@ -24,81 +37,134 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showProfileDropdown]);
+  }, [showProfileDropdown, isMobileMenuOpen]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Helper function to get first letter of username for profile picture
+  const getUserInitial = (username) => {
+    if (!username || typeof username !== 'string') return 'U';
+    return username.trim().charAt(0).toUpperCase();
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const handleNavLinkClick = () => {
+    if (isMobile) {
+      setIsMobileMenuOpen(false);
+    }
+  };
 
   return (
-    <nav className="w-full py-6 px-6 sm:px-8 shadow-md" style={{
-      background: 'var(--emov-gradient)'
-    }}>
-      <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Logo */}
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 flex items-center justify-center">
-            <img 
-              src="/loginemov.png" 
-              alt="Emov Logo" 
-              className="w-full h-full object-contain"
-            />
-          </div>
-          <div className="h-8">
-            <img 
-              src="/emovfont.png" 
-              alt="Emov" 
-              className="h-full w-auto"
-            />
-          </div>
-        </div>
+    <nav className="w-full py-2 sm:py-3 px-4 sm:px-6 lg:px-8 relative z-50 bg-transparent">
+      
+      <div className="relative z-10 max-w-7xl mx-auto flex items-center justify-between">
+        {/* Left side - Logo and Navigation Links */}
+        <div className="flex items-center space-x-8 lg:space-x-12">
+          {/* Logo and Hamburger Menu */}
+          <div className="flex items-center space-x-2">
+            {/* Hamburger Menu Button - Visible only on mobile */}
+            <button
+              className="hamburger-menu md:hidden p-1 text-white focus:outline-none"
+              onClick={toggleMobileMenu}
+              aria-label="Toggle menu"
+            >
+              {isMobileMenuOpen ? (
+                <FaTimes className="w-4 h-4" />
+              ) : (
+                <FaBars className="w-4 h-4" />
+              )}
+            </button>
 
-        {/* Navigation Links with increased spacing */}
-        <div className="hidden md:flex items-center space-x-8 lg:space-x-12 mx-8">
-          <a 
-            href="/dashboard" 
-            className="relative text-base font-medium text-white hover:text-gray-100 group transition-colors duration-300"
-          >
-            Home
-            <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/dashboard' ? 'w-full' : ''}`}></span>
-          </a>
-          <a 
-            href="/chats" 
-            className="relative text-base font-medium text-white hover:text-gray-100 group transition-colors duration-300"
-          >
-            Chats
-            <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/chats' ? 'w-full' : ''}`}></span>
-          </a>
-          <a 
-            href="/my-ads" 
-            className="relative text-base font-medium text-white hover:text-gray-100 group transition-colors duration-300"
-          >
-            My Ads
-            <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
-          </a>
+            {/* Logo */}
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
+                <img 
+                  src="/loginemov.png" 
+                  alt="Emov Logo" 
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="h-5 sm:h-6">
+                <img 
+                  src="/emovfont.png" 
+                  alt="Emov" 
+                  className="h-full w-auto object-contain"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Navigation Links - Now positioned right after logo */}
+          <div className="hidden md:flex items-center space-x-8 lg:space-x-12">
+            <a 
+              href="/dashboard" 
+              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+            >
+              Home
+              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/dashboard' ? 'w-full' : ''}`}></span>
+            </a>
+            <a 
+              href="/chats" 
+              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+            >
+              Chats
+              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/chats' ? 'w-full' : ''}`}></span>
+            </a>
+            <a 
+              href="/my-ads" 
+              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+            >
+              My Ads
+              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
+            </a>
+          </div>
         </div>
 
         {/* Right side controls */}
-        <div className="flex items-center space-x-4">
-          {/* Language Selector */}
-          <div className="relative">
-            <select 
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className={`${isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} px-3 py-1.5 sm:px-4 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 border rounded-md ${isDark ? 'border-gray-600 focus:ring-white' : 'border-gray-300 focus:ring-gray-500'}`}
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          {/* Desktop Language Selector and Theme Toggle */}
+          <div className="hidden md:flex items-center space-x-4">
+            {/* Language Selector */}
+            <div className="relative">
+              <select 
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className={`${isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} pl-3 pr-10 py-1.5 sm:pl-4 sm:pr-12 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 border rounded-md ${isDark ? 'border-gray-600 focus:ring-white' : 'border-gray-300 focus:ring-gray-500'} appearance-none`}
+              >
+                <option value="english">EN</option>
+                <option value="urdu">UR</option>
+                <option value="french">FR</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
+                <FaGlobe className={`${isDark ? 'text-gray-300' : 'text-gray-500'} w-3.5 h-3.5 sm:w-4 sm:h-4`} />
+                <FaCaretDown className={`ml-1 ${isDark ? 'text-gray-300' : 'text-gray-500'} w-3 h-3`} />
+              </div>
+            </div>
+            
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme}
+              className={`focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl ${isDark ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+              style={{ borderRadius: '12px' }}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
-              <option value="english">EN</option>
-              <option value="urdu">UR</option>
-              <option value="french">FR</option>
-            </select>
-            <FaGlobe className={`absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 pointer-events-none w-3 h-3 sm:w-4 sm:h-4 ${isDark ? 'text-gray-300' : 'text-gray-500'}`} />
+              {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
+            </button>
           </div>
-          
-          {/* Theme Toggle Button */}
-          <button 
-            onClick={toggleTheme}
-            className={`focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl ${isDark ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
-            style={{ borderRadius: '12px' }}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
-          </button>
 
           {/* User Profile Dropdown */}
           <div className="relative profile-dropdown">
@@ -109,7 +175,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               aria-haspopup="true"
             >
               <div 
-                className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center text-base font-medium overflow-hidden ${
+                className={`w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-full flex items-center justify-center text-base font-medium overflow-hidden border-2 border-black ${
                   isDark ? 'bg-[var(--emov-purple)] text-white' : 'bg-white text-[var(--emov-purple)]'
                 }`}
               >
@@ -128,7 +194,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   {getUserInitial(userProfile?.name || userProfile?.username || 'U')}
                 </div>
               </div>
-              <span className="hidden sm:block text-sm font-medium text-white">
+              <span className="hidden sm:block text-sm font-medium text-black">
                 {userProfile?.name || 'User'}
               </span>
               <FaCaretDown className={`w-3 h-3 transition-transform duration-200 ${showProfileDropdown ? 'rotate-180' : ''}`} />
@@ -185,6 +251,136 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   <span>Sign out</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      <div 
+        className={`mobile-menu md:hidden fixed inset-0 z-40 bg-black bg-opacity-50 transition-opacity duration-300 ${
+          isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setIsMobileMenuOpen(false)}
+      >
+        {/* Mobile Menu Sidebar */}
+        <div 
+          className="absolute top-0 left-0 h-full w-80 max-w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex flex-col h-full">
+            {/* Mobile Menu Header */}
+            <div className="flex items-center justify-between p-4 border-b border-border-primary">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <img 
+                    src="/loginemov.png" 
+                    alt="Emov Logo" 
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="h-6">
+                  <img 
+                    src="/emovfont.png" 
+                    alt="Emov" 
+                    className="h-full w-auto"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 text-text-primary hover:bg-bg-tertiary rounded-lg transition-colors"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Mobile Menu Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {/* Navigation Links */}
+              <div className="space-y-2 mb-8">
+                <a 
+                  href="/dashboard" 
+                  className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
+                  onClick={handleNavLinkClick}
+                >
+                  Home
+                </a>
+                <a 
+                  href="/chats" 
+                  className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
+                  onClick={handleNavLinkClick}
+                >
+                  Chats
+                </a>
+                <a 
+                  href="/my-ads" 
+                  className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
+                  onClick={handleNavLinkClick}
+                >
+                  My Ads
+                </a>
+              </div>
+
+              {/* Mobile Controls */}
+              <div className="space-y-4 border-t border-border-primary pt-6">
+                {/* Language Selector */}
+                <div className="flex items-center justify-between">
+                  <span className="text-text-primary font-medium">Language</span>
+                  <div className="relative w-32">
+                    <select 
+                      value={language}
+                      onChange={(e) => setLanguage(e.target.value)}
+                      className={`${isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} w-full pl-3 pr-10 py-2 text-base focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 border rounded-md ${isDark ? 'border-gray-600 focus:ring-white' : 'border-gray-300 focus:ring-gray-500'} appearance-none`}
+                    >
+                      <option value="english">English</option>
+                      <option value="urdu">Urdu</option>
+                      <option value="french">French</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
+                      <FaGlobe className={`${isDark ? 'text-gray-300' : 'text-gray-500'} w-4 h-4`} />
+                      <FaCaretDown className={`ml-1 ${isDark ? 'text-gray-300' : 'text-gray-500'} w-3 h-3`} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Theme Toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-text-primary font-medium">Theme</span>
+                  <button 
+                    onClick={toggleTheme}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                      isDark ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {isDark ? (
+                      <>
+                        <FaSun className="w-5 h-5" />
+                        <span>Light</span>
+                      </>
+                    ) : (
+                      <>
+                        <FaMoon className="w-5 h-5" />
+                        <span>Dark</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Menu Footer - Only Sign Out Button */}
+            <div className="p-4 border-t border-border-primary">
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center space-x-2 py-3 px-4 text-text-primary hover:bg-bg-tertiary rounded-lg transition-colors border border-border-primary"
+              >
+                <FaSignOutAlt className="w-4 h-4" />
+                <span>Sign out</span>
+              </button>
             </div>
           </div>
         </div>
