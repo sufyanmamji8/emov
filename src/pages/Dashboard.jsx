@@ -1,8 +1,27 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaSpinner, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater } from 'react-icons/fa';
+import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater } from 'react-icons/fa';
 import axios from 'axios';
 import { useTheme } from '../hooks/useTheme';
 import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
+
+// Gradient image paths from public folder - Vite requires paths to public assets to be absolute from the public folder
+const gradientLeft = '/gradientleft.png';
+const gradientRight = '/gradientright bottom.png';
+
+// Debug: Log image paths and check if they're accessible
+console.log('Gradient Left Path:', gradientLeft);
+console.log('Gradient Right Path:', gradientRight);
+
+// Check if images are accessible
+const checkImage = (url) => {
+  const img = new Image();
+  img.onload = () => console.log(`✅ Image loaded successfully: ${url}`);
+  img.onerror = () => console.error(`❌ Failed to load image: ${url}`);
+  img.src = url;
+};
+
+checkImage(gradientLeft);
+checkImage(gradientRight);
 
 // Carousel Navigation Component
 const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) => (
@@ -10,18 +29,18 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
     <button
       onClick={onPrev}
       disabled={!canGoPrev}
-      className={`absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white/90 shadow-lg ${!canGoPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`absolute -left-16 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg hover:bg-gray-100 transition-colors ${!canGoPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
       aria-label={`Previous ${section}`}
     >
-      <FaChevronLeft className="w-5 h-5 text-gray-700" />
+      <FaChevronLeft className="w-6 h-6 text-gray-700" />
     </button>
     <button
       onClick={onNext}
       disabled={!canGoNext}
-      className={`absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white/90 shadow-lg ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`absolute -right-16 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg hover:bg-gray-100 transition-colors ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
       aria-label={`Next ${section}`}
     >
-      <FaChevronRight className="w-5 h-5 text-gray-700" />
+      <FaChevronRight className="w-6 h-6 text-gray-700" />
     </button>
   </>
 );
@@ -38,7 +57,6 @@ function Dashboard() {
   });
   const [apiData, setApiData] = useState(null);
   const [vehiclesData, setVehiclesData] = useState([]);
-  const [loading, setLoading] = useState(false); // Start with false since we'll load data manually
   const [error, setError] = useState(null);
   const [userProfile, setUserProfile] = useState(() => {
     // Initialize with data from localStorage if available
@@ -319,14 +337,10 @@ function Dashboard() {
   };
 
   const [apiError, setApiError] = useState(null);
-  const [isFetching, setIsFetching] = useState(false);
 
   const fetchFilterData = useCallback(async () => {
-    // Skip if we already have data or already fetching
-    if (apiData || isFetching) return;
-    
-    setIsFetching(true);
-    setLoading(true);
+    // Skip if we already have data
+    if (apiData) return;
     
     try {
       console.log('Fetching filter data...');
@@ -369,10 +383,8 @@ function Dashboard() {
       setApiData(fallbackData);
       setApiError('Failed to load data. Using limited offline mode.');
     } finally {
-      setIsFetching(false);
-      setLoading(false);
     }
-  }, [apiData, isFetching]);
+  }, [apiData]);
 
   // Helper function to get first letter of username for profile picture
   const getUserInitial = (username) => {
@@ -380,23 +392,13 @@ function Dashboard() {
     return username.trim().charAt(0).toUpperCase();
   };
 
-  // Load data on component mount only if not already loaded
-  useEffect(() => {
-    const controller = new AbortController();
-    
-    if (!apiData && !isFetching) {
-      fetchFilterData();
-    }
-    
-    // Cleanup function to cancel any pending requests
-    return () => {
-      controller.abort();
-    };
-  }, [apiData, fetchFilterData, isFetching]);
-
+  // Handle click outside profile dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showProfileDropdown && !event.target.closest('.profile-dropdown')) {
+      const profileDropdown = document.getElementById('profile-dropdown');
+      const profileButton = document.getElementById('profile-button');
+      
+      if (profileDropdown && profileButton && !profileDropdown.contains(event.target) && !profileButton.contains(event.target)) {
         setShowProfileDropdown(false);
       }
     };
@@ -470,10 +472,7 @@ function Dashboard() {
   // Fetch filter data and generate vehicles with images
   useEffect(() => {
     const fetchFilterData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
+      try {        
         const token = localStorage.getItem('token');
         if (!token) {
           handleUnauthorized();
@@ -506,9 +505,6 @@ function Dashboard() {
             status: err.response?.status
           });
         }
-        setError('Failed to load vehicle data. Please try again later.');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -1208,20 +1204,6 @@ function Dashboard() {
     }
   ];
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className="text-center">
-          <FaSpinner className="animate-spin h-12 w-12 text-purple-600 mx-auto mb-4" />
-          <p className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-            {t.error.loading}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   // Error state
   if (error) {
     return (
@@ -1244,10 +1226,34 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-white text-gray-800">
-      {/* Top Header Section */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-          <div className="flex justify-between items-center h-8 sm:h-10">
+      {/* Background Gradients */}
+      <div className="fixed inset-0 -z-10 w-full h-full">
+        {/* Left Green Gradient */}
+        <div className="absolute left-0 top-0 h-full w-1/3" style={{
+          backgroundImage: `url(${gradientLeft})`,
+          backgroundSize: 'auto 100%',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'left center',
+          zIndex: 0
+        }}></div>
+        
+        {/* Bottom Right Blue Gradient */}
+        <div className="absolute right-0 bottom-0 h-1/2 w-1/3" style={{
+          backgroundImage: `url(${gradientRight})`,
+          backgroundSize: '100% auto',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right bottom',
+          zIndex: 0
+        }}></div>
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10">
+
+        {/* Top Header Section */}
+        <div className="bg-white/90">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <div className="flex justify-between items-center h-8 sm:h-10">
             <div className="flex items-center space-x-2">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
@@ -1270,70 +1276,28 @@ function Dashboard() {
               </button>
             </div>
           </div>
+          </div>
         </div>
-      </div>
 
-      {/* Navbar Section with Gradient Background */}
-      <div className="relative">
-        {/* Gradient Background for Navbar */}
-        <div className="absolute inset-0 -z-10">
-          <div className="absolute top-0 left-0 w-1/2 h-full" style={{
-            backgroundImage: 'url(/gradientleft.png)',
-            backgroundPosition: 'left top',
-            backgroundSize: 'cover',
-            backgroundRepeat: 'no-repeat',
-            zIndex: 0,
-            backgroundColor: 'transparent'
-          }}></div>
-          
-          <div className="absolute bottom-0 right-0 w-1/2 h-full" style={{
-            backgroundImage: 'url(/gradientright bottom.png)',
-            backgroundPosition: 'right bottom',
-            backgroundSize: 'cover',
-            backgroundRepeat: 'no-repeat',
-            zIndex: 0,
-            backgroundColor: 'transparent'
-          }}></div>
-          
-          {/* White overlay with opacity */}
-          <div className="absolute inset-0 bg-white/90"></div>
+        {/* Navbar Section */}
+        <div className="relative">
+          <Navbar 
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            language={language}
+            setLanguage={setLanguage}
+            userProfile={userProfile}
+            handleLogout={handleLogout}
+          />
         </div>
-        
-        <Navbar 
-          isDark={isDark}
-          toggleTheme={toggleTheme}
-          language={language}
-          setLanguage={setLanguage}
-          userProfile={userProfile}
-          handleLogout={handleLogout}
-        />
-      </div>
 
-      {/* Main Content */}
-      {/* Hero Section with Gradient Background */}
-      <section className="relative w-full bg-white">
+        {/* Hero Section */}
+        <section className="relative w-full" style={{
+          background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)',
+          paddingBottom: '2rem'
+        }}>
         <div className="relative max-w-[2000px] mx-auto">
-          <div className="relative w-full z-10 min-h-[250px] sm:min-h-[300px]">
-            {/* Background with white overlay */}
-            <div className="absolute inset-0 bg-white/80 z-0"></div>
-            
-            {/* Left gradient background */}
-            <div 
-              className="absolute top-0 left-0 w-1/3 h-full"
-              style={{
-                background: 'url(/gradientleft.png) left top/contain no-repeat',
-                zIndex: 1
-              }}
-            ></div>
-            
-            {/* Right gradient background */}
-            <div 
-              className="absolute bottom-0 right-0 w-1/3 h-full"
-              style={{
-                background: 'url(/gradientright%20bottom.png) right bottom/contain no-repeat',
-                zIndex: 1
-              }}
-            ></div>
+          <div className="relative w-full z-10 min-h-[250px] sm:min-h-[300px] pt-8 sm:pt-12 pb-12 sm:pb-16">
             
             {/* Content */}
             <div className="relative z-10 pt-8 sm:pt-12 pb-12 sm:pb-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1754,13 +1718,11 @@ function Dashboard() {
                             )}
                           </div>
                             <div className="p-4 flex-grow flex flex-col">
-                              <div className="flex justify-between items-center mb-2">
-                                <h3 className="text-lg font-bold text-gray-900">{vehicle.title}</h3>
-                                <span className="text-lg font-bold text-emov-purple">{vehicle.price}</span>
-                              </div>
+                              <h3 className="text-lg font-bold text-gray-900 mb-1">{vehicle.title.split(' ').slice(0, 2).join(' ')}</h3>
+                              <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
                               
-                              <div className="flex items-center text-sm text-gray-500 mb-4">
-                                <span>{vehicle.year}</span>
+                              <div className="flex items-center text-sm text-gray-500 mb-3">
+                                <span>{vehicle.title.split(' ').slice(2).join(' ')}</span>
                                 <span className="mx-2">•</span>
                                 <span className="flex items-center">
                                   <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1770,33 +1732,14 @@ function Dashboard() {
                                 </span>
                               </div>
                               
-                              <div className="grid grid-cols-3 gap-2 text-xs text-gray-500 mb-4">
-                                <div className="flex flex-col items-center p-2 bg-gray-50 rounded">
-                                  <svg className="w-4 h-4 mb-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                                  </svg>
-                                  <span>{vehicle.transmission}</span>
-                                </div>
-                                <div className="flex flex-col items-center p-2 bg-gray-50 rounded">
-                                  <svg className="w-4 h-4 mb-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                  </svg>
-                                  <span>{vehicle.fuel}</span>
-                                </div>
-                                <div className="flex flex-col items-center p-2 bg-gray-50 rounded">
-                                  <svg className="w-4 h-4 mb-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  </svg>
-                                  <span>{vehicle.location}</span>
-                                </div>
+                              <div className="flex items-center text-sm text-gray-500">
+                                <svg className="w-4 h-4 mr-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span>{vehicle.location}</span>
                               </div>
                               
-                              <div className="mt-auto pt-3 border-t border-gray-100">
-                                <button className="w-full py-2 bg-emov-purple text-white font-medium rounded hover:bg-opacity-90 transition-colors">
-                                  View Details
-                                </button>
-                              </div>
                           </div>
                         </div>
                       ))}
@@ -1903,10 +1846,27 @@ function Dashboard() {
                               </div>
                             )}
                           </div>
-                          <div className="p-5">
-                            <div className="flex justify-between items-start mb-3">
-                              <h3 className="text-sm font-medium text-gray-900 line-clamp-1 pr-2">{vehicle.title}</h3>
-                              <span className="text-sm font-medium text-emov-purple whitespace-nowrap">{vehicle.price}</span>
+                          <div className="p-4 flex-grow flex flex-col">
+                            <h3 className="text-lg font-bold text-gray-900 mb-1">{vehicle.title.split(' ').slice(0, 2).join(' ')}</h3>
+                            <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
+                            
+                            <div className="flex items-center text-sm text-gray-500 mb-3">
+                              <span>{vehicle.title.split(' ').slice(2).join(' ')}</span>
+                              <span className="mx-2">•</span>
+                              <span className="flex items-center">
+                                <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {vehicle.mileage}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center text-sm text-gray-500">
+                              <svg className="w-4 h-4 mr-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                              </svg>
+                              <span>{vehicle.location}</span>
                             </div>
                           </div>
                         </div>
@@ -2063,6 +2023,7 @@ function Dashboard() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }

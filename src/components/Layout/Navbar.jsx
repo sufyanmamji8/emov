@@ -78,9 +78,10 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
           <div className="flex items-center space-x-2">
             {/* Hamburger Menu Button - Visible only on mobile */}
             <button
-              className="hamburger-menu md:hidden p-1 text-white focus:outline-none"
+              className="hamburger-menu md:hidden p-1 focus:outline-none"
               onClick={toggleMobileMenu}
               aria-label="Toggle menu"
+              style={{ color: 'var(--emov-green)' }}
             >
               {isMobileMenuOpen ? (
                 <FaTimes className="w-4 h-4" />
