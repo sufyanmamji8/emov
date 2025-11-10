@@ -69,7 +69,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
   };
 
   return (
-    <nav className="w-full py-2 sm:py-3 px-4 sm:px-6 lg:px-8 relative z-50 bg-transparent">
+    <nav className="w-full py-0 sm:py-3 pl-0 sm:pl-2 lg:pl-4 pr-4 sm:pr-6 lg:pr-8 relative z-50 bg-transparent">
       
       <div className="relative z-10 max-w-7xl mx-auto flex items-center justify-between">
         {/* Left side - Logo and Navigation Links */}
@@ -91,18 +91,11 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
             </button>
 
             {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center">
+            <div className="flex items-center justify-center h-16 sm:h-20">
+              <div className="w-auto h-3/4 flex items-center px-2">
                 <img 
-                  src="/loginemov.png" 
+                  src="/loginemovv.png" 
                   alt="Emov Logo" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="h-5 sm:h-6">
-                <img 
-                  src="/emovfont.png" 
-                  alt="Emov" 
                   className="h-full w-auto object-contain"
                 />
               </div>
@@ -132,41 +125,19 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               My Ads
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
             </a>
+               <a 
+              href="/my-ads" 
+              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+            >
+              More
+              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
+            </a>
           </div>
         </div>
 
-        {/* Right side controls */}
-        <div className="flex items-center space-x-3 sm:space-x-4">
-          {/* Desktop Language Selector and Theme Toggle */}
-          <div className="hidden md:flex items-center space-x-4">
-            {/* Language Selector */}
-            <div className="relative">
-              <select 
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className={`${isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} pl-3 pr-10 py-1.5 sm:pl-4 sm:pr-12 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 border rounded-md ${isDark ? 'border-gray-600 focus:ring-white' : 'border-gray-300 focus:ring-gray-500'} appearance-none`}
-              >
-                <option value="english">EN</option>
-                <option value="urdu">UR</option>
-                <option value="french">FR</option>
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
-                <FaGlobe className={`${isDark ? 'text-gray-300' : 'text-gray-500'} w-3.5 h-3.5 sm:w-4 sm:h-4`} />
-                <FaCaretDown className={`ml-1 ${isDark ? 'text-gray-300' : 'text-gray-500'} w-3 h-3`} />
-              </div>
-            </div>
-            
-            {/* Theme Toggle Button */}
-            <button 
-              onClick={toggleTheme}
-              className={`focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl ${isDark ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
-              style={{ borderRadius: '12px' }}
-              aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
-            </button>
-          </div>
-
+        {/* Right side - Theme Toggle, Language Selector, and Profile (Commented Out) */}
+        {false && (
+        <div className="flex items-center space-x-4 sm:space-x-6">
           {/* User Profile Dropdown */}
           <div className="relative profile-dropdown">
             <button
@@ -255,6 +226,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
             </div>
           </div>
         </div>
+        )}
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -320,6 +292,13 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   onClick={handleNavLinkClick}
                 >
                   My Ads
+                </a>
+                 <a 
+                  href="/" 
+                  className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
+                  onClick={handleNavLinkClick}
+                >
+                  More
                 </a>
               </div>
 

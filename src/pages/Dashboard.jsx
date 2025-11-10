@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater } from 'react-icons/fa';
+import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater, FaArrowRight } from 'react-icons/fa';
+import { FiMapPin, FiCalendar } from 'react-icons/fi';
 import axios from 'axios';
 import { useTheme } from '../hooks/useTheme';
 import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
 
-// Gradient image paths from public folder - Vite requires paths to public assets to be absolute from the public folder
-const gradientLeft = '/gradientleft.png';
-const gradientRight = '/gradientright bottom.png';
+// Gradient image paths from public folder
+const gradientLeft = 'gradientleft.png';
+// Encode the space in the filename
+const gradientRight = 'gradientrightbottom.png';
 
 // Debug: Log image paths and check if they're accessible
 console.log('Gradient Left Path:', gradientLeft);
@@ -29,18 +31,22 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
     <button
       onClick={onPrev}
       disabled={!canGoPrev}
-      className={`absolute -left-16 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg hover:bg-gray-100 transition-colors ${!canGoPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`absolute -left-7 top-1/2 -translate-y-1/2  z-10 w-12 h-12 flex items-center justify-center bg-transparent hover:bg-transparent transition-colors ${!canGoPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
       aria-label={`Previous ${section}`}
     >
-      <FaChevronLeft className="w-6 h-6 text-gray-700" />
+      <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-300 bg-white hover:bg-gray-50 transition-colors">
+        <FaChevronLeft className="w-5 h-5 text-emov-purple" />
+      </div>
     </button>
     <button
       onClick={onNext}
       disabled={!canGoNext}
-      className={`absolute -right-16 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center rounded-full bg-white shadow-lg hover:bg-gray-100 transition-colors ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`absolute -right-7 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center bg-transparent hover:bg-transparent transition-colors ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
       aria-label={`Next ${section}`}
     >
-      <FaChevronRight className="w-6 h-6 text-gray-700" />
+      <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-300 bg-white hover:bg-gray-50 transition-colors">
+        <FaChevronRight className="w-5 h-5 text-emov-purple" />
+      </div>
     </button>
   </>
 );
@@ -119,7 +125,7 @@ function Dashboard() {
   const scrollLeft = (tab, items = null, itemsPerRow = 4) => {
     setCurrentSlides(prevSlides => {
       if (tab === 'Recently Added' || tab === 'Featured Vehicles') {
-        const maxSlide = Math.ceil((items || []).length / (itemsPerRow * 2)) - 1;
+        const maxSlide = Math.ceil((items || []).length / itemsPerRow) - 1;
         const newSlide = Math.max(prevSlides[tab] - 1, 0);
         return { ...prevSlides, [tab]: newSlide };
       } else {
@@ -137,7 +143,7 @@ function Dashboard() {
   const scrollRight = (tab, items = null, itemsPerRow = 4) => {
     setCurrentSlides(prevSlides => {
       if (tab === 'Recently Added' || tab === 'Featured Vehicles') {
-        const maxSlide = Math.ceil((items || []).length / (itemsPerRow * 2)) - 1;
+        const maxSlide = Math.ceil((items || []).length / itemsPerRow) - 1;
         const newSlide = Math.min(prevSlides[tab] + 1, maxSlide);
         return { ...prevSlides, [tab]: newSlide };
       } else {
@@ -166,7 +172,7 @@ function Dashboard() {
   
   const canScrollRight = (tab, items = null, itemsPerRow = 4) => {
     if (tab === 'Recently Added' || tab === 'Featured Vehicles') {
-      const maxSlide = Math.ceil((items || []).length / (itemsPerRow * 2)) - 1;
+      const maxSlide = Math.ceil((items || []).length / itemsPerRow) - 1;
       return currentSlides[tab] < maxSlide;
     } else {
       const transformedData = transformApiData();
@@ -1225,59 +1231,102 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white text-gray-800">
-      {/* Background Gradients */}
-      <div className="fixed inset-0 -z-10 w-full h-full">
-        {/* Left Green Gradient */}
-        <div className="absolute left-0 top-0 h-full w-1/3" style={{
-          backgroundImage: `url(${gradientLeft})`,
-          backgroundSize: 'auto 100%',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'left center',
-          zIndex: 0
-        }}></div>
+ <div className="min-h-screen bg-white text-gray-800">
+      {/* Gradient Background Section - Wrapping all three sections */}
+       <div className="relative z-10">
+      <div className="relative w-full min-h-[400px] md:min-h-[500px] bg-white overflow-hidden">
+        {/* Left Gradient - Responsive */}
+        {/* Left Gradient - Full Height */}
+        <div 
+          className="absolute left-0 top-0 w-1/2 sm:w-1/3 md:w-1/4 h-full overflow-hidden"
+          style={{
+            backgroundImage: `url(/${gradientLeft})`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'left center',
+            backgroundRepeat: 'no-repeat',
+            zIndex: 0,
+            opacity: 0.8,
+            borderTopRightRadius: '9999px',
+            borderBottomRightRadius: '9999px',
+            clipPath: 'inset(0 0 0 0 round 0 9999px 9999px 0)',
+            boxShadow: '8px 0 15px -5px rgba(0, 0, 0, 0.15)',
+            transform: 'scaleX(1.2) scaleY(1.1) translateX(-5%)'
+          }}
+        />
         
-        {/* Bottom Right Blue Gradient */}
-        <div className="absolute right-0 bottom-0 h-1/2 w-1/3" style={{
-          backgroundImage: `url(${gradientRight})`,
-          backgroundSize: '100% auto',
-          backgroundRepeat: 'no-repeat',
-          backgroundPosition: 'right bottom',
-          zIndex: 0
-        }}></div>
-      </div>
-      
-      {/* Content */}
-      <div className="relative z-10">
-
-        {/* Top Header Section */}
-        <div className="bg-white/90">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-            <div className="flex justify-between items-center h-8 sm:h-10">
+        {/* Right Gradient - Bottom of Hero - Maximum Size */}
+        <div 
+          className="absolute right-0 bottom-0 w-5/6 md:w-2/3 h-4/5"
+          style={{
+            backgroundImage: `url(/${gradientRight})`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'right bottom',
+            backgroundRepeat: 'no-repeat',
+            opacity: 0.8,
+            zIndex: 0
+          }}
+        />
+        
+        {/* Wrapper for all three sections */}
+       
+          {/* Top Header Section */}
+          <div className="bg-white/90 py-4 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl  mx-auto flex justify-between items-center h-8 sm:h-10">
             <div className="flex items-center space-x-2">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
               <span className="text-sm font-medium text-gray-700">Download App</span>
             </div>
+
+               {/* Right side controls */}
+                    <div className="flex items-center space-x-3 sm:space-x-4">
+                      {/* Desktop Language Selector and Theme Toggle */}
+                      <div className="hidden md:flex items-center space-x-4">
+                        {/* Language Selector */}
+                        <div className="relative">
+                          <select 
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                            className={`${isDark ? 'bg-transparent text-white' : 'bg-transparent text-violet-600'} pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none`}
+                          >
+                            <option value="english">English</option>
+                            <option value="urdu">Urdu</option>
+                            <option value="french">French</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
+                            <FaCaretDown className={`${isDark ? 'text-gray-300' : 'text-gray-500'} w-3 h-3`} />
+                          </div>
+                        </div>
+                        
+                        {/* Theme Toggle Button */}
+                        <button 
+                          onClick={toggleTheme}
+                          className={`focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl ${isDark ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                          style={{ borderRadius: '12px' }}
+                          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                        >
+                          {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                        </button>
+                      </div>
             
             <div className="flex items-center space-x-4">
-              <button className="text-sm font-medium text-gray-700">
-                Sign In
+              <button className="flex items-center space-x-1 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <span>Sign In</span>
               </button>
-              <button className="text-white px-4 py-1 rounded text-sm font-medium transition-colors"
+              <button className="flex items-center space-x-1 text-black px-4 py-1 rounded-full text-sm font-medium transition-colors"
                 style={{
-                  backgroundColor: 'var(--emov-green, #0DFF9A)',
+                  backgroundColor: 'var(--emov-green, #27c583ff)',
                 }}
                 onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
                 onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
               >
-                Sign Up
+                <span>Sign Up</span>
               </button>
+              
             </div>
           </div>
           </div>
-        </div>
 
         {/* Navbar Section */}
         <div className="relative">
@@ -1292,32 +1341,28 @@ function Dashboard() {
         </div>
 
         {/* Hero Section */}
-        <section className="relative w-full" style={{
-          background: 'linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%)',
-          paddingBottom: '2rem'
-        }}>
-        <div className="relative max-w-[2000px] mx-auto">
-          <div className="relative w-full z-10 min-h-[250px] sm:min-h-[300px] pt-8 sm:pt-12 pb-12 sm:pb-16">
-            
-            {/* Content */}
-            <div className="relative z-10 pt-8 sm:pt-12 pb-12 sm:pb-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative w-full overflow-hidden pb-12 sm:pb-16 ">
+          <div className="relative max-w-[2000px] mx-auto">
+              {/* Content */}
               {/* Hero Text */}
-              <div className="text-center mb-4 sm:mb-6">
-                <h1 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-3">
-                  {t.findVehicles}
-                </h1>
-                <p className="text-gray-800 text-base sm:text-lg max-w-2xl mx-auto">
-                  {t.tagline}
-                </p>
+              <div className="text-left mt-8 md:mt-5 px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
+                <div className="ml-0 md:ml-16 max-w-4xl">
+                  <h1 className="text-gray-800 font-semibold text-base sm:text-2xl md:text-5xl font-normal mb-1 sm:mb-3 leading-tight whitespace-nowrap">
+                    {t.findVehicles}
+                  </h1>
+                  <h1 className="text-lg sm:text-3xl md:text-6xl font-normal mb-2 sm:mb-4 leading-tight text-gray-400 whitespace-nowrap">
+                    {t.tagline}
+                  </h1>
+                </div>
               </div>
 
               {/* Search Bar */}
-              <div className="max-w-2xl mx-auto px-4 sm:px-6">
+              <div className="w-full px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none z-10">
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
-                      className="h-6 w-6 text-emov-purple" 
+                      className="h-6 w-6 text-gray-400" 
                       fill="none" 
                       viewBox="0 0 24 24" 
                       stroke="currentColor"
@@ -1336,30 +1381,39 @@ function Dashboard() {
                   </div>
                   <input
                     type="text"
-                    className="w-full pl-10 sm:pl-12 pr-12 sm:pr-14 py-3 sm:py-4 bg-white/90 backdrop-blur-sm border-2 border-white/80 focus:border-emov-purple/70 focus:ring-2 focus:ring-emov-purple/30 text-sm sm:text-base placeholder-gray-500 text-gray-800"
-                    style={{ 
+                    className="w-full pl-10 sm:pl-12 pr-12 sm:pr-14 py-3 sm:py-4 bg-white/30 backdrop-blur-lg border-2 border-white/40 focus:border-white/70 focus:ring-2 focus:ring-white/30 text-sm sm:text-base placeholder-gray-600 text-gray-800"
+                    style={{
                       borderRadius: '12px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                      transition: 'all 0.2s ease-in-out'
+                      transition: 'all 0.3s ease-in-out',
+                      backdropFilter: 'blur(8px)',
+                      WebkitBackdropFilter: 'blur(8px)'
                     }}
                     placeholder={t.searchPlaceholder}
                   />
                   <button className="absolute inset-y-0 right-0 pr-4 sm:pr-5 flex items-center focus:outline-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-emov-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
                   </button>
                 </div>
-              </div>
             </div>
-          </div>
+          
         </div>
+        
+       
       </section>
-
+      
+       
+        </div>
+        </div>
+         </div>
+         
+       
+      
       {/* Banner Section */}
       <section className="w-full bg-white py-6 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="w-full rounded-xl overflow-hidden shadow-sm">
+          <div className="w-full rounded-xl overflow-hidden ">
             <img 
               src="/banner.png" 
               alt="Special Offers" 
@@ -1374,128 +1428,154 @@ function Dashboard() {
       {/* Main Content */}
       <main className="w-full relative z-10">
         {/* Browse Used Vehicles Section with Tabs */}
-        <section className="w-full bg-gray-100 py-12 sm:py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="w-full bg-transparent rounded-xl overflow-hidden">
-              <div className="w-full p-6 bg-gray-100 rounded-t-lg">
-                <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.browseUsedVehicles}</h2>
-                
-                {/* Tabs with underline for active state */}
-                <div className="w-full overflow-x-auto pb-1">
-                  <div className="flex space-x-1 border-b border-gray-100 w-max min-w-full">
-                    {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
-                      <button
-                        key={tab}
-                        className={`px-4 py-3 text-sm sm:text-base font-medium whitespace-nowrap relative ${
-                          activeTab === tab
-                            ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
-                            : 'text-gray-600'
-                        }`}
-                        onClick={() => setActiveTab(tab)}
-                      >
-                        {tab}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Tab Content with 2-line Navigation */}
-              <div className="relative w-full pb-6 px-6 bg-gray-100 rounded-lg shadow-sm">
-                <button
-                  onClick={() => scrollLeft(activeTab)}
-                  className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg border-2 border-gray-100 text-gray-800 ${!canScrollLeft(activeTab) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canScrollLeft(activeTab)}
-                >
-                  <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5 transform rotate-180" />
-                </button>
-
-                <button
-                  onClick={() => scrollRight(activeTab)}
-                  className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg border-2 border-gray-100 text-gray-800 ${!canScrollRight(activeTab) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!canScrollRight(activeTab)}
-                >
-                  <FaChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-
-              {/* Carousel Container */}
-              <div className="relative w-full overflow-hidden">
-              {/* Carousel Track */}
-              <div 
-                ref={slideRef}
-                className="flex transition-transform duration-300 ease-in-out w-full"
-                style={{ transform: `translateX(-${currentSlides[activeTab] * 100}%)` }}
+    <section className="w-full bg-gray-50 py-12 sm:py-16">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="w-full bg-transparent rounded-xl overflow-hidden">
+      <div className="w-full p-6 bg-gray-50 rounded-t-lg">
+        <h2 style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.browseUsedVehicles}</h2>
+        
+        {/* Tabs with underline for active state */}
+        <div className="w-full overflow-x-auto pb-1">
+          <div style={{ fontSize: '20px' }} className="flex space-x-1 border-b border-gray-100 w-max min-w-full">
+            {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
+              <button
+                key={tab}
+                className={`px-4 py-3 text-sm sm:text-base font-medium whitespace-nowrap relative ${
+                  activeTab === tab
+                    ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
+                    : 'text-gray-600'
+                }`}
+                onClick={() => setActiveTab(tab)}
               >
-                {(() => {
-                  const transformedData = transformApiData();
-                  let currentTabData = [];
-                  
-                  // Handle data for different tabs
-                  const tabDataMap = {
-                    'Category': 'categories',
-                    'Model': 'models',
-                    'Brand': 'brands',
-                    'Body Type': 'bodytypes',  // Match the exact tab name 'Body Type' with the data key 'bodytypes'
-                    'Budget': 'budgets'
-                  };
-                  
-                  // Convert activeTab to match the expected format (handle spaces)
-                  const normalizedTab = activeTab.replace(/\s+/g, ' ');
-                  let dataKey = tabDataMap[normalizedTab];
-                  
-                  // If no direct match, try to find a matching key
-                  if (!dataKey) {
-                    const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
-                    dataKey = Object.entries(tabDataMap).find(([key]) => 
-                      key.toLowerCase().replace(/\s+/g, '') === lowerTab
-                    )?.[1];
-                  }
-                  currentTabData = Array.isArray(transformedData[dataKey]) ? 
-                    transformedData[dataKey] : [];
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      {/* Tab Content with 2-line Navigation */}
+      <div className="relative w-full pb-6 px-6 bg-gray-50 rounded-lg ">
+        {/* Carousel Container - Added relative positioning for arrows */}
+        <div className="relative w-full overflow-hidden">
+          {/* Left Arrow - Positioned relative to carousel container */}
+          <button
+            onClick={() => scrollLeft(activeTab)}
+            className={`absolute left-0 border border-gray-300 top-1/2 -translate-y-1/2 z-10 bg-white p-3 rounded-full  border-2 border-gray-100 text-gray-800 hover:bg-gray-50 transition-colors ${
+              !canScrollLeft(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
+            }`}
+            disabled={!canScrollLeft(activeTab)}
+          >
+            <FaChevronRight style={{ color: '#7B3DFF'}} className="w-4 h-4 sm:w-5 sm:h-5 transform rotate-180" />
+          </button>
 
-                  if (currentTabData.length === 0) {
-                    return (
-                      <div className="w-full py-8 text-center flex-shrink-0" style={{ width: '100%' }}>
-                        <p className="text-gray-500">
-                          {t.noDataAvailable || 'No data available for this category'}
-                        </p>
-                      </div>
-                    );
-                  }
+          {/* Right Arrow - Positioned relative to carousel container */}
+          <button
+            onClick={() => scrollRight(activeTab)}
+            className={`absolute right-5 top-1/2 -translate-y-1/2 z-10 bg-white  p-3 rounded-full  border-2 border-gray-00 text-gray-800 hover:bg-gray-50 transition-colors ${
+              !canScrollRight(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
+            }`}
+            disabled={!canScrollRight(activeTab)}
+          >
+            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
 
-                  // Calculate number of slides needed
-                  const totalSlides = Math.ceil(currentTabData.length / itemsPerPage);
-                  const slides = [];
+          {/* Carousel Track */}
+          <div 
+            ref={slideRef}
+            className="flex transition-transform duration-300 ease-in-out w-full"
+            style={{ transform: `translateX(-${currentSlides[activeTab] * 100}%)` }}
+          >
+            {(() => {
+              const transformedData = transformApiData();
+              let currentTabData = [];
+              
+              // Handle data for different tabs
+              const tabDataMap = {
+                'Category': 'categories',
+                'Model': 'models',
+                'Brand': 'brands',
+                'Body Type': 'bodytypes',
+                'Budget': 'budgets'
+              };
+              
+              // Convert activeTab to match the expected format (handle spaces)
+              const normalizedTab = activeTab.replace(/\s+/g, ' ');
+              let dataKey = tabDataMap[normalizedTab];
+              
+              // If no direct match, try to find a matching key
+              if (!dataKey) {
+                const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
+                dataKey = Object.entries(tabDataMap).find(([key]) => 
+                  key.toLowerCase().replace(/\s+/g, '') === lowerTab
+                )?.[1];
+              }
+              currentTabData = Array.isArray(transformedData[dataKey]) ? 
+                transformedData[dataKey] : [];
 
-                  // Create slides with items
-                  for (let i = 0; i < totalSlides; i++) {
-                    const slideItems = currentTabData.slice(i * itemsPerPage, (i + 1) * itemsPerPage);
+              if (currentTabData.length === 0) {
+                return (
+                  <div className="w-full py-8 text-center flex-shrink-0" style={{ width: '100%' }}>
+                    <p className="text-gray-500">
+                      {t.noDataAvailable || 'No data available for this category'}
+                    </p>
+                  </div>
+                );
+              }
 
-                    slides.push(
-                      <div 
-                        key={`slide-${i}`} 
-                        className="flex-shrink-0 w-full"
-                        style={{ width: '100%' }}
-                      >
-                        <div className={`grid grid-cols-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full px-2 sm:px-4`}>
-                          {slideItems.map((item, index) => {
-                            const displayName = item.displayName || item.name || item.CategoryName || 'Unnamed Category';
-                            const itemCount = typeof item.count === 'number' ? item.count : 0;
-                            
-                            // Standard card layout for all tabs
-                            const cardContent = () => (
-                              <div className="flex flex-col items-center justify-center p-3 h-full w-full">
-                                {item.image || item.icon ? (
-                                  <div className="w-10 h-10 mb-2 flex items-center justify-center">
-                                    {item.icon ? (
-                                      <div style={{ color: '#9E9E9E' }}>
-                                        {React.cloneElement(item.icon, { size: 24 })}
-                                      </div>
-                                    ) : (
+              // Calculate number of slides needed
+              const totalSlides = Math.ceil(currentTabData.length / itemsPerPage);
+              const slides = [];
+
+              // Create slides with items
+              for (let i = 0; i < totalSlides; i++) {
+                const slideItems = currentTabData.slice(i * itemsPerPage, (i + 1) * itemsPerPage);
+
+                slides.push(
+                  <div 
+                    key={`slide-${i}`} 
+                    className="flex-shrink-0 w-full"
+                    style={{ width: '100%' }}
+                  >
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full px-2 sm:px-4">
+                      {slideItems.map((item, index) => {
+                        const displayName = item.displayName || item.name || item.CategoryName || 'Unnamed Category';
+                        const itemCount = typeof item.count === 'number' ? item.count : 0;
+                        
+                        // Standard card layout for all tabs
+                        const cardContent = () => (
+                          <div className="relative flex flex-col items-center p-3 h-full w-full">
+                            {item.image || item.icon ? (
+                              <div className="relative w-full" style={{ height: '71px' }}>
+                                {item.icon ? (
+                                  <div 
+                                    className="flex items-center justify-center bg-white rounded-full"
+                                    style={{
+                                      position: 'absolute',
+                                      left: '-20px',
+                                      top: '-10px',
+                                      width: '40px',
+                                      height: '40px',
+                                      zIndex: 20,
+                                      border: '1px solid #e9f0feff'
+                                    }}
+                                  >
+                                    {React.cloneElement(item.icon, { size: 20, style: { color: '#878787' } })}
+                                  </div>
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center p-2">
+                                    <div className="relative w-full h-full flex items-center justify-center">
                                       <img 
                                         src={item.image} 
                                         alt={displayName}
                                         className="max-w-full max-h-full object-contain"
+                                        style={{
+                                          maxWidth: '100%',
+                                          maxHeight: '100%',
+                                          width: 'auto',
+                                          height: 'auto',
+                                          objectFit: 'contain'
+                                        }}
                                         onError={(e) => {
                                           e.target.style.display = 'none';
                                           if (e.target.nextSibling) {
@@ -1503,161 +1583,154 @@ function Dashboard() {
                                           }
                                         }}
                                       />
-                                    )}
-                                    {!item.icon && (
-                                      <div className="hidden w-full h-full items-center justify-center text-[#9E9E9E]">
-                                        {displayName.charAt(0).toUpperCase()}
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : null}
-                                <div className="text-center w-full">
-                                  <div className="text-xs sm:text-sm font-medium text-text-primary line-clamp-2">
-                                    {displayName}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-
-                            // Return the appropriate card wrapper based on tab
-                            if (['Budget', 'BodyType', 'Category', 'Brand', 'Model'].includes(activeTab)) {
-                              return (
-                                <div 
-                                  key={`${item.id || index}-${activeTab}`}
-                                  className={`relative flex flex-col h-full rounded-lg cursor-pointer ${
-                                    isDark 
-                                      ? 'bg-gray-800 border border-gray-600' 
-                                      : 'bg-white border-2 border-gray-100'
-                                  }`}
-                                  style={{
-                                    minHeight: '90px',
-                                    boxShadow: isDark 
-                                      ? '0 2px 4px rgba(0,0,0,0.3)' 
-                                      : '0 2px 6px rgba(0,0,0,0.1)'
-                                  }}
-                                >
-                                  {cardContent()}
-                                </div>
-                              );
-                            }
-                            
-                            // Card layout for Model tab (text-based with colored background)
-                            if (activeTab === 'Model') {
-                              return (
-                                <div 
-                                  key={`${item.id || index}-${activeTab}`}
-                                  className={`flex items-center justify-center p-4 rounded-lg text-center cursor-pointer h-full ${
-                                    isDark 
-                                      ? 'bg-gray-700 text-white border border-gray-500' 
-                                      : 'bg-white text-gray-800 border-2 border-gray-300'
-                                  }`}
-                                  style={{
-                                    minHeight: '100px',
-                                    minWidth: '140px',
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
-                                  }}
-                                >
-                                  <div className="font-medium text-sm">
-                                    {displayName}
-                                    {itemCount > 0 && (
-                                      <div className="text-xs mt-2 text-gray-500">
-                                        {itemCount} {t.vehicles || 'vehicles'}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            // Card layout for Body Type tab (similar to Model but without vehicle count)
-                            if (activeTab === 'Body Type') {
-                              return (
-                                <div 
-                                  key={`${item.id || index}-${activeTab}`}
-                                  className={`flex items-center justify-center p-4 rounded-lg text-center cursor-pointer h-full ${
-                                    isDark 
-                                      ? 'bg-gray-700 text-white border border-gray-500' 
-                                      : 'bg-white text-gray-800 border-2 border-gray-300'
-                                  }`}
-                                  style={{
-                                    minHeight: '100px',
-                                    minWidth: '140px',
-                                    boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
-                                  }}
-                                >
-                                  <div className="font-medium text-sm">
-                                    {displayName}
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            // Card layout for other tabs (Category, Brand, etc.)
-                            return (
-                              <div 
-                                key={`${item.id || index}-${activeTab}`}
-                                className={`relative flex flex-col h-full rounded-xl overflow-hidden cursor-pointer ${
-                                  isDark 
-                                    ? 'bg-gray-700 border border-gray-600' 
-                                    : 'bg-white border-2 border-gray-100'
-                                }`}
-                                style={{
-                                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                }}
-                              >
-                                {/* Image Container */}
-                                <div className="relative pt-[75%] bg-gray-100">
-                                  <div className="absolute inset-0 flex items-center justify-center p-4">
-                                    {createItemBackground(item, item.type || activeTab.toLowerCase())}
-                                  </div>
-                                </div>
-                                
-                                {/* Content */}
-                                <div className="p-3 flex-1 flex flex-col">
-                                  <h3 
-                                    className={`text-sm font-semibold text-center ${
-                                      isDark ? 'text-white' : 'text-gray-800'
-                                    }`}
-                                    title={displayName}
-                                  >
-                                    {displayName}
-                                  </h3>
-                                  {itemCount > 0 && (
-                                    <div className="mt-1 text-center">
-                                      <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                                        {itemCount} {t.vehicles || 'vehicles'}
-                                      </span>
                                     </div>
-                                  )}
-                                </div>
+                                  </div>
+                                )}
+                                {!item.icon && (
+                                  <div className="hidden w-full h-full items-center justify-center text-[#878787]">
+                                    {displayName.charAt(0).toUpperCase()}
+                                  </div>
+                                )}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  }
+                            ) : null}
+                            <div className="text-center w-full">
+                              <div className="text-base mt-4 font-medium text-text-primary line-clamp-2">
+                                {displayName}
+                              </div>
+                            </div>
+                          </div>
+                        );
 
-                  return slides;
-                })()}
-              </div> {/* End of carousel track */}
-            </div> {/* End of carousel container */}
-          </div> {/* End of tab content */}
-        </div> {/* End of white rounded container */}
-      </div> {/* End of max-w-7xl container */}
-    </section>
+                        // Return the appropriate card wrapper based on tab
+                        if (['Budget', 'BodyType', 'Category', 'Brand', 'Model'].includes(activeTab)) {
+                          return (
+                            <div 
+                              key={`${item.id || index}-${activeTab}`}
+                              className={`relative flex flex-col rounded-lg cursor-pointer ${
+                                isDark 
+                                  ? 'bg-gray-800 border border-gray-600' 
+                                  : 'bg-white border-2 border-[#D9D9D9]'
+                              }`}
+                              style={{
+                                width: '180px',
+                                height: '158px',
+                              }}
+                            >
+                              {cardContent()}
+                            </div>
+                          );
+                        }
+                        
+                        // Card layout for Model tab (text-based with colored background)
+                        if (activeTab === 'Model') {
+                          return (
+                            <div 
+                              key={`${item.id || index}-${activeTab}`}
+                              className={`flex items-center justify-center p-4 rounded-lg text-center cursor-pointer h-full ${
+                                isDark 
+                                  ? 'bg-gray-700 text-white border border-gray-500' 
+                                  : 'bg-white text-gray-800 border-2 border-gray-300'
+                              }`}
+                              style={{
+                                minHeight: '100px',
+                                minWidth: '140px',
+                              }}
+                            >
+                              <div className="font-medium text-sm">
+                                {displayName}
+                                {itemCount > 0 && (
+                                  <div className="text-xs mt-2 text-gray-500">
+                                    {itemCount} {t.vehicles || 'vehicles'}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // Card layout for Body Type tab (matching other tabs)
+                        if (activeTab === 'Body Type') {
+                          return (
+                            <div 
+                              key={`${item.id || index}-${activeTab}`}
+                              className={`relative flex flex-col rounded-lg cursor-pointer ${
+                                isDark 
+                                  ? 'bg-gray-800 border border-gray-600' 
+                                  : 'bg-white border-2 border-[#D9D9D9]'
+                              }`}
+                              style={{
+                                width: '180px',
+                                height: '158px',
+                              }}
+                            >
+                              {cardContent()}
+                            </div>
+                          );
+                        }
+                        
+                        // Card layout for other tabs (Category, Brand, etc.)
+                        return (
+                          <div 
+                            key={`${item.id || index}-${activeTab}`}
+                            className={`relative flex flex-col h-full rounded-xl overflow-hidden cursor-pointer ${
+                              isDark 
+                                ? 'bg-gray-700 border border-gray-600' 
+                                : 'bg-white border-2 border-gray-100'
+                            }`}
+                          >
+                            {/* Image Container */}
+                            <div className="relative pt-[75%] bg-gray-100">
+                              <div className="absolute inset-0 flex items-center justify-center p-4">
+                                {createItemBackground(item, item.type || activeTab.toLowerCase())}
+                              </div>
+                            </div>
+                            
+                            {/* Content */}
+                            <div className="p-3 flex-1 flex flex-col">
+                              <h3 
+                                className={`text-sm font-semibold text-center ${
+                                  isDark ? 'text-white' : 'text-gray-800'
+                                }`}
+                                title={displayName}
+                              >
+                                {displayName}
+                              </h3>
+                              {itemCount > 0 && (
+                                <div className="mt-1 text-center">
+                                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                                    {itemCount} {t.vehicles || 'vehicles'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }
+
+              return slides;
+            })()}
+          </div> {/* End of carousel track */}
+        </div> {/* End of carousel container */}
+      </div> {/* End of tab content */}
+    </div> {/* End of white rounded container */}
+  </div> {/* End of max-w-7xl container */}
+</section>
 
         {/* Other Services Section */}
         <section className="w-full bg-white py-12 sm:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
+            <h2  style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
             
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
               {otherServices.map((service, index) => (
                 <div 
                   key={index}
-                  className={`overflow-hidden rounded-lg shadow-lg border p-4 sm:p-5 text-center cursor-pointer ${
-                    isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-100 hover:border-gray-300'
+                  className={`overflow-hidden rounded-lg  border border-gray-200 p-4 sm:p-5 text-center cursor-pointer ${
+                    isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100 hover:border-gray-300'
                   }`}
                 >
                   <div className="text-2xl sm:text-3xl mb-3 text-emov-purple">{service.icon}</div>
@@ -1669,218 +1742,239 @@ function Dashboard() {
         </section>
 
         {/* Recently Added Section */}
-        <section className="w-full bg-gray-100 py-12 sm:py-16 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">{t.recentlyAdded}</h2>
-            </div>
-            
-            <div className="relative">
-              <CarouselNavigation
-                onPrev={() => scrollLeft('Recently Added', recentlyAddedVehicles, 4)}
-                onNext={() => scrollRight('Recently Added', recentlyAddedVehicles, 4)}
-                canGoPrev={canScrollLeft('Recently Added')}
-                canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, 4)}
-                section="recently added vehicles"
-              />
-              
-              <div className="relative overflow-hidden">
+   <section className="w-full bg-gray-50 py-12 sm:py-16 relative">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="mb-6">
+      <h2 className="text-2xl font-bold text-gray-900">{t.recentlyAdded}</h2>
+    </div>
+    
+    <div className="relative">
+      <CarouselNavigation
+        onPrev={() => scrollLeft('Recently Added', recentlyAddedVehicles, 4)}
+        onNext={() => scrollRight('Recently Added', recentlyAddedVehicles, 4)}
+        canGoPrev={canScrollLeft('Recently Added')}
+        canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, 4)}
+        section="recently added vehicles"
+      />
+      
+      <div className="relative overflow-hidden">
+        <div 
+          className="flex transition-transform duration-300"
+          style={{
+            transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
+            width: '100%',
+            transition: 'transform 0.3s ease-in-out'
+          }}
+        >
+          {Array(Math.ceil(recentlyAddedVehicles.length / 4)).fill().map((_, groupIndex) => (
+            <div 
+              key={groupIndex}
+              className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+              style={{ minWidth: '100%' }}
+            >
+              {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle, vehicleIndex) => (
                 <div 
-                  className="flex transition-transform duration-300"
-                  style={{
-                    transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
-                    width: '100%',
-                    transition: 'transform 0.3s ease-in-out'
-                  }}
+                  key={`${vehicle.id}-${vehicleIndex}`} 
+                  className="group bg-white rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-md"
                 >
-                  {Array(Math.ceil(recentlyAddedVehicles.length / 4)).fill().map((_, groupIndex) => (
-                    <div 
-                      key={groupIndex}
-                      className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
-                      style={{ minWidth: '100%' }}
-                    >
-                      {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle) => (
-                        <div 
-                          key={vehicle.id} 
-                          className="group bg-white rounded-xl overflow-hidden border border-gray-200 flex flex-col h-full transition-shadow duration-300 hover:shadow-md"
-                        >
-                          <div className="relative h-48 w-full overflow-hidden">
-                            <img 
-                              src="/mockvehicle.png" 
-                              alt={vehicle.title}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                              loading="lazy"
-                            />
-                            {vehicle.isNew && (
-                              <div className="absolute top-3 left-3 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
-                                {t.new}
-                              </div>
-                            )}
-                          </div>
-                            <div className="p-4 flex-grow flex flex-col">
-                              <h3 className="text-lg font-bold text-gray-900 mb-1">{vehicle.title.split(' ').slice(0, 2).join(' ')}</h3>
-                              <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
-                              
-                              <div className="flex items-center text-sm text-gray-500 mb-3">
-                                <span>{vehicle.title.split(' ').slice(2).join(' ')}</span>
-                                <span className="mx-2">•</span>
-                                <span className="flex items-center">
-                                  <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                  </svg>
-                                  {vehicle.mileage}
-                                </span>
-                              </div>
-                              
-                              <div className="flex items-center text-sm text-gray-500">
-                                <svg className="w-4 h-4 mr-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                <span>{vehicle.location}</span>
-                              </div>
-                              
-                          </div>
+                  {/* Image with minimal gap like reference */}
+                  <div className="p-3">
+                    <div className="relative h-48 w-full border border-gray-300 rounded-lg overflow-hidden bg-white p-1">
+                      <img 
+                        src="/mockvehicle.png" 
+                        alt={vehicle.title}
+                        className="w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      {vehicle.isNew && (
+                        <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
+                          {t.new}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  ))}
+                  </div>
+                  
+                  {/* Content area */}
+                  <div className="px-3 pb-3 flex-grow flex flex-col">
+                    {/* Vehicle Title */}
+                    <h3 className="text-base font-semibold text-gray-900 mb-1 leading-tight">
+                      {vehicle.title.split(' ').slice(0, 3).join(' ')}
+                    </h3>
+                    
+                    {/* Vehicle Description */}
+                    <p className="text-sm text-gray-600 mb-0 leading-tight">
+                      {vehicle.title.split(' ').slice(3).join(' ')}
+                    </p>
+                    
+                    {/* Price */}
+                    <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
+                    
+                    {/* Details row - Year and Mileage */}
+                    <div className="flex items-center text-sm text-gray-500 mb-1">
+                      <span>{vehicle.year || '2020'}</span>
+                      <span className="mx-2">|</span>
+                      <span>{vehicle.mileage}</span>
+                    </div>
+                    
+                    {/* Location */}
+                    <div className="flex items-center text-sm text-gray-500">
+                      <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>{vehicle.location}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          </div>
-        </section>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
         {/* Featured Vehicles Section */}
-        <section className="w-full bg-white py-12 sm:py-16 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">{t.featuredVehicles}</h2>
-            </div>
-            
-            <div className="relative">
-              <CarouselNavigation
-                onPrev={() => scrollLeft('Featured Vehicles', featuredVehicles, 4)}
-                onNext={() => scrollRight('Featured Vehicles', featuredVehicles, 4)}
-                canGoPrev={canScrollLeft('Featured Vehicles')}
-                canGoNext={canScrollRight('Featured Vehicles', featuredVehicles, 4)}
-                section="featured vehicles"
-              />
-              
-              <div className="relative overflow-hidden">
-                
+     <section className="w-full bg-white py-12 sm:py-16 relative">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="mb-6">
+      <h2 className="text-2xl font-bold text-gray-900">{t.featuredVehicles}</h2>
+    </div>
+    
+    <div className="relative">
+      <CarouselNavigation
+        onPrev={() => scrollLeft('Featured Vehicles', featuredVehicles, 4)}
+        onNext={() => scrollRight('Featured Vehicles', featuredVehicles, 4)}
+        canGoPrev={canScrollLeft('Featured Vehicles')}
+        canGoNext={canScrollRight('Featured Vehicles', featuredVehicles, 4)}
+        section="featured vehicles"
+      />
+      
+      <div className="relative overflow-hidden">
+        <div 
+          className="flex transition-transform duration-300"
+          style={{
+            transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)`,
+            width: '100%',
+            transition: 'transform 0.3s ease-in-out'
+          }}
+        >
+          {Array(Math.ceil(featuredVehicles.length / 4)).fill().map((_, groupIndex) => (
+            <div 
+              key={groupIndex}
+              className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+              style={{ minWidth: '100%' }}
+            >
+              {[
+                {
+                  id: 1,
+                  title: 'Toyota Camry 2020',
+                  price: '$24,000',
+                  year: '2020',
+                  mileage: '35,000 km',
+                  transmission: 'Automatic',
+                  fuel: 'Petrol',
+                  location: 'New York',
+                  isNew: true
+                },
+                {
+                  id: 2,
+                  title: 'Honda Civic 2021',
+                  price: '$22,500',
+                  year: '2021',
+                  mileage: '25,000 km',
+                  transmission: 'Automatic',
+                  fuel: 'Hybrid',
+                  location: 'Los Angeles',
+                  isNew: false
+                },
+                {
+                  id: 3,
+                  title: 'BMW 3 Series 2019',
+                  price: '$32,000',
+                  year: '2019',
+                  mileage: '28,000 km',
+                  transmission: 'Automatic',
+                  fuel: 'Diesel',
+                  location: 'Miami',
+                  isNew: true
+                },
+                {
+                  id: 4,
+                  title: 'Mercedes C-Class 2020',
+                  price: '$38,500',
+                  year: '2020',
+                  mileage: '18,000 km',
+                  transmission: 'Automatic',
+                  fuel: 'Petrol',
+                  location: 'Chicago',
+                  isNew: false
+                }
+              ].map((vehicle) => (
                 <div 
-                  className="flex transition-transform duration-300"
-                  style={{
-                    transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)`,
-                    width: '100%',
-                    transition: 'transform 0.3s ease-in-out'
-                  }}
+                  key={vehicle.id} 
+                  className="group bg-gray-50 rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-md"
                 >
-                  {Array(Math.ceil(featuredVehicles.length / 4)).fill().map((_, groupIndex) => (
-                    <div 
-                      key={groupIndex}
-                      className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
-                      style={{ minWidth: '100%' }}
-                    >
-                      {[
-                        {
-                          id: 1,
-                          title: 'Toyota Camry 2020',
-                          price: '$24,000',
-                          year: '2020',
-                          mileage: '35,000 km',
-                          transmission: 'Automatic',
-                          fuel: 'Petrol',
-                          location: 'New York',
-                          isNew: true
-                        },
-                        {
-                          id: 2,
-                          title: 'Honda Civic 2021',
-                          price: '$22,500',
-                          year: '2021',
-                          mileage: '25,000 km',
-                          transmission: 'Automatic',
-                          fuel: 'Hybrid',
-                          location: 'Los Angeles',
-                          isNew: false
-                        },
-                        {
-                          id: 3,
-                          title: 'BMW 3 Series 2019',
-                          price: '$32,000',
-                          year: '2019',
-                          mileage: '28,000 km',
-                          transmission: 'Automatic',
-                          fuel: 'Diesel',
-                          location: 'Miami',
-                          isNew: true
-                        },
-                        {
-                          id: 4,
-                          title: 'Mercedes C-Class 2020',
-                          price: '$38,500',
-                          year: '2020',
-                          mileage: '18,000 km',
-                          transmission: 'Automatic',
-                          fuel: 'Petrol',
-                          location: 'Chicago',
-                          isNew: false
-                        }
-                      ].map((vehicle) => (
-                        <div 
-                          key={vehicle.id} 
-                          className="group bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-all duration-300 flex flex-col h-full"
-                        >
-                          <div className="relative h-48 w-full overflow-hidden">
-                            <img 
-                              src="/mockvehicle.png" 
-                              alt={vehicle.title}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                            {vehicle.isNew && (
-                              <div className="absolute top-3 left-3 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
-                                {t.new}
-                              </div>
-                            )}
-                          </div>
-                          <div className="p-4 flex-grow flex flex-col">
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">{vehicle.title.split(' ').slice(0, 2).join(' ')}</h3>
-                            <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
-                            
-                            <div className="flex items-center text-sm text-gray-500 mb-3">
-                              <span>{vehicle.title.split(' ').slice(2).join(' ')}</span>
-                              <span className="mx-2">•</span>
-                              <span className="flex items-center">
-                                <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {vehicle.mileage}
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center text-sm text-gray-500">
-                              <svg className="w-4 h-4 mr-1 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                              </svg>
-                              <span>{vehicle.location}</span>
-                            </div>
-                          </div>
+                  {/* Image with minimal gap like reference */}
+                  <div className="p-3">
+                    <div className="relative h-48 w-full border border-gray-300 rounded-lg overflow-hidden bg-white p-1">
+                      <img 
+                        src="/mockvehicle.png" 
+                        alt={vehicle.title}
+                        className="w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      {vehicle.isNew && (
+                        <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
+                          {t.new}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  ))}
+                  </div>
+                  
+                  {/* Content area - exactly like reference image */}
+                  <div className="px-3 pb-3 flex-grow flex flex-col">
+                    {/* Vehicle Title - Two lines */}
+                    <h3 className="text-base font-semibold text-gray-900 mb-1 leading-tight">
+                      {vehicle.title.split(' ').slice(0, 2).join(' ')}
+                    </h3>
+                    
+                    {/* Vehicle Description - Second line */}
+                    <p className="text-sm text-gray-600 mb-1 leading-tight">
+                      {vehicle.title.split(' ').slice(2).join(' ')}
+                    </p>
+                    
+                    {/* Price - Large and prominent */}
+                    <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
+                    
+                    {/* Details row - Year and Mileage */}
+                    <div className="flex items-center text-sm text-gray-500 mb-1">
+                      <span>{vehicle.year}</span>
+                      <span className="mx-2">|</span>
+                      <span>{vehicle.mileage}</span>
+                    </div>
+                    
+                    {/* Location with icon */}
+                    <div className="flex items-center text-sm text-gray-500">
+                      <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      <span>{vehicle.location}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-          </div>
-        </section>
-
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
         {/* Banner 2 - Full Width */}
-        <section className="w-full bg-gray-100 py-6 sm:py-8">
+        <section className="w-full bg-white py-6 sm:py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="w-full rounded-xl overflow-hidden">
               <img 
@@ -1895,7 +1989,7 @@ function Dashboard() {
         </section>
 
         {/* Featured Brands Section */}
-        <section className="w-full bg-white py-12 sm:py-16">
+        <section className="w-full bg-gray-50 py-12 sm:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Featured Brands</h2>
@@ -1922,12 +2016,12 @@ function Dashboard() {
 
                 return uniqueBrands.map((brand) => (
                   <div key={brand.id} className="flex flex-col items-center group">
-                    <div className="w-24 h-24 rounded-full bg-gray-100 border-2 border-gray-100 p-2 flex items-center justify-center mb-2">
+                    <div className="w-24 h-24 rounded-full bg-white border-2 border-gray-200 p-2 flex items-center justify-center mb-2">
                       {brand.image ? (
                         <img 
                           src={brand.image} 
                           alt={brand.name}
-                          className="h-12 w-auto object-contain bg-gray-100"
+                          className="h-12 w-auto object-contain bg-white"
                           onError={(e) => {
                             e.target.onerror = null;
                             e.target.src = '/placeholder-car.png';
@@ -1948,9 +2042,9 @@ function Dashboard() {
         </section>
 
         {/* Sell Your Vehicle Section with Banner */}
-        <section className="w-full bg-gray-100 py-6 sm:py-8">
+        <section className="w-full bg-white py-6 sm:py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="w-full rounded-xl overflow-hidden shadow-sm">
+            <div className="w-full rounded-xl overflow-hidden">
               <img 
                 src="/banner3.png" 
                 alt="Sell Your Vehicle" 
@@ -1962,6 +2056,9 @@ function Dashboard() {
           </div>
         </section>
       </main>
+          {/* Close the Content Wrapper */}
+         {/* Close the Gradient Background Section */}
+      {/* Close the min-h-screen container */}
 
       {/* Enhanced Footer */}
       <footer className={`py-8 sm:py-12 w-full ${isDark ? 'bg-gray-800' : 'bg-gray-900'} text-white`}>
@@ -2023,7 +2120,6 @@ function Dashboard() {
           </div>
         </div>
       </footer>
-      </div>
     </div>
   );
 }
