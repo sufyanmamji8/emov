@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { useTheme } from '../context/ThemeContext';
+import { FaSun, FaMoon, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authApi from '../services/AuthApi';
 
@@ -15,6 +17,7 @@ const ChangePassword = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   // Get email and OTP from location state
   useEffect(() => {
@@ -160,14 +163,8 @@ const ChangePassword = () => {
   }, [error]);
 
   return (
-    <div className="h-screen bg-white flex overflow-hidden no-scrollbar">
-      {error && (
-        <div className="fixed top-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 z-50 rounded shadow-lg max-w-md">
-          <p className="font-bold">Error</p>
-          <p>{error}</p>
-        </div>
-      )}
-      {/* Left side - Brand Section with Your Gradient */}
+    <div className="min-h-screen flex flex-col md:flex-row bg-bg-primary">
+      {/* Left side - Brand Section */}
       <div 
         className="hidden lg:flex lg:w-1/2 items-center justify-center p-8 relative overflow-hidden" 
         style={{ maxHeight: '100vh', background: 'var(--emov-gradient)' }}
@@ -179,127 +176,96 @@ const ChangePassword = () => {
           <div className="absolute top-1/3 right-1/3 w-20 h-20 bg-emov-purple rounded-full animate-ping"></div>
         </div>
         
-        <div className="max-w-md text-gray-800 text-center relative z-10 flex flex-col items-center">
+        <div className="max-w-md text-text-primary text-center relative z-10">
+          <img 
+            src="/emovlogo.png" 
+            alt="Emov Logo" 
+            className="w-48 mx-auto mb-8"
+          />
+          <h1 className="text-4xl font-bold mb-4">Reset Your Password</h1>
+          <p className="text-lg opacity-90">Create a new password to secure your account.</p>
+        </div>
+      </div>
+
+      {/* Right side - Change Password Form */}
+      <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-bg-primary">
+        {/* Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-bg-secondary transition-colors"
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          {theme === 'dark' ? (
+            <FaSun className="w-5 h-5 text-yellow-300" />
+          ) : (
+            <FaMoon className="w-5 h-5 text-text-secondary" />
+          )}
+        </button>
+        
+        <div className="w-full max-w-md">
           <img 
             src="/emovlogo.png" 
             alt="Emov Logo" 
             className="w-40 h-40 mb-6 animate-fade-in"
           />
-          <div className="mb-4 animate-fade-in w-48">
-            <img 
-              src="/emovfont.png" 
-              alt="Emov" 
-              className="w-full h-auto"
-            />
-          </div>
-          <p className="text-2xl font-light mb-6 animate-slide-up text-gray-700">Set a new password to continue</p>
-          <div className="w-24 h-1 bg-emov-purple mx-auto animate-expand"></div>
-        </div>
-      </div>
-
-      {/* Right side - Change Password Form */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center p-6 bg-white overflow-y-auto no-scrollbar" style={{ maxHeight: '100vh' }}>
-        {/* Emov Logo at the very top */}
-        <div className="w-full flex justify-center mb-5">
-          <div className="w-36">
-            <img 
-              src="/emovfont.png" 
-              alt="Emov" 
-              className="w-full h-auto"
-            />
-          </div>
-        </div>
-        
-        <div className="w-full max-w-md animate-fade-in flex flex-col items-center">
-          <div className="w-24 h-24 -mt-4">
-            <img 
-              src="/changepass.png" 
-              alt="Change Password" 
-              className="w-full h-full object-contain"
-            />
-          </div>
+          {error && (
+            <div className="w-full p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg mb-6">
+              <p className="text-red-600 dark:text-red-400 text-sm text-center">{error}</p>
+            </div>
+          )}
           
-          {/* Header */}
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-medium text-gray-800 mb-1.5">Enter Password</h2>
-            <p className="text-sm text-gray-500">
-              Enter and confirm your new password.
+            <h1 className="text-3xl font-bold text-text-primary mb-2">Create New Password</h1>
+            <p className="text-text-secondary mb-8">
+              Your new password must be different from previous used passwords.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="w-full space-y-4">
             {/* New Password Field */}
             <div className="animate-slide-up" style={{animationDelay: '0.1s'}}>
-              <label className="block text-base font-normal text-gray-700 mb-1.5">New Password</label>
+              <label className="block text-base font-normal text-text-primary dark:text-gray-200 mb-1.5">New Password</label>
               <div className="relative">
-                <input 
-                  type={showNewPassword ? "text" : "password"}
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
                   name="newPassword"
                   value={formData.newPassword}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 pr-10 text-base border border-gray-200 rounded-lg focus:ring-2 focus:ring-emov-purple focus:border-transparent focus:ring-opacity-50 focus:outline-none bg-white transition-all duration-300 hover:border-gray-300"
-                  style={{ '--tw-ring-color': 'var(--emov-purple)' }}
-                  placeholder="Enter your new password"
+                  className={`w-full px-4 py-3 border ${theme === 'dark' ? 'border-gray-600' : 'border-border-primary'} rounded-lg focus:ring-2 focus:ring-offset-2 focus:ring-emov-purple focus:border-transparent bg-bg-primary dark:bg-gray-800 text-text-primary dark:text-white`}
+                  placeholder="New Password"
                   required
                 />
-                {/* Eye Icon Button */}
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                  onClick={toggleNewPasswordVisibility}
-                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                  disabled={loading}
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  {showNewPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  )}
+                  {showNewPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
             </div>
 
             {/* Confirm New Password Field */}
             <div className="animate-slide-up" style={{animationDelay: '0.2s'}}>
-              <label className="block text-base font-normal text-gray-700 mb-1.5">Confirm New Password</label>
+              <label className="block text-base font-normal text-text-primary dark:text-gray-200 mb-1.5">Confirm New Password</label>
               <div className="relative">
-                <input 
-                  type={showConfirmPassword ? "text" : "password"}
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className={`w-full px-3 py-2 pr-10 text-base border rounded-lg focus:ring-2 focus:ring-emov-purple focus:border-transparent focus:ring-opacity-50 focus:outline-none bg-white transition-all duration-300 ${
-                    formData.confirmPassword && !passwordsMatch 
-                      ? 'border-red-300 hover:border-red-400' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  style={{ '--tw-ring-color': 'var(--emov-purple)' }}
-                  placeholder="Confirm your new password"
+                  className={`w-full px-3 py-2 border ${
+                    passwordValidation.length.isValid ? 'border-green-500' : 'border-red-500'
+                  } rounded-md focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent bg-bg-secondary text-text-primary`}
+                  placeholder="Confirm New Password"
                   required
                 />
-                {/* Eye Icon Button */}
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors duration-200"
-                  onClick={toggleConfirmPasswordVisibility}
-                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                  disabled={loading}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  {showConfirmPassword ? (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  ) : (
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                    </svg>
-                  )}
+                  {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
               {formData.confirmPassword && !passwordsMatch && (
@@ -308,23 +274,15 @@ const ChangePassword = () => {
             </div>
 
             {/* Password Validation Rules */}
-            <div className="animate-slide-up p-4 bg-gray-50 rounded-lg border border-gray-200" style={{animationDelay: '0.3s'}}>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">Weak password. Must contain:</h3>
-              <ul className="space-y-2 text-sm">
+            <div className="animate-slide-up p-4 bg-bg-secondary dark:bg-gray-800 rounded-lg border border-border-primary dark:border-gray-700" style={{animationDelay: '0.3s'}}>
+              <h3 className="text-sm font-medium text-text-primary dark:text-gray-200 mb-3">Password must contain:</h3>
+              <ul className="space-y-2">
                 {Object.entries(passwordValidation).map(([key, rule]) => (
                   <li key={key} className="flex items-center">
-                    <span className="mr-2">
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={3} 
-                          d="M5 13l4 4L19 7"
-                          className={rule.isValid ? 'text-emerald-500' : 'text-emerald-300'}
-                        />
-                      </svg>
-                    </span>
-                    <span className={rule.isValid ? 'text-gray-700' : 'text-gray-500'}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 ${rule.isValid ? 'bg-emov-green' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                      {rule.isValid && <FaCheck className="text-white text-xs" />}
+                    </div>
+                    <span className={`text-sm ${rule.isValid ? 'text-emov-green' : 'text-text-secondary dark:text-gray-400'}`}>
                       {rule.message}
                     </span>
                   </li>
@@ -334,20 +292,17 @@ const ChangePassword = () => {
 
             <button
               type="submit"
-              className={`w-full py-3 px-6 text-white font-medium rounded-md transition-all duration-300 flex items-center justify-center ${isFormValid() ? 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800' : 'bg-gray-400 cursor-not-allowed'}`}
-              disabled={!isFormValid() || loading}
-              style={{
-                backgroundSize: '200% auto',
-                transition: 'all 0.3s ease',
-                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-              }}
-              onMouseOver={(e) => {
+              disabled={!isFormValid()}
+              className={`w-full py-3 px-4 rounded-lg font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emov-purple transition-colors ${
+                !isFormValid() ? 'bg-emov-purple/70 cursor-not-allowed' : 'bg-emov-purple hover:bg-emov-purple/90'
+              }`}
+              onMouseEnter={(e) => {
                 if (isFormValid()) {
                   e.target.style.backgroundPosition = 'right center';
                   e.target.style.boxShadow = '0 6px 8px rgba(0, 0, 0, 0.15)';
                 }
               }}
-              onMouseOut={(e) => {
+              onMouseLeave={(e) => {
                 if (isFormValid()) {
                   e.target.style.backgroundPosition = 'left center';
                   e.target.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';

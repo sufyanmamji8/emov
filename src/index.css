@@ -40,14 +40,26 @@
   --shadow-color: rgba(0, 0, 0, 0.1);
 }
 
-[data-theme="dark"] {
+:root[data-theme="dark"] {
   /* Dark Theme Colors */
   --emov-purple: #a67af5;
   --emov-green: #00e69a;
+  --emov-purple-light: #c4b5fd;
   --emov-gradient: linear-gradient(135deg, #2bd6a8 0%, #bda8e9 100%);
   
   /* Dark Theme Variables */
   --bg-primary: #0f172a;
+  --bg-primary-dark: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-secondary-dark: #1e293b;
+  --bg-tertiary: #334155;
+  --bg-card: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  --border-primary: #334155;
+  --border-secondary: #475569;
+  --shadow-color: rgba(0, 0, 0, 0.3);
   --bg-secondary: #1e293b;
   --bg-tertiary: #334155;
   --bg-card: #1e293b;

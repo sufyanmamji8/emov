@@ -106,28 +106,28 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
           <div className="hidden md:flex items-center space-x-8 lg:space-x-12">
             <a 
               href="/dashboard" 
-              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+              className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               Home
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/dashboard' ? 'w-full' : ''}`}></span>
             </a>
             <a 
               href="/chats" 
-              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+              className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               Chats
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/chats' ? 'w-full' : ''}`}></span>
             </a>
             <a 
               href="/my-ads" 
-              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+              className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               My Ads
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
             </a>
-               <a 
-              href="/my-ads" 
-              className="relative text-base font-medium text-gray-900 hover:text-gray-700 group transition-colors duration-300"
+            <a 
+              href="" 
+              className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               More
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
@@ -147,9 +147,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               aria-haspopup="true"
             >
               <div 
-                className={`w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-full flex items-center justify-center text-base font-medium overflow-hidden border-2 border-black ${
-                  isDark ? 'bg-[var(--emov-purple)] text-white' : 'bg-white text-[var(--emov-purple)]'
-                }`}
+                className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-full flex items-center justify-center text-base font-medium overflow-hidden border-2 border-border-primary bg-bg-card text-text-primary"
               >
                 {userProfile?.picture ? (
                   <img 
@@ -187,7 +185,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               <div className="p-4 border-b border-border-primary">
                 <div className="flex items-center space-x-3">
                   <div className={`w-10 h-10 flex-shrink-0 flex items-center justify-center text-lg font-medium rounded-full ${
-                    userProfile?.picture ? 'overflow-hidden' : 'bg-emov-purple text-white border-0'
+                    userProfile?.picture ? 'overflow-hidden' : 'bg-[var(--emov-purple)] text-white border-0'
                   }`}>
                     {userProfile?.picture ? (
                       <img 
@@ -311,15 +309,15 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                     <select 
                       value={language}
                       onChange={(e) => setLanguage(e.target.value)}
-                      className={`${isDark ? 'bg-gray-700 text-white' : 'bg-white text-gray-800'} w-full pl-3 pr-10 py-2 text-base focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 border rounded-md ${isDark ? 'border-gray-600 focus:ring-white' : 'border-gray-300 focus:ring-gray-500'} appearance-none`}
+                      className="w-full pl-3 pr-10 py-2 text-base focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 border rounded-md bg-bg-secondary text-text-primary border-border-primary focus:ring-[var(--emov-purple)] appearance-none"
                     >
                       <option value="english">English</option>
                       <option value="urdu">Urdu</option>
                       <option value="french">French</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
-                      <FaGlobe className={`${isDark ? 'text-gray-300' : 'text-gray-500'} w-4 h-4`} />
-                      <FaCaretDown className={`ml-1 ${isDark ? 'text-gray-300' : 'text-gray-500'} w-3 h-3`} />
+                      <FaGlobe className="text-text-tertiary w-4 h-4" />
+                      <FaCaretDown className="ml-1 text-text-tertiary w-3 h-3" />
                     </div>
                   </div>
                 </div>
@@ -329,9 +327,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   <span className="text-text-primary font-medium">Theme</span>
                   <button 
                     onClick={toggleTheme}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                      isDark ? 'bg-gray-700 text-yellow-300' : 'bg-gray-200 text-gray-700'
-                    }`}
+                    className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors bg-bg-tertiary text-text-primary"
                   >
                     {isDark ? (
                       <>

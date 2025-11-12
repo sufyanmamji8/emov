@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater, FaArrowRight } from 'react-icons/fa';
 import { FiMapPin, FiCalendar } from 'react-icons/fi';
-import axios from 'axios';
 import { useTheme } from '../hooks/useTheme';
+import apiService from '../services/Api';
 import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
 
 // Gradient image paths from public folder
@@ -34,8 +34,8 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
       className={`absolute -left-7 top-1/2 -translate-y-1/2  z-10 w-12 h-12 flex items-center justify-center bg-transparent hover:bg-transparent transition-colors ${!canGoPrev ? 'opacity-50 cursor-not-allowed' : ''}`}
       aria-label={`Previous ${section}`}
     >
-      <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-300 bg-white hover:bg-gray-50 transition-colors">
-        <FaChevronLeft className="w-5 h-5 text-emov-purple" />
+      <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-border-primary bg-bg-primary hover:bg-bg-secondary transition-colors">
+        <FaChevronLeft className="w-5 h-5 text-[var(--emov-purple)]" />
       </div>
     </button>
     <button
@@ -44,8 +44,8 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
       className={`absolute -right-7 top-1/2 -translate-y-1/2 z-10 w-12 h-12 flex items-center justify-center bg-transparent hover:bg-transparent transition-colors ${!canGoNext ? 'opacity-50 cursor-not-allowed' : ''}`}
       aria-label={`Next ${section}`}
     >
-      <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-gray-300 bg-white hover:bg-gray-50 transition-colors">
-        <FaChevronRight className="w-5 h-5 text-emov-purple" />
+      <div className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-border-primary bg-bg-primary hover:bg-bg-secondary transition-colors">
+        <FaChevronRight className="w-5 h-5 text-[var(--emov-purple)]"/>
       </div>
     </button>
   </>
@@ -216,33 +216,24 @@ function Dashboard() {
   // Handle token refresh
   const refreshToken = async () => {
     try {
-      const response = await axios.post('/api/v2/refresh-token', {}, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (response.data && response.data.access_token) {
-        localStorage.setItem('token', response.data.access_token);
-        return true;
+      const response = await apiService.auth.refreshToken();
+      if (response && response.token) {
+        localStorage.setItem('token', response.token);
+        return response.token;
       }
     } catch (error) {
       console.error('Error refreshing token:', error);
+      // If refresh fails, log the user out
+      handleLogout();
     }
-    return false;
+    return null;
   };
 
   // Handle logout
   const handleLogout = async () => {
     try {
       // Call logout API if available
-      await axios.post('/api/v2/logout', {}, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      await apiService.auth.logout();
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {
@@ -350,46 +341,21 @@ function Dashboard() {
     
     try {
       console.log('Fetching filter data...');
-      const endpoints = [
-        { baseURL: '/api', path: '/v2/vehiclesfilter' },
-        { baseURL: '/api/', path: '/v2/vehiclesfilter' },
-      ];
-
-      for (const endpoint of endpoints) {
-        try {
-          const response = await axios.get(endpoint.path, {
-            baseURL: endpoint.baseURL,
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            timeout: 8000 // Increased timeout to 8 seconds
-          });
-          
-          if (response.data?.data) {
-            console.log('Successfully fetched filter data');
-            setApiData(response.data.data);
-            setApiError(null);
-            return;
-          }
-        } catch (err) {
-          console.warn(`API request to ${endpoint.baseURL} failed:`, err.message);
-          // Continue to next endpoint if this one fails
-        }
+      const response = await apiService.vehicles.getFilters();
+      if (response?.data) {
+        console.log('Successfully fetched filter data');
+        setApiData(response.data);
+        setApiError(null);
+        return;
       }
-      
-      // If all API attempts fail, use fallback data
-      console.log('All API attempts failed, using fallback data');
-      setApiData(fallbackData);
-      setApiError('Using offline data. Some features may be limited.');
-      
-    } catch (error) {
-      console.error('Unexpected error in fetchFilterData:', error);
-      setApiData(fallbackData);
-      setApiError('Failed to load data. Using limited offline mode.');
-    } finally {
+    } catch (err) {
+      console.error('Error fetching vehicle filters:', err);
     }
+    
+    // If all API attempts fail, use fallback data
+    console.log('All API attempts failed, using fallback data');
+    setApiData(fallbackData);
+    setApiError('Using offline data. Some features may be limited.');
   }, [apiData]);
 
   // Helper function to get first letter of username for profile picture
@@ -415,45 +381,18 @@ function Dashboard() {
     };
   }, [showProfileDropdown]);
 
-  // Set up axios interceptor for 401 responses
-  useEffect(() => {
-    const requestInterceptor = axios.interceptors.request.use(
-      config => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      error => Promise.reject(error)
-    );
-
-    const responseInterceptor = axios.interceptors.response.use(
-      response => response,
-      error => {
-        if (error.response && error.response.status === 401) {
-          handleUnauthorized();
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    return () => {
-      axios.interceptors.request.eject(requestInterceptor);
-      axios.interceptors.response.eject(responseInterceptor);
-    };
-  }, []);
-
-  // Generate vehicle image paths using API endpoint with dynamic image names
+  // Generate optimized vehicle image paths with lazy loading support
   const generateVehicleImage = (brand, vehicleType, index, brandImage = null) => {
-    // Base URL for all images
+    // Base URL for all images with optimization parameters
     const baseUrl = 'https://api.emov.com.pk/image/';
+    const optimizationParams = '?w=400&h=300&fit=cover&q=80&auto=format';
     
     // If we have a brand image, use it with the API URL
     if (brandImage) {
       // Remove any path or URL parts if present
       const cleanImageName = brandImage.split('/').pop();
-      return `${baseUrl}${cleanImageName}`;
+      // Add optimization parameters
+      return `${baseUrl}${cleanImageName}${optimizationParams}`;
     }
     
     // Determine vehicle type based on brand name or category
@@ -471,8 +410,8 @@ function Dashboard() {
     const vehicleTypeKey = getVehicleType(brand, vehicleType);
     const imageIndex = (index % 5) + 1; // Use 1-5 for image variations
     
-    // Return path to server images using the API endpoint
-    return `${baseUrl}${vehicleTypeKey}-${imageIndex}.jpg`;
+    // Return optimized image URL with parameters
+    return `${baseUrl}${vehicleTypeKey}-${imageIndex}.jpg${optimizationParams}`;
   };
 
   // Fetch filter data and generate vehicles with images
@@ -485,22 +424,15 @@ function Dashboard() {
           return;
         }
 
-        const response = await axios.get('/api/v2/vehiclesfilter', {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          withCredentials: true,
-          timeout: 30000
-        });
+        const response = await apiService.vehicles.getFilters();
         
-        if (response.data?.data) {
-          setApiData(response.data.data);
-          const vehicles = generateVehiclesFromFilterData(response.data.data);
+        if (response.data) {
+          // The API response has the data directly in response.data
+          setApiData(response.data);
+          const vehicles = generateVehiclesFromFilterData(response.data);
           setVehiclesData(vehicles);
         } else {
-          throw new Error('Invalid API response structure');
+          throw new Error('No data received from the server');
         }
       } catch (err) {
         if (err.response?.status === 401) {
@@ -517,7 +449,7 @@ function Dashboard() {
     fetchFilterData();
   }, []);
 
-  // Generate vehicles data from filter API response with proper image handling
+  // Generate vehicles data from filter API response with optimized image handling
   const generateVehiclesFromFilterData = (filterData) => {
     if (!filterData) return [];
     
@@ -529,6 +461,15 @@ function Dashboard() {
     
     // Get up to 12 featured vehicles or all available if less
     const vehicleCount = Math.min(12, Math.max(brands.length, categories.length, models.length) || 6);
+    
+    // Pre-generate image URLs for better performance
+    const imageUrls = Array(vehicleCount).fill().map((_, i) => {
+      const brand = brands[i % brands.length] || {};
+      const category = categories[i % categories.length] || {};
+      const brandName = brand.BrandName || brand.name || 'Vehicle';
+      const categoryName = category.CategoryName || category.name || 'Car';
+      return generateVehicleImage(brandName, categoryName, i, brand.BrandImage);
+    });
     
     for (let i = 0; i < vehicleCount; i++) {
       const brand = brands[i % brands.length] || {};
@@ -1213,9 +1154,9 @@ function Dashboard() {
   // Error state
   if (error) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
         <div className="text-center">
-          <div className={`border rounded-lg max-w-md p-6 ${isDark ? 'bg-gray-800 border-gray-700 text-red-400' : 'bg-red-50 border-red-400 text-red-700'}`}>
+          <div className="border border-red-400 rounded-lg max-w-md p-6 bg-red-500/10 text-red-500">
             <p className="font-bold mb-2">Network Error</p>
             <p className="mb-4">{error}</p>
             <button 
@@ -1231,14 +1172,14 @@ function Dashboard() {
   }
 
   return (
- <div className="min-h-screen bg-white text-gray-800">
+ <div className="min-h-screen bg-bg-primary text-text-primary overflow-x-hidden">
       {/* Gradient Background Section - Wrapping all three sections */}
-       <div className="relative z-10">
-      <div className="relative w-full min-h-[400px] md:min-h-[500px] bg-white overflow-hidden">
+       <div className="relative z-10 w-full">
+      <div className="relative w-full min-h-[400px] md:min-h-[500px] bg-bg-secondary overflow-hidden">
         {/* Left Gradient - Responsive */}
         {/* Left Gradient - Full Height */}
         <div 
-          className="absolute left-0 top-0 w-1/2 sm:w-1/3 md:w-1/4 h-full overflow-hidden"
+          className="absolute left-0 top-0 w-1/2 sm:w-1/3 md:w-1/3 h-full overflow-hidden"
           style={{
             backgroundImage: `url(/${gradientLeft})`,
             backgroundSize: 'contain',
@@ -1270,17 +1211,17 @@ function Dashboard() {
         {/* Wrapper for all three sections */}
        
           {/* Top Header Section */}
-          <div className="bg-white/90 py-4 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-7xl  mx-auto flex justify-between items-center h-8 sm:h-10">
-            <div className="flex items-center space-x-2">
+          <div className="bg-bg-secondary/90 py-4 px-4 sm:px-6 lg:px-8">
+            <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-8 sm:h-10 py-6 border-b border-border-primary">
+            <div className="flex items-center space-x-2 ">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
               </svg>
-              <span className="text-sm font-medium text-gray-700">Download App</span>
+              <span className="text-sm font-medium text-text-primary">Download App</span>
             </div>
 
                {/* Right side controls */}
-                    <div className="flex items-center space-x-3 sm:space-x-4">
+                    <div className="flex items-center space-x-2 sm:space-x-4">
                       {/* Desktop Language Selector and Theme Toggle */}
                       <div className="hidden md:flex items-center space-x-4">
                         {/* Language Selector */}
@@ -1288,21 +1229,21 @@ function Dashboard() {
                           <select 
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
-                            className={`${isDark ? 'bg-transparent text-white' : 'bg-transparent text-violet-600'} pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none`}
+                            className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none"
                           >
                             <option value="english">English</option>
                             <option value="urdu">Urdu</option>
                             <option value="french">French</option>
                           </select>
                           <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
-                            <FaCaretDown className={`${isDark ? 'text-gray-300' : 'text-gray-500'} w-3 h-3`} />
+                            <FaCaretDown className="text-text-secondary w-3 h-3" />
                           </div>
                         </div>
                         
                         {/* Theme Toggle Button */}
                         <button 
                           onClick={toggleTheme}
-                          className={`focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl ${isDark ? 'text-yellow-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}
+                          className="focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
                           style={{ borderRadius: '12px' }}
                           aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
                         >
@@ -1311,10 +1252,10 @@ function Dashboard() {
                       </div>
             
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-1 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+              <button className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none">
                 <span>Sign In</span>
               </button>
-              <button className="flex items-center space-x-1 text-black px-4 py-1 rounded-full text-sm font-medium transition-colors"
+              <button className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
                 style={{
                   backgroundColor: 'var(--emov-green, #27c583ff)',
                 }}
@@ -1347,10 +1288,10 @@ function Dashboard() {
               {/* Hero Text */}
               <div className="text-left mt-8 md:mt-5 px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
                 <div className="ml-0 md:ml-16 max-w-4xl">
-                  <h1 className="text-gray-800 font-semibold text-base sm:text-2xl md:text-5xl font-normal mb-1 sm:mb-3 leading-tight whitespace-nowrap">
+                  <h1 className="text-text-primary ml-4 font-semibold text-base sm:text-2xl md:text-5xl font-normal mb-1 sm:mb-3 leading-tight whitespace-nowrap">
                     {t.findVehicles}
                   </h1>
-                  <h1 className="text-lg sm:text-3xl md:text-6xl font-normal mb-2 sm:mb-4 leading-tight text-gray-400 whitespace-nowrap">
+                  <h1 className="text-lg ml-4 sm:text-3xl md:text-6xl font-normal mb-2 sm:mb-4 leading-tight text-text-tertiary whitespace-nowrap">
                     {t.tagline}
                   </h1>
                 </div>
@@ -1362,7 +1303,7 @@ function Dashboard() {
                   <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none z-10">
                     <svg 
                       xmlns="http://www.w3.org/2000/svg" 
-                      className="h-6 w-6 text-gray-400" 
+                      className="h-6 w-6 text-text-tertiary" 
                       fill="none" 
                       viewBox="0 0 24 24" 
                       stroke="currentColor"
@@ -1381,7 +1322,7 @@ function Dashboard() {
                   </div>
                   <input
                     type="text"
-                    className="w-full pl-10 sm:pl-12 pr-12 sm:pr-14 py-3 sm:py-4 bg-white/30 backdrop-blur-lg border-2 border-white/40 focus:border-white/70 focus:ring-2 focus:ring-white/30 text-sm sm:text-base placeholder-gray-600 text-gray-800"
+                    className="w-full pl-10 sm:pl-12 pr-12 sm:pr-14 py-3 sm:py-4 bg-bg-secondary/30 backdrop-blur-lg border-2 border-border-primary/40 focus:border-border-primary/70 focus:ring-2 focus:ring-border-primary/30 text-sm sm:text-base placeholder-text-tertiary text-text-primary"
                     style={{
                       borderRadius: '12px',
                       transition: 'all 0.3s ease-in-out',
@@ -1391,7 +1332,7 @@ function Dashboard() {
                     placeholder={t.searchPlaceholder}
                   />
                   <button className="absolute inset-y-0 right-0 pr-4 sm:pr-5 flex items-center focus:outline-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-800" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
                     </svg>
                   </button>
@@ -1411,7 +1352,7 @@ function Dashboard() {
        
       
       {/* Banner Section */}
-      <section className="w-full bg-white py-6 sm:py-8">
+      <section className="w-full bg-bg-primary py-6 sm:py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="w-full rounded-xl overflow-hidden ">
             <img 
@@ -1428,22 +1369,23 @@ function Dashboard() {
       {/* Main Content */}
       <main className="w-full relative z-10">
         {/* Browse Used Vehicles Section with Tabs */}
-    <section className="w-full bg-gray-50 py-12 sm:py-16">
+   <section className="w-full bg-bg-secondary py-12 sm:py-16">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="w-full bg-transparent rounded-xl overflow-hidden">
-      <div className="w-full p-6 bg-gray-50 rounded-t-lg">
-        <h2 style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.browseUsedVehicles}</h2>
+      <div className="w-full p-6 bg-bg-secondary rounded-t-lg">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-text-primary">{t.browseUsedVehicles}</h2>
         
-        {/* Tabs with underline for active state */}
-        <div className="w-full overflow-x-auto pb-1">
-          <div style={{ fontSize: '20px' }} className="flex space-x-1 border-b border-gray-100 w-max min-w-full">
+        {/* Tabs - MOBILE: Show all 5 tabs in grid, DESKTOP: original */}
+        <div className="w-full pb-1">
+          {/* Mobile: Single line tabs */}
+          <div className="md:hidden flex space-x-1 overflow-x-auto pb-1 no-scrollbar">
             {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
               <button
                 key={tab}
-                className={`px-4 py-3 text-sm sm:text-base font-medium whitespace-nowrap relative ${
+                className={`px-2 py-2 text-[10px] xs:text-xs font-medium whitespace-nowrap ${
                   activeTab === tab
-                    ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
-                    : 'text-gray-600'
+                    ? 'text-emov-purple border-b-2 border-emov-purple'
+                    : 'text-text-secondary hover:text-text-primary'
                 }`}
                 onClick={() => setActiveTab(tab)}
               >
@@ -1451,33 +1393,61 @@ function Dashboard() {
               </button>
             ))}
           </div>
+          <style jsx>{`
+            .no-scrollbar::-webkit-scrollbar {
+              display: none;
+            }
+            .no-scrollbar {
+              -ms-overflow-style: none;
+              scrollbar-width: none;
+            }
+          `}</style>
+          
+          {/* Desktop: Original tab layout */}
+          <div className="hidden md:block overflow-x-auto pb-1">
+            <div style={{ fontSize: '20px' }} className="flex space-x-1 border-b border-border-primary w-max min-w-full">
+              {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
+                <button
+                  key={tab}
+                  className={`px-4 py-3 text-sm sm:text-base font-medium whitespace-nowrap relative ${
+                    activeTab === tab
+                      ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
+                      : 'text-text-secondary hover:text-text-primary'
+                  }`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       
-      {/* Tab Content with 2-line Navigation */}
-      <div className="relative w-full pb-6 px-6 bg-gray-50 rounded-lg ">
-        {/* Carousel Container - Added relative positioning for arrows */}
+      {/* Tab Content */}
+      <div className="relative w-full pb-6 px-6 bg-bg-secondary rounded-lg">
         <div className="relative w-full overflow-hidden">
-          {/* Left Arrow - Positioned relative to carousel container */}
+          {/* Arrows - ORIGINAL POSITION */}
           <button
             onClick={() => scrollLeft(activeTab)}
-            className={`absolute left-0 border border-gray-300 top-1/2 -translate-y-1/2 z-10 bg-white p-3 rounded-full  border-2 border-gray-100 text-gray-800 hover:bg-gray-50 transition-colors ${
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-border-secondary text-text-primary hover:bg-bg-tertiary transition-colors ${
               !canScrollLeft(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
             }`}
+            style={{ padding: '0.5rem' }}
             disabled={!canScrollLeft(activeTab)}
           >
-            <FaChevronRight style={{ color: '#7B3DFF'}} className="w-4 h-4 sm:w-5 sm:h-5 transform rotate-180" />
+            <FaChevronRight style={{ color: '#7B3DFF'}} className="w-3 h-3 sm:w-5 sm:h-5 transform rotate-180" />
           </button>
 
-          {/* Right Arrow - Positioned relative to carousel container */}
           <button
             onClick={() => scrollRight(activeTab)}
-            className={`absolute right-5 top-1/2 -translate-y-1/2 z-10 bg-white  p-3 rounded-full  border-2 border-gray-00 text-gray-800 hover:bg-gray-50 transition-colors ${
+            className={`absolute right-0 md:right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-border-secondary text-text-primary hover:bg-bg-tertiary transition-colors ${
               !canScrollRight(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
             }`}
+            style={{ padding: '0.5rem' }}
             disabled={!canScrollRight(activeTab)}
           >
-            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-4 h-4 sm:w-5 sm:h-5" />
+            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-5 sm:h-5" />
           </button>
 
           {/* Carousel Track */}
@@ -1490,7 +1460,6 @@ function Dashboard() {
               const transformedData = transformApiData();
               let currentTabData = [];
               
-              // Handle data for different tabs
               const tabDataMap = {
                 'Category': 'categories',
                 'Model': 'models',
@@ -1499,11 +1468,9 @@ function Dashboard() {
                 'Budget': 'budgets'
               };
               
-              // Convert activeTab to match the expected format (handle spaces)
               const normalizedTab = activeTab.replace(/\s+/g, ' ');
               let dataKey = tabDataMap[normalizedTab];
               
-              // If no direct match, try to find a matching key
               if (!dataKey) {
                 const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
                 dataKey = Object.entries(tabDataMap).find(([key]) => 
@@ -1523,33 +1490,74 @@ function Dashboard() {
                 );
               }
 
-              // Calculate number of slides needed
-              const totalSlides = Math.ceil(currentTabData.length / itemsPerPage);
+              // MOBILE: 8 items per slide (4 columns × 2 rows), DESKTOP: original
+              const itemsPerSlideMobile = 8;
+              const totalSlides = Math.ceil(currentTabData.length / 
+                (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage));
+              
               const slides = [];
 
-              // Create slides with items
               for (let i = 0; i < totalSlides; i++) {
-                const slideItems = currentTabData.slice(i * itemsPerPage, (i + 1) * itemsPerPage);
+                const slideItems = currentTabData.slice(
+                  i * (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage), 
+                  (i + 1) * (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage)
+                );
 
                 slides.push(
-                  <div 
-                    key={`slide-${i}`} 
-                    className="flex-shrink-0 w-full"
-                    style={{ width: '100%' }}
-                  >
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 w-full px-2 sm:px-4">
+                  <div key={`slide-${i}`} className="flex-shrink-0 w-full" style={{ width: '100%' }}>
+                    {/* MOBILE: 4 columns × 2 rows, DESKTOP: original grid */}
+                    <div className="grid grid-cols-4 gap-2 md:grid-cols-2 md:sm:grid-cols-3 lg:grid-cols-5 md:gap-4 w-full px-2 sm:px-4">
                       {slideItems.map((item, index) => {
                         const displayName = item.displayName || item.name || item.CategoryName || 'Unnamed Category';
                         const itemCount = typeof item.count === 'number' ? item.count : 0;
                         
-                        // Standard card layout for all tabs
-                        const cardContent = () => (
+                        // MOBILE card layout
+                        const mobileCard = () => (
+                          <div className="relative flex flex-col items-center p-1 h-full w-full">
+                            {item.image || item.icon ? (
+                              <div className="relative w-full flex justify-center" style={{ height: '30px' }}>
+                                {item.icon ? (
+                                  <div className="flex items-center justify-center bg-bg-primary rounded-full w-5 h-5 border border-border-primary">
+                                    {React.cloneElement(item.icon, { 
+                                      size: 10,
+                                      style: { 
+                                        color: 'var(--text-secondary)' 
+                                      }
+                                    })}
+                                  </div>
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <img 
+                                      src={item.image} 
+                                      alt={displayName}
+                                      className="max-w-full max-h-full object-contain"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        if (e.target.nextSibling) {
+                                          e.target.nextSibling.style.display = 'flex';
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            ) : null}
+                            <div className="text-center w-full mt-0.5">
+                              <div className="text-[10px] xs:text-xs font-medium text-text-primary line-clamp-2 leading-tight">
+                                {displayName}
+                              </div>
+                            </div>
+                          </div>
+                        );
+
+                        // DESKTOP card layout (original)
+                        const desktopCard = () => (
                           <div className="relative flex flex-col items-center p-3 h-full w-full">
                             {item.image || item.icon ? (
                               <div className="relative w-full" style={{ height: '71px' }}>
                                 {item.icon ? (
                                   <div 
-                                    className="flex items-center justify-center bg-white rounded-full"
+                                    className="flex items-center justify-center bg-bg-primary rounded-full"
                                     style={{
                                       position: 'absolute',
                                       left: '-20px',
@@ -1564,31 +1572,11 @@ function Dashboard() {
                                   </div>
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center p-2">
-                                    <div className="relative w-full h-full flex items-center justify-center">
-                                      <img 
-                                        src={item.image} 
-                                        alt={displayName}
-                                        className="max-w-full max-h-full object-contain"
-                                        style={{
-                                          maxWidth: '100%',
-                                          maxHeight: '100%',
-                                          width: 'auto',
-                                          height: 'auto',
-                                          objectFit: 'contain'
-                                        }}
-                                        onError={(e) => {
-                                          e.target.style.display = 'none';
-                                          if (e.target.nextSibling) {
-                                            e.target.nextSibling.style.display = 'flex';
-                                          }
-                                        }}
-                                      />
-                                    </div>
-                                  </div>
-                                )}
-                                {!item.icon && (
-                                  <div className="hidden w-full h-full items-center justify-center text-[#878787]">
-                                    {displayName.charAt(0).toUpperCase()}
+                                    <img 
+                                      src={item.image} 
+                                      alt={displayName}
+                                      className="max-w-full max-h-full object-contain"
+                                    />
                                   </div>
                                 )}
                               </div>
@@ -1601,108 +1589,20 @@ function Dashboard() {
                           </div>
                         );
 
-                        // Return the appropriate card wrapper based on tab
-                        if (['Budget', 'BodyType', 'Category', 'Brand', 'Model'].includes(activeTab)) {
-                          return (
-                            <div 
-                              key={`${item.id || index}-${activeTab}`}
-                              className={`relative flex flex-col rounded-lg cursor-pointer ${
-                                isDark 
-                                  ? 'bg-gray-800 border border-gray-600' 
-                                  : 'bg-white border-2 border-[#D9D9D9]'
-                              }`}
-                              style={{
-                                width: '180px',
-                                height: '158px',
-                              }}
-                            >
-                              {cardContent()}
-                            </div>
-                          );
-                        }
-                        
-                        // Card layout for Model tab (text-based with colored background)
-                        if (activeTab === 'Model') {
-                          return (
-                            <div 
-                              key={`${item.id || index}-${activeTab}`}
-                              className={`flex items-center justify-center p-4 rounded-lg text-center cursor-pointer h-full ${
-                                isDark 
-                                  ? 'bg-gray-700 text-white border border-gray-500' 
-                                  : 'bg-white text-gray-800 border-2 border-gray-300'
-                              }`}
-                              style={{
-                                minHeight: '100px',
-                                minWidth: '140px',
-                              }}
-                            >
-                              <div className="font-medium text-sm">
-                                {displayName}
-                                {itemCount > 0 && (
-                                  <div className="text-xs mt-2 text-gray-500">
-                                    {itemCount} {t.vehicles || 'vehicles'}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        }
-                        
-                        // Card layout for Body Type tab (matching other tabs)
-                        if (activeTab === 'Body Type') {
-                          return (
-                            <div 
-                              key={`${item.id || index}-${activeTab}`}
-                              className={`relative flex flex-col rounded-lg cursor-pointer ${
-                                isDark 
-                                  ? 'bg-gray-800 border border-gray-600' 
-                                  : 'bg-white border-2 border-[#D9D9D9]'
-                              }`}
-                              style={{
-                                width: '180px',
-                                height: '158px',
-                              }}
-                            >
-                              {cardContent()}
-                            </div>
-                          );
-                        }
-                        
-                        // Card layout for other tabs (Category, Brand, etc.)
                         return (
                           <div 
                             key={`${item.id || index}-${activeTab}`}
-                            className={`relative flex flex-col h-full rounded-xl overflow-hidden cursor-pointer ${
+                            className={`relative flex flex-col rounded-lg cursor-pointer ${
                               isDark 
-                                ? 'bg-gray-700 border border-gray-600' 
-                                : 'bg-white border-2 border-gray-100'
+                                ? 'bg-bg-card border border-border-primary' 
+                                : 'bg-bg-primary border border-border-primary'
                             }`}
+                            style={{
+                              width: window.innerWidth < 768 ? '100%' : '180px',
+                              height: window.innerWidth < 768 ? '70px' : '158px',
+                            }}
                           >
-                            {/* Image Container */}
-                            <div className="relative pt-[75%] bg-gray-100">
-                              <div className="absolute inset-0 flex items-center justify-center p-4">
-                                {createItemBackground(item, item.type || activeTab.toLowerCase())}
-                              </div>
-                            </div>
-                            
-                            {/* Content */}
-                            <div className="p-3 flex-1 flex flex-col">
-                              <h3 
-                                className={`text-sm font-semibold text-center ${
-                                  isDark ? 'text-white' : 'text-gray-800'
-                                }`}
-                                title={displayName}
-                              >
-                                {displayName}
-                              </h3>
-                              {itemCount > 0 && (
-                                <div className="mt-1 text-center">
-                                  <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                                    {itemCount} {t.vehicles || 'vehicles'}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                            {window.innerWidth < 768 ? mobileCard() : desktopCard()}
                           </div>
                         );
                       })}
@@ -1713,15 +1613,15 @@ function Dashboard() {
 
               return slides;
             })()}
-          </div> {/* End of carousel track */}
-        </div> {/* End of carousel container */}
-      </div> {/* End of tab content */}
-    </div> {/* End of white rounded container */}
-  </div> {/* End of max-w-7xl container */}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
 
         {/* Other Services Section */}
-        <section className="w-full bg-white py-12 sm:py-16">
+        <section className="w-full bg-bg-primary py-12 sm:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2  style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
             
@@ -1729,12 +1629,10 @@ function Dashboard() {
               {otherServices.map((service, index) => (
                 <div 
                   key={index}
-                  className={`overflow-hidden rounded-lg  border border-gray-200 p-4 sm:p-5 text-center cursor-pointer ${
-                    isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100 hover:border-gray-300'
-                  }`}
+                  className="overflow-hidden rounded-lg border border-border-primary p-4 sm:p-5 text-center cursor-pointer bg-bg-secondary hover:border-border-secondary transition-colors"
                 >
                   <div className="text-2xl sm:text-3xl mb-3 text-emov-purple">{service.icon}</div>
-                  <span className="text-sm sm:text-base font-medium text-gray-800">{service.name}</span>
+                  <span className="text-sm sm:text-base font-medium text-text-primary">{service.name}</span>
                 </div>
               ))}
             </div>
@@ -1742,10 +1640,10 @@ function Dashboard() {
         </section>
 
         {/* Recently Added Section */}
-   <section className="w-full bg-gray-50 py-12 sm:py-16 relative">
+   <section className="w-full bg-bg-secondary py-12 sm:py-16 relative">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="mb-6">
-      <h2 className="text-2xl font-bold text-gray-900">{t.recentlyAdded}</h2>
+      <h2 className="text-2xl font-bold text-text-primary">{t.recentlyAdded}</h2>
     </div>
     
     <div className="relative">
@@ -1775,15 +1673,20 @@ function Dashboard() {
               {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle, vehicleIndex) => (
                 <div 
                   key={`${vehicle.id}-${vehicleIndex}`} 
-                  className="group bg-white rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-md"
+                  className="group bg-bg-primary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
                 >
                   {/* Image with minimal gap like reference */}
                   <div className="p-3">
-                    <div className="relative h-48 w-full border border-gray-300 rounded-lg overflow-hidden bg-white p-1">
+                    <div className="relative h-48 w-full rounded-lg overflow-hidden">
+                      <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
                       <img 
                         src="/mockvehicle.png" 
                         alt={vehicle.title}
-                        className="w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105"
+                        className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
+                        style={{
+                          border: '1px solid var(--border-primary)',
+                          boxSizing: 'border-box'
+                        }}
                         loading="lazy"
                       />
                       {vehicle.isNew && (
@@ -1797,32 +1700,32 @@ function Dashboard() {
                   {/* Content area */}
                   <div className="px-3 pb-3 flex-grow flex flex-col">
                     {/* Vehicle Title */}
-                    <h3 className="text-base font-semibold text-gray-900 mb-1 leading-tight">
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-1">
                       {vehicle.title.split(' ').slice(0, 3).join(' ')}
                     </h3>
                     
                     {/* Vehicle Description */}
-                    <p className="text-sm text-gray-600 mb-0 leading-tight">
+                    <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-0 leading-tight line-clamp-1">
                       {vehicle.title.split(' ').slice(3).join(' ')}
                     </p>
                     
                     {/* Price */}
-                    <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
+                    <span className="text-base sm:text-lg font-bold text-emov-purple mb-1 sm:mb-2 block">{vehicle.price}</span>
                     
                     {/* Details row - Year and Mileage */}
-                    <div className="flex items-center text-sm text-gray-500 mb-1">
+                    <div className="flex items-center text-xs sm:text-sm text-gray-500 mb-1">
                       <span>{vehicle.year || '2020'}</span>
-                      <span className="mx-2">|</span>
-                      <span>{vehicle.mileage}</span>
+                      <span className="mx-1 sm:mx-2">|</span>
+                      <span className="line-clamp-1">{vehicle.mileage}</span>
                     </div>
                     
                     {/* Location */}
-                    <div className="flex items-center text-sm text-gray-500">
-                      <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center text-xs sm:text-sm text-gray-500 mt-auto">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      <span>{vehicle.location}</span>
+                      <span className="line-clamp-1">{vehicle.location}</span>
                     </div>
                   </div>
                 </div>
@@ -1836,10 +1739,10 @@ function Dashboard() {
 </section>
 
         {/* Featured Vehicles Section */}
-     <section className="w-full bg-white py-12 sm:py-16 relative">
+     <section className="w-full bg-bg-primary py-12 sm:py-16 relative">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="mb-6">
-      <h2 className="text-2xl font-bold text-gray-900">{t.featuredVehicles}</h2>
+      <h2 className="text-2xl font-bold text-text-primary">{t.featuredVehicles}</h2>
     </div>
     
     <div className="relative">
@@ -1914,15 +1817,20 @@ function Dashboard() {
               ].map((vehicle) => (
                 <div 
                   key={vehicle.id} 
-                  className="group bg-gray-50 rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-md"
+                  className="group bg-bg-secondary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
                 >
                   {/* Image with minimal gap like reference */}
                   <div className="p-3">
-                    <div className="relative h-48 w-full border border-gray-300 rounded-lg overflow-hidden bg-white p-1">
+                    <div className="relative h-48 w-full rounded-lg overflow-hidden">
+                      <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
                       <img 
                         src="/mockvehicle.png" 
                         alt={vehicle.title}
-                        className="w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105"
+                        className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
+                        style={{
+                          border: '1px solid var(--border-primary)',
+                          boxSizing: 'border-box'
+                        }}
                         loading="lazy"
                       />
                       {vehicle.isNew && (
@@ -1936,7 +1844,7 @@ function Dashboard() {
                   {/* Content area - exactly like reference image */}
                   <div className="px-3 pb-3 flex-grow flex flex-col">
                     {/* Vehicle Title - Two lines */}
-                    <h3 className="text-base font-semibold text-gray-900 mb-1 leading-tight">
+                    <h3 className="text-base font-semibold text-text-primary mb-1 leading-tight">
                       {vehicle.title.split(' ').slice(0, 2).join(' ')}
                     </h3>
                     
@@ -1974,7 +1882,7 @@ function Dashboard() {
   </div>
 </section>
         {/* Banner 2 - Full Width */}
-        <section className="w-full bg-white py-6 sm:py-8">
+        <section className="w-full bg-bg-primary py-6 sm:py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="w-full rounded-xl overflow-hidden">
               <img 
@@ -1989,10 +1897,10 @@ function Dashboard() {
         </section>
 
         {/* Featured Brands Section */}
-        <section className="w-full bg-gray-50 py-12 sm:py-16">
+        <section className="w-full bg-bg-secondary py-12 sm:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Featured Brands</h2>
+              <h2 className="text-2xl font-bold text-text-primary">Featured Brands</h2>
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-6 gap-8">
@@ -2016,24 +1924,31 @@ function Dashboard() {
 
                 return uniqueBrands.map((brand) => (
                   <div key={brand.id} className="flex flex-col items-center group">
-                    <div className="w-24 h-24 rounded-full bg-white border-2 border-gray-200 p-2 flex items-center justify-center mb-2">
+                    <div className="w-24 h-24 rounded-full bg-bg-primary border-2 border-border-primary p-2 flex items-center justify-center mb-2">
                       {brand.image ? (
-                        <img 
-                          src={brand.image} 
-                          alt={brand.name}
-                          className="h-12 w-auto object-contain bg-white"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = '/placeholder-car.png';
-                          }}
-                        />
+                        <div className="w-full h-full flex items-center justify-center">
+                          <img 
+                            src={brand.image} 
+                            alt={brand.name}
+                            className="h-12 w-auto object-contain"
+                            style={{
+                              maxWidth: '80%',
+                              maxHeight: '80%',
+                              objectFit: 'contain'
+                            }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '/placeholder-car.png';
+                            }}
+                          />
+                        </div>
                       ) : (
-                        <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center">
-                          <FaCar className="text-gray-400" />
+                        <div className="h-12 w-12 rounded-full flex items-center justify-center">
+                          <FaCar className="text-text-tertiary" />
                         </div>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-gray-700 text-center mt-2">{brand.name}</span>
+                    <span className="text-sm font-medium text-text-primary text-center mt-2">{brand.name}</span>
                   </div>
                 ));
               })()}
@@ -2042,7 +1957,7 @@ function Dashboard() {
         </section>
 
         {/* Sell Your Vehicle Section with Banner */}
-        <section className="w-full bg-white py-6 sm:py-8">
+        <section className="w-full bg-bg-primary py-6 sm:py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="w-full rounded-xl overflow-hidden">
               <img 
