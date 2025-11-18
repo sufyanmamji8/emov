@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater, FaArrowRight } from 'react-icons/fa';
 import { FiMapPin, FiCalendar } from 'react-icons/fi';
 import { useTheme } from '../hooks/useTheme';
-import apiService from '../services/Api';
+import apiService, { handleUnauthorized } from '../services/Api';
 import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
 
 // Gradient image paths from public folder
@@ -52,6 +53,7 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
 );
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('Category');
   const [language, setLanguage] = useState('english');
   const [scrollPositions, setScrollPositions] = useState({
@@ -95,6 +97,11 @@ function Dashboard() {
   });
   const [itemsPerRow, setItemsPerRow] = useState(5); // Default for desktop
   const itemsPerPage = itemsPerRow * 2; // 2 rows of items
+  
+  // State for Recently Added vehicles from API
+  const [recentlyAddedVehicles, setRecentlyAddedVehicles] = useState([]);
+  const [loadingRecentAds, setLoadingRecentAds] = useState(true);
+  const [recentAdsError, setRecentAdsError] = useState(null);
   
   // Update items per row based on screen size
   useEffect(() => {
@@ -207,10 +214,8 @@ function Dashboard() {
   // These replace the old scroll functions
 
   // Handle unauthorized access
-  const handleUnauthorized = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
+  const handleUnauthorizedAccess = () => {
+    handleUnauthorized();
   };
 
   // Handle token refresh
@@ -420,7 +425,7 @@ function Dashboard() {
       try {        
         const token = localStorage.getItem('token');
         if (!token) {
-          handleUnauthorized();
+          handleUnauthorizedAccess();
           return;
         }
 
@@ -436,7 +441,7 @@ function Dashboard() {
         }
       } catch (err) {
         if (err.response?.status === 401) {
-          handleUnauthorized();
+          handleUnauthorizedAccess();
         } else if (process.env.NODE_ENV === 'development') {
           console.error('Error fetching filter data:', {
             message: err.message,
@@ -448,6 +453,80 @@ function Dashboard() {
 
     fetchFilterData();
   }, []);
+
+  // Fetch recent ads for Recently Added section
+
+useEffect(() => {
+  const fetchRecentAds = async () => {
+    try {
+      setLoadingRecentAds(true);
+      setRecentAdsError(null);
+      console.log('Fetching recent ads...');
+      const response = await apiService.ads.getRecentAds();
+      
+      console.log('Dashboard - Full response:', response);
+      console.log('Dashboard - Response data:', response?.data);
+      console.log('Dashboard - Data array length:', response?.data?.length);
+      
+      if (response && response.data && response.data.data) {
+        console.log('Transforming data...');
+        // Transform the API data to match the expected format
+        const transformedData = response.data.data.map(ad => {
+          console.log('Processing ad:', ad);
+          console.log('Ad images:', ad.Images);
+          console.log('First image path:', ad.Images?.[0]);
+          
+          // ✅ CORRECT: Use /images/ directory instead of /uploads/
+          let imageUrl = '/mockvehicle.png';
+          if (ad.Images && ad.Images.length > 0) {
+            const imageFilename = ad.Images[0];
+            
+            if (imageFilename.startsWith('http')) {
+              imageUrl = imageFilename;
+            } else {
+              // ✅ CORRECT PATTERN: https://api.emov.com.pk/images/filename.jpg
+              imageUrl = `https://api.emov.com.pk/image/${imageFilename}`;
+            }
+            console.log('Dashboard - Constructed image URL:', imageUrl);
+          }
+          
+          return {
+            id: ad.AdID,
+            title: ad.VehicleName,
+            price: `Rs. ${parseInt(ad.VehiclePrice).toLocaleString()}`,
+            year: ad.RegistrationYear,
+            mileage: ad.VehicleMileage,
+            location: ad.LocationName,
+            isNew: true,
+            image: imageUrl,
+            // Keep original API data for reference
+            Images: ad.Images,
+            VehicleName: ad.VehicleName,
+            VehiclePrice: ad.VehiclePrice,
+            RegistrationYear: ad.RegistrationYear,
+            VehicleMileage: ad.VehicleMileage,
+            LocationName: ad.LocationName,
+            SellerComment: ad.SellerComment
+          };
+        });
+        
+        console.log('Successfully transformed data:', transformedData);
+        setRecentlyAddedVehicles(transformedData);
+        console.log('Successfully fetched and transformed recent ads:', transformedData);
+      } else {
+        console.log('No data in response');
+        setRecentAdsError('No data received from server');
+      }
+    } catch (err) {
+      console.error('Error fetching recent ads:', err);
+      setRecentAdsError('Failed to load recent ads');
+    } finally {
+      setLoadingRecentAds(false);
+    }
+  };
+
+  fetchRecentAds();
+}, []);
 
   // Generate vehicles data from filter API response with optimized image handling
   const generateVehiclesFromFilterData = (filterData) => {
@@ -943,90 +1022,6 @@ function Dashboard() {
     { id: 8, name: 'Luxury', icon: <FaCrown className="w-6 h-6 sm:w-7 sm:h-7" /> },
   ];
 
-  // Recently Added Vehicles Data
-  const recentlyAddedVehicles = [
-    {
-      id: 1,
-      title: 'Toyota Corolla 2022',
-      price: '$24,500',
-      image: '/mockvehicle.png',
-      year: '2022',
-      mileage: '15,000 km',
-      location: 'Karachi',
-      isNew: true
-    },
-    {
-      id: 2,
-      title: 'Honda Civic 2021',
-      price: '$22,300',
-      image: '/mockvehicle.png',
-      year: '2021',
-      mileage: '25,000 km',
-      location: 'Lahore',
-      isNew: false
-    },
-    {
-      id: 3,
-      title: 'Suzuki Alto 2023',
-      price: '$12,500',
-      image: '/mockvehicle.png',
-      year: '2023',
-      mileage: '5,000 km',
-      location: 'Islamabad',
-      isNew: true
-    },
-    {
-      id: 4,
-      title: 'Toyota Fortuner 2020',
-      price: '$35,000',
-      image: '/mockvehicle.png',
-      year: '2020',
-      mileage: '45,000 km',
-      location: 'Rawalpindi',
-      isNew: false
-    },
-    {
-      id: 5,
-      title: 'Hyundai Elantra 2021',
-      price: '$18,500',
-      image: '/mockvehicle.png',
-      year: '2021',
-      mileage: '20,000 km',
-      location: 'Karachi',
-      isNew: false
-    },
-    {
-      id: 6,
-      title: 'Kia Sportage 2022',
-      price: '$28,000',
-      image: '/mockvehicle.png',
-      year: '2022',
-      mileage: '12,000 km',
-      location: 'Lahore',
-      isNew: true
-    },
-    {
-      id: 7,
-      title: 'Honda City 2020',
-      price: '$16,800',
-      image: '/mockvehicle.png',
-      year: '2020',
-      mileage: '35,000 km',
-      location: 'Islamabad',
-      isNew: false
-    },
-    {
-      id: 8,
-      title: 'Toyota Hilux 2021',
-      price: '$32,000',
-      image: '/mockvehicle.png',
-      year: '2021',
-      mileage: '30,000 km',
-      location: 'Rawalpindi',
-      isNew: false
-    }
-  ];
-
   // Featured Vehicles Data
   const featuredVehicles = [
     {
@@ -1211,7 +1206,7 @@ function Dashboard() {
         {/* Wrapper for all three sections */}
        
           {/* Top Header Section */}
-          <div className="bg-bg-secondary/90 py-4 px-4 sm:px-6 lg:px-8">
+          <div className="bg-bg-secondary/90 py-0 px-0 sm:px-0 lg:px-0">
             <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-8 sm:h-10 py-6 border-b border-border-primary">
             <div className="flex items-center space-x-2 ">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
@@ -1288,10 +1283,10 @@ function Dashboard() {
               {/* Hero Text */}
               <div className="text-left mt-8 md:mt-5 px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
                 <div className="ml-0 md:ml-16 max-w-4xl">
-                  <h1 className="text-text-primary ml-4 font-semibold text-base sm:text-2xl md:text-5xl font-normal mb-1 sm:mb-3 leading-tight whitespace-nowrap">
+                  <h1 className="text-text-primary ml-16 mt-12 font-semibold text-base sm:text-2xl md:text-5xl font-normal mb-1 sm:mb-3 leading-tight whitespace-nowrap">
                     {t.findVehicles}
                   </h1>
-                  <h1 className="text-lg ml-4 sm:text-3xl md:text-6xl font-normal mb-2 sm:mb-4 leading-tight text-text-tertiary whitespace-nowrap">
+                  <h1 className="text-lg ml-16 sm:text-3xl md:text-6xl font-normal mb-2 sm:mb-4 leading-tight text-text-tertiary whitespace-nowrap">
                     {t.tagline}
                   </h1>
                 </div>
@@ -1352,7 +1347,7 @@ function Dashboard() {
        
       
       {/* Banner Section */}
-      <section className="w-full bg-bg-primary py-6 sm:py-8">
+      <section className="w-full bg-bg-primary py-0 sm:py-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="w-full rounded-xl overflow-hidden ">
             <img 
@@ -1640,101 +1635,140 @@ function Dashboard() {
         </section>
 
         {/* Recently Added Section */}
-   <section className="w-full bg-bg-secondary py-12 sm:py-16 relative">
+
+{/* Recently Added Section */}
+<section className="w-full bg-bg-secondary py-12 sm:py-16 relative">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="mb-6">
       <h2 className="text-2xl font-bold text-text-primary">{t.recentlyAdded}</h2>
     </div>
     
-    <div className="relative">
-      <CarouselNavigation
-        onPrev={() => scrollLeft('Recently Added', recentlyAddedVehicles, 4)}
-        onNext={() => scrollRight('Recently Added', recentlyAddedVehicles, 4)}
-        canGoPrev={canScrollLeft('Recently Added')}
-        canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, 4)}
-        section="recently added vehicles"
-      />
-      
-      <div className="relative overflow-hidden">
-        <div 
-          className="flex transition-transform duration-300"
-          style={{
-            transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
-            width: '100%',
-            transition: 'transform 0.3s ease-in-out'
-          }}
+    {loadingRecentAds ? (
+      <div className="text-center py-10">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
+        <p className="mt-2 text-text-secondary">Loading vehicles...</p>
+      </div>
+    ) : recentAdsError ? (
+      <div className="text-center py-10 text-red-500">
+        <p>{recentAdsError}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-2 px-4 py-2 bg-emov-purple text-white rounded-md hover:bg-opacity-90 transition-colors"
         >
+          Retry
+        </button>
+      </div>
+    ) : recentlyAddedVehicles.length > 0 ? (
+      <div className="relative">
+        <CarouselNavigation
+          onPrev={() => scrollLeft('Recently Added', recentlyAddedVehicles, 4)}
+          onNext={() => scrollRight('Recently Added', recentlyAddedVehicles, 4)}
+          canGoPrev={canScrollLeft('Recently Added')}
+          canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, 4)}
+          section="recently added vehicles"
+        />
+        
+        <div className="relative overflow-hidden">
+          <div 
+            className="flex transition-transform duration-300"
+            style={{
+              transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
+              width: '100%',
+              transition: 'transform 0.3s ease-in-out'
+            }}
+          >
           {Array(Math.ceil(recentlyAddedVehicles.length / 4)).fill().map((_, groupIndex) => (
             <div 
               key={groupIndex}
               className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
               style={{ minWidth: '100%' }}
             >
-              {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle, vehicleIndex) => (
-                <div 
-                  key={`${vehicle.id}-${vehicleIndex}`} 
-                  className="group bg-bg-primary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
-                >
-                  {/* Image with minimal gap like reference */}
-                  <div className="p-3">
-                    <div className="relative h-48 w-full rounded-lg overflow-hidden">
-                      <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
-                      <img 
-                        src="/mockvehicle.png" 
-                        alt={vehicle.title}
-                        className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
-                        style={{
-                          border: '1px solid var(--border-primary)',
-                          boxSizing: 'border-box'
-                        }}
-                        loading="lazy"
-                      />
-                      {vehicle.isNew && (
-                        <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
-                          {t.new}
-                        </div>
-                      )}
+              {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle, vehicleIndex) => {
+                // Use the image URL that was already constructed in fetchRecentAds
+                const vehicleImageUrl = vehicle.image || '/mockvehicle.png';
+                
+                return (
+                  <div 
+                    key={`${vehicle.AdID || vehicle.id}-${vehicleIndex}`} 
+                    className="group bg-bg-primary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg cursor-pointer"
+                    onClick={() => navigate(`/ad/${vehicle.AdID || vehicle.id}`, { state: { adData: vehicle } })}
+                  >
+                    {/* Image with minimal gap like reference */}
+                    <div className="p-3">
+                      <div className="relative h-48 w-full rounded-lg overflow-hidden">
+                        <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
+                        <img 
+                          src={vehicleImageUrl} 
+                          alt={vehicle.VehicleName || vehicle.title}
+                          className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
+                          style={{
+                            border: '1px solid var(--border-primary)',
+                            boxSizing: 'border-box'
+                          }}
+                          loading="lazy"
+                          onError={(e) => {
+                            console.log('❌ Image failed to load:', vehicleImageUrl);
+                            e.target.onerror = null;
+                            e.target.src = '/mockvehicle.png';
+                          }}
+                          onLoad={(e) => {
+                            console.log('✅ Image loaded successfully:', vehicleImageUrl);
+                          }}
+                        />
+                        {vehicle.isNew && (
+                          <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
+                            {t.new}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Content area */}
+                    <div className="px-3 pb-3 flex-grow flex flex-col">
+                      {/* Vehicle Title */}
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-1">
+                        {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(0, 3).join(' ')}
+                      </h3>
+                      
+                      {/* Vehicle Description */}
+                      <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-0 leading-tight line-clamp-1">
+                        {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(3).join(' ') || vehicle.SellerComment || ''}
+                      </p>
+                      
+                      {/* Price */}
+                      <span className="text-base sm:text-lg font-bold text-emov-purple mb-1 sm:mb-2 block">
+                        {vehicle.VehiclePrice ? `Rs ${parseInt(vehicle.VehiclePrice).toLocaleString()}` : vehicle.price}
+                      </span>
+                      
+                      {/* Details row - Year and Mileage */}
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500 mb-1">
+                        <span>{vehicle.RegistrationYear || vehicle.year || '2020'}</span>
+                        <span className="mx-1 sm:mx-2">|</span>
+                        <span className="line-clamp-1">{vehicle.VehicleMileage || vehicle.mileage}</span>
+                      </div>
+                      
+                      {/* Location */}
+                      <div className="flex items-center text-xs sm:text-sm text-gray-500 mt-auto">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="line-clamp-1">{vehicle.LocationName || vehicle.location}</span>
+                      </div>
                     </div>
                   </div>
-                  
-                  {/* Content area */}
-                  <div className="px-3 pb-3 flex-grow flex flex-col">
-                    {/* Vehicle Title */}
-                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-1">
-                      {vehicle.title.split(' ').slice(0, 3).join(' ')}
-                    </h3>
-                    
-                    {/* Vehicle Description */}
-                    <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-0 leading-tight line-clamp-1">
-                      {vehicle.title.split(' ').slice(3).join(' ')}
-                    </p>
-                    
-                    {/* Price */}
-                    <span className="text-base sm:text-lg font-bold text-emov-purple mb-1 sm:mb-2 block">{vehicle.price}</span>
-                    
-                    {/* Details row - Year and Mileage */}
-                    <div className="flex items-center text-xs sm:text-sm text-gray-500 mb-1">
-                      <span>{vehicle.year || '2020'}</span>
-                      <span className="mx-1 sm:mx-2">|</span>
-                      <span className="line-clamp-1">{vehicle.mileage}</span>
-                    </div>
-                    
-                    {/* Location */}
-                    <div className="flex items-center text-xs sm:text-sm text-gray-500 mt-auto">
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="line-clamp-1">{vehicle.location}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ))}
         </div>
       </div>
     </div>
+    ) : (
+      <div className="text-center py-10 text-text-secondary">
+        <p>No recent vehicles available</p>
+      </div>
+    )}
   </div>
 </section>
 

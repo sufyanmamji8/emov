@@ -120,6 +120,14 @@ const authApi = {
       });
       
       console.log('Login successful, response:', response.data);
+      
+      // Store the token in localStorage and sessionStorage
+      if (response.data && response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        sessionStorage.setItem('token', response.data.token);
+        console.log('Token stored successfully');
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Login error details:', error);

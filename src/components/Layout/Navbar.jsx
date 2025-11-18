@@ -69,7 +69,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
   };
 
   return (
-    <nav className="w-full py-0 sm:py-3 pl-0 sm:pl-2 lg:pl-4 pr-4 sm:pr-6 lg:pr-8 relative z-50 bg-transparent">
+    <nav className="w-full py-0 sm:py-0 pl-0 sm:pl-2 lg:pl-0 pr-0 sm:pr-6 lg:pr-0 relative z-50 bg-transparent">
       
       <div className="relative z-10 max-w-7xl mx-auto flex items-center justify-between">
         {/* Left side - Logo and Navigation Links */}

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCamera, FaMicrophone, FaUpload, FaCheck, FaChevronDown, FaChevronUp, FaCaretDown, FaMoon } from 'react-icons/fa';
+import { FaArrowLeft, FaCamera, FaMicrophone, FaUpload, FaCheck, FaChevronDown, FaChevronUp, FaCaretDown, FaMoon, FaSun } from 'react-icons/fa';
 import apiService from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
 
 // Language translations
 const translations = {
@@ -33,6 +32,8 @@ const translations = {
     selectVehicleType: "Select vehicle type",
     selectVehicleModel: "Select vehicle model",
     selectRegistrationYear: "Select registration year",
+    location: "Location",
+    enterLocation: "Enter location",
     manual: "Manual",
     automatic: "Automatic",
     semiAutomatic: "Semi Automatic",
@@ -98,6 +99,8 @@ const translations = {
     enterVehiclePower: "گاڑی کی پاور درج کریں",
     selectVehicleType: "گاڑی کی قسم منتخب کریں",
     selectVehicleModel: "گاڑی کا ماڈل منتخب کریں",
+    location: "مقام",
+    enterLocation: "مقام درج کریں",
     selectRegistrationYear: "رجسٹریشن کا سال منتخب کریں",
     manual: "مینوئل",
     automatic: "آٹومیٹک",
@@ -163,8 +166,10 @@ const translations = {
     enterVehicleMileage: "Entrez le kilométrage du véhicule",
     enterVehiclePower: "Entrez la puissance du véhicule",
     selectVehicleType: "Sélectionnez le type de véhicule",
-    selectVehicleModel: "Sélectionnez le modèle du véhicule",
+    selectVehicleModel: "Sélectionnez le modèle de véhicule",
     selectRegistrationYear: "Sélectionnez l'année d'immatriculation",
+    location: "Emplacement",
+    enterLocation: "Entrez l'emplacement",
     manual: "Manuelle",
     automatic: "Automatique",
     semiAutomatic: "Semi-automatique",
@@ -224,6 +229,9 @@ export default function Ads() {
   const [language, setLanguage] = useState('english');
   const [userProfile, setUserProfile] = useState(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [filterData, setFilterData] = useState(null);
+  const [filterDataLoading, setFilterDataLoading] = useState(true);
+  const [filterDataError, setFilterDataError] = useState(null);
   const [formData, setFormData] = useState({
     VehicleName: '',
     VehiclePrice: '',
@@ -250,9 +258,16 @@ export default function Ads() {
     City: '',
     Address: ''
   });
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [stepErrors, setStepErrors] = useState({});
+  
+  // Add submitting state
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const t = translations[language];
   const translatedData = getTranslatedData(language);
+  const navigate = useNavigate();
 
   const vehicleModels = ['Model S', 'Model 3', 'Civic', 'Accord', 'Camry', 'Corolla', 'F-150', 'X5'];
   const registrationYears = Array.from({length: 30}, (_, i) => new Date().getFullYear() - i);
@@ -314,44 +329,263 @@ export default function Ads() {
       console.log('Updated formData:', updated);
       return updated;
     });
-    
-    // Log the current state after update for debugging
-    setTimeout(() => {
-      console.log('Current formData:', formData);
-    }, 0);
   };
   
-  // Handle select changes
-  const handleSelectChange = (name, value) => {
-    console.log(`Select changed - ${name}:`, value);
-    const isNumeric = ['VehicleTypeID', 'VehicleBrandID', 'VehicleModelID', 'VehicleBodyTypeID', 'RegistrationYear'].includes(name);
-    const newValue = isNumeric ? (value ? Number(value) : '') : value;
-    
-    setFormData(prev => {
-      const updated = {
+  // Debug: Log form data changes
+  useEffect(() => {
+    console.log('Form data updated:', formData);
+  }, [formData]);
+
+const handleFileChange = async (e) => {
+  const { name, files } = e.target;
+  console.log(`File input changed - ${name}:`, files);
+  
+  if (name === 'images' && files.length > 0) {
+    try {
+      setSubmitting(true);
+      const uploadedImageUrls = [];
+      
+      // Upload each file one by one
+      for (const file of files) {
+        try {
+          console.log('Uploading file:', file.name);
+          const response = await apiService.upload.uploadImage(file);
+          if (response && response.url) {
+            console.log('Image uploaded successfully:', response.url);
+            
+            // Store just the filename (not full URL)
+            let imageUrl = response.url;
+            
+            // Extract just the filename if it's a full URL
+            if (imageUrl.includes('/')) {
+              imageUrl = imageUrl.split('/').pop();
+            }
+            
+            console.log('Storing image filename for API:', imageUrl);
+            uploadedImageUrls.push(imageUrl);
+          } else {
+            throw new Error('No URL returned from image upload');
+          }
+        } catch (uploadError) {
+          console.error('Error uploading file:', uploadError);
+          throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+        }
+      }
+      
+      console.log('All images uploaded, storing filenames:', uploadedImageUrls);
+      
+      setFormData(prev => ({
         ...prev,
-        [name]: newValue
-      };
-      console.log('Updated formData:', updated);
-      return updated;
-    });
+        Images: uploadedImageUrls, // Store as array
+        imageUploadError: null
+      }));
+      
+    } catch (error) {
+      console.error('Error handling file uploads:', error);
+      setFormData(prev => ({
+        ...prev,
+        imageUploadError: error.message || 'Failed to upload images. Please try again.'
+      }));
+    } finally {
+      setSubmitting(false);
+    }
+  } else if (name === 'audio' && files.length > 0) {
+    try {
+      // Handle audio upload similarly
+      const file = files[0];
+      const response = await apiService.upload.uploadAudio(file); // You might need to create this
+      if (response && response.url) {
+        let audioUrl = response.url;
+        if (audioUrl.includes('/')) {
+          audioUrl = audioUrl.split('/').pop();
+        }
+        
+        setFormData(prev => ({
+          ...prev,
+          AudioURL: audioUrl,
+          audioUploadError: null
+        }));
+      }
+    } catch (error) {
+      console.error('Error uploading audio:', error);
+      setFormData(prev => ({
+        ...prev,
+        audioUploadError: 'Failed to upload audio. Please try again.'
+      }));
+    }
+  }
+};
+
+  // Validate step before navigation
+  const validateStep = (step) => {
+    const errors = {};
+    
+    console.log('Validating step:', step);
+    console.log('Current formData:', formData);
+    
+    if (step === 1) {
+      // Basic Details step validation
+      if (!formData.VehicleName?.trim()) {
+        errors.VehicleName = 'Fill this field';
+        console.log('VehicleName missing');
+      }
+      if (!formData.VehiclePrice || formData.VehiclePrice === '') {
+        errors.VehiclePrice = 'Fill this field';
+        console.log('VehiclePrice missing');
+      }
+      if (!formData.VehicleTypeID) {
+        errors.VehicleTypeID = 'Fill this field';
+        console.log('VehicleTypeID missing');
+      }
+      if (!formData.VehicleBrandID) {
+        errors.VehicleBrandID = 'Fill this field';
+        console.log('VehicleBrandID missing');
+      }
+      if (!formData.VehicleModelID) {
+        errors.VehicleModelID = 'Fill this field';
+        console.log('VehicleModelID missing');
+      }
+      if (!formData.VehicleMileage?.trim()) {
+        errors.VehicleMileage = 'Fill this field';
+        console.log('VehicleMileage missing');
+      }
+      if (!formData.RegistrationYear || formData.RegistrationYear === '') {
+        errors.RegistrationYear = 'Fill this field';
+        console.log('RegistrationYear missing');
+      }
+      if (!formData.VehiclePower || formData.VehiclePower === '') {
+        errors.VehiclePower = 'Fill this field';
+        console.log('VehiclePower missing');
+      }
+      if (!formData.Transmission) {
+        errors.Transmission = 'Fill this field';
+        console.log('Transmission missing');
+      }
+      if (!formData.Color?.trim()) {
+        errors.Color = 'Fill this field';
+        console.log('Color missing');
+      }
+    } else if (step === 2) {
+      // Images & Audio step validation - at least one image is required, audio is optional
+      if (!formData.Images || formData.Images.length === 0) {
+        errors.Images = 'At least one image is required';
+        console.log('Images missing');
+      }
+      // Audio is optional - no validation needed
+    } else if (step === 3) {
+      // Additional Details step validation
+      if (!formData.SellerComment?.trim()) {
+        errors.SellerComment = 'Fill this field';
+        console.log('SellerComment missing');
+      }
+      if (!formData.LocationName?.trim()) {
+        errors.LocationName = 'Fill this field';
+        console.log('LocationName missing');
+      }
+      if (!formData.EngineType) {
+        errors.EngineType = 'Fill this field';
+        console.log('EngineType missing');
+      }
+      if (!formData.VehicleBodyTypeID) {
+        errors.VehicleBodyTypeID = 'Fill this field';
+        console.log('VehicleBodyTypeID missing');
+      }
+      if (!formData.Ownership) {
+        errors.Ownership = 'Fill this field';
+        console.log('Ownership missing');
+      }
+      if (!formData.ServiceHistory) {
+        errors.ServiceHistory = 'Fill this field';
+        console.log('ServiceHistory missing');
+      }
+    }
+    
+    console.log('Validation errors:', errors);
+    setFieldErrors(errors);
+    const hasErrors = Object.keys(errors).length > 0;
+    console.log('Has errors:', hasErrors);
+    
+    if (hasErrors) {
+      setStepErrors(prev => ({ ...prev, [step]: true }));
+    } else {
+      setStepErrors(prev => ({ ...prev, [step]: false }));
+    }
+    
+    return !hasErrors;
   };
 
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    if (name === 'images') {
-      setFormData(prev => ({ ...prev, images: Array.from(files) }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: files[0] }));
+  // Handle step navigation with validation
+  const handleStepChange = (newStep) => {
+    if (newStep < currentStep) {
+      // Allow going back without validation
+      setCurrentStep(newStep);
+      return;
+    }
+    
+    // Validate current step before moving forward
+    if (validateStep(currentStep)) {
+      setCurrentStep(newStep);
     }
   };
 
+  // Fetch filter data from API
+  useEffect(() => {
+    const fetchFilterData = async () => {
+      try {
+        setFilterDataLoading(true);
+        console.log('Fetching filter data for Ads page...');
+        const response = await apiService.vehicles.getFilters();
+        console.log('Full API response:', response);
+        console.log('Response data:', response?.data);
+        console.log('Body types data:', response?.data?.body_type);
+        console.log('Body types array:', Array.isArray(response?.data?.body_type));
+        console.log('All available keys:', Object.keys(response?.data || {}));
+        if (response?.data) {
+          console.log('Successfully fetched filter data for Ads:', response.data);
+          setFilterData(response.data);
+          setFilterDataError(null);
+          
+          // Store filter data in localStorage for preview access
+          if (response.data.category) {
+            localStorage.setItem('vehicleCategories', JSON.stringify(response.data.category));
+          }
+          if (response.data.brand) {
+            localStorage.setItem('vehicleBrands', JSON.stringify(response.data.brand));
+          }
+          if (response.data.model) {
+            localStorage.setItem('vehicleModels', JSON.stringify(response.data.model));
+          }
+          if (response.data.body_type || response.data.bodyType) {
+            const bodyTypes = response.data.body_type || response.data.bodyType;
+            localStorage.setItem('vehicleBodyTypes', JSON.stringify(bodyTypes));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching vehicle filters for Ads:', err);
+        setFilterDataError('Failed to load vehicle data');
+      } finally {
+        setFilterDataLoading(false);
+      }
+    };
+
+    fetchFilterData();
+  }, []);
+
   const nextStep = () => {
+    console.log('nextStep called, currentStep:', currentStep);
     if (currentStep < 4) {
-      setCurrentStep(prev => prev + 1);
-      setTimeout(() => {
-        document.getElementById(`step-${currentStep + 1}`)?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      // Validate current step before moving forward
+      const isValid = validateStep(currentStep);
+      console.log('Validation result:', isValid);
+      if (isValid) {
+        console.log('Moving to step:', currentStep + 1);
+        setCurrentStep(prev => prev + 1);
+        setTimeout(() => {
+          document.getElementById(`step-${currentStep + 1}`)?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      } else {
+        console.log('Validation failed, staying on current step');
+      }
     }
   };
 
@@ -364,412 +598,602 @@ export default function Ads() {
     }
   };
 
-  const validateForm = () => {
-    const requiredFields = [
-      { key: 'VehicleName', name: 'Vehicle Name' },
-      { key: 'VehiclePrice', name: 'Price' },
-      { key: 'VehicleTypeID', name: 'Vehicle Type' },
-      { key: 'VehicleBrandID', name: 'Brand' },
-      { key: 'VehicleModelID', name: 'Model' }
-    ];
+const validateForm = () => {
+  const requiredFields = [
+    { key: 'VehicleName', name: 'Vehicle Name' },
+    { key: 'VehiclePrice', name: 'Vehicle Price' },
+    { key: 'VehicleTypeID', name: 'Vehicle Type' },
+    { key: 'VehicleBrandID', name: 'Vehicle Brand' },
+    { key: 'VehicleModelID', name: 'Vehicle Model' },
+    { key: 'VehicleMileage', name: 'Vehicle Mileage' },
+    { key: 'RegistrationYear', name: 'Registration Year' },
+    { key: 'VehiclePower', name: 'Vehicle Power' },
+    { key: 'Transmission', name: 'Transmission' },
+    { key: 'Color', name: 'Color' },
+    { key: 'LocationName', name: 'Location' },
+    { key: 'EngineType', name: 'Engine Type' },
+    { key: 'VehicleBodyTypeID', name: 'Vehicle Body Type' },
+    { key: 'Ownership', name: 'Ownership' },
+  ];
+
+  const errors = [];
+  
+  requiredFields.forEach(field => {
+    const value = formData[field.key];
     
-    const errors = [];
-    
-    requiredFields.forEach(field => {
-      const value = formData[field.key];
-      if (value === '' || value === null || value === undefined || (typeof value === 'number' && isNaN(value))) {
-        errors.push(field.name);
-      }
-    });
-    
-    return errors;
-  };
-
-  const handleSubmit = async () => {
-    try {
-      console.log('Current formData:', formData);
-      
-      // Validate form
-      const validationErrors = validateForm();
-      
-      if (validationErrors.length > 0) {
-        // Highlight the fields with errors
-        validationErrors.forEach(fieldName => {
-          console.error(`Missing or invalid field: ${fieldName}`);
-        });
-        
-        // Show the first step with errors
-        setCurrentStep(1);
-        
-        throw new Error(`Please fill in all required fields: ${validationErrors.join(', ')}`);
-      }
-
-      console.log('Form data before submission:', formData);
-      
-      const formDataToSend = new FormData();
-      
-      // Prepare the payload with proper field mapping
-      const payload = {
-        VehicleName: String(formData.VehicleName || ''),
-        VehicleModelID: formData.VehicleModelID ? Number(formData.VehicleModelID) : 0,
-        VehiclePrice: formData.VehiclePrice ? Number(formData.VehiclePrice) : 0,
-        VehicleTypeID: formData.VehicleTypeID ? Number(formData.VehicleTypeID) : 0,
-        VehicleMileage: String(formData.mileage || ''),
-        RegistrationYear: String(formData.registrationYear || ''),
-        VehiclePower: String(formData.power || ''),
-        VehicleBrandID: formData.VehicleBrandID ? Number(formData.VehicleBrandID) : 0,
-        Transmission: String(formData.transmission || ''),
-        Color: String(formData.Color || ''),
-        SellerComment: String(formData.sellerComment || ''),
-        LocationName: String(formData.location || ''),
-        EngineType: String(formData.engineType || ''),
-        VehicleBodyTypeID: formData.vehicleBodyType ? 
-          (bodyTypes.indexOf(formData.vehicleBodyType) + 1) : 0,
-        LoadCapacity: String(formData.loadCapacity || ''),
-        Ownership: String(formData.ownership || ''),
-        ServiceHistory: String(formData.serviceHistory || '')
-      };
-      
-      // Append all payload fields to FormData
-      Object.entries(payload).forEach(([key, value]) => {
-        if (value !== undefined && value !== null && value !== '') {
-          formDataToSend.append(key, value);
-        }
-      });
-
-      // Handle images - send as JSON string
-      if (formData.images && formData.images.length > 0) {
-        const imageFiles = [];
-        
-        formData.images.forEach((image) => {
-          if (image instanceof File) {
-            // For file uploads, we'll handle them separately
-            formDataToSend.append('Images', image);
-            imageFiles.push(image.name);
-          } else if (image && typeof image === 'object' && image.uri) {
-            formDataToSend.append('Images', {
-              uri: image.uri,
-              type: image.type || 'image/jpeg',
-              name: image.name || `image_${Date.now()}.jpg`
-            });
-            imageFiles.push(image.name || 'uploaded_image.jpg');
-          }
-        });
-        
-        // Also include the image filenames as a JSON string
-        formDataToSend.append('Images', JSON.stringify(imageFiles));
-      } else {
-        formDataToSend.append('Images', '[]');
-      }
-
-      // Handle audio (optional)
-      if (formData.audioFile) {
-        if (formData.audioFile instanceof File) {
-          formDataToSend.append('AudioURL', formData.audioFile);
-          console.log('Appended audio file:', formData.audioFile.name);
-        } else if (formData.audioFile.uri) {
-          formDataToSend.append('AudioURL', {
-            uri: formData.audioFile.uri,
-            type: formData.audioFile.type || 'audio/mp3',
-            name: formData.audioFile.name || `audio_${Date.now()}.mp3`
-          });
-        }
-      }
-
-      // Log form data entries for debugging
-      console.log('FormData entries:');
-      for (let [key, value] of formDataToSend.entries()) {
-        console.log(`${key}:`, value);
-      }
-
-      console.log('Sending request to API...');
-      
-      // Show loading state
-      setSubmitting(true);
-      
-      try {
-        // Use the apiService to make the request
-        const result = await apiService.ads.create(formDataToSend);
-        
-        console.log('API Response:', result);
-        
-        if (result && result.success) {
-          // Show success message
-          alert(result.message || 'Ad created successfully!');
-          // Reset form
-          setFormData({
-            // ... your initial form state
-          });
-          // Redirect to dashboard or ad preview
-          window.location.href = '/dashboard';
-          return; // Exit the function after successful submission
-        } else {
-          throw new Error(result?.message || 'Failed to create ad');
-        }
-      } catch (error) {
-        console.error('API Error:', error);
-        
-        let errorMessage = 'Failed to create ad. Please try again.';
-        
-        if (error.response) {
-          console.error('Response data:', error.response.data);
-          console.error('Response status:', error.response.status);
-          
-          // Check for specific error messages from the server
-          if (error.response.data) {
-            if (typeof error.response.data === 'string') {
-              errorMessage = error.response.data;
-            } else if (error.response.data.message) {
-              errorMessage = error.response.data.message;
-            } else if (error.response.data.error) {
-              errorMessage = error.response.data.error;
-            }
-          }
-          
-          // Handle specific status codes
-          if (error.response.status === 400) {
-            errorMessage = 'Invalid data. Please check your input.';
-          } else if (error.response.status === 401) {
-            errorMessage = 'Session expired. Please log in again.';
-            // Redirect to login
-            window.location.href = '/login';
-            return;
-          } else if (error.response.status === 500) {
-            errorMessage = 'Server error. Please try again later.';
-          }
-        } else if (error.request) {
-          console.error('No response received:', error.request);
-          errorMessage = 'No response from server. Please check your internet connection.';
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
-        
-        // Show error message to user
-        alert(errorMessage);
-        throw error; // Re-throw the error to be caught by the outer catch block
-      } finally {
-        // Reset submitting state
-        setSubmitting(false);
-      }
-    } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      let errorMessage = 'Failed to create ad. Please try again.';
-      
-      if (error.response) {
-        if (error.response.status === 401) {
-          errorMessage = 'Authentication failed. Please log in again.';
-        } else if (error.response.status === 400) {
-          errorMessage = 'Invalid request. Please check your input.';
-          if (error.response.data?.errors) {
-            errorMessage += '\n\n' + Object.entries(error.response.data.errors)
-              .map(([field, messages]) => `${field}: ${Array.isArray(messages) ? messages.join(', ') : messages}`)
-              .join('\n');
-          }
-        } else if (error.response.status === 500) {
-          errorMessage = 'Server error. Please try again later.';
-          if (error.response.data?.message) {
-            errorMessage += `\n\n${error.response.data.message}`;
-          }
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        } else {
-          errorMessage = `Server returned status: ${error.response.status}`;
-        }
-      } else if (error.request) {
-        console.error('No response received:', error.request);
-        errorMessage = 'No response from server. Please check your internet connection.';
-      } else if (error.message) {
-        console.error('Request setup error:', error.message);
-        errorMessage = error.message;
-      }
-      
-      // Show error message to user
-      alert(errorMessage);
-      console.error('Error details:', { error });
+    // Check for empty strings, null, undefined, or 0 for numeric fields
+    if (value === '' || value === null || value === undefined || value === 0) {
+      errors.push(field.name);
     }
-  };
+    
+    // Additional validation for price
+    if (field.key === 'VehiclePrice' && (value <= 0 || isNaN(value))) {
+      errors.push(`${field.name} must be greater than 0`);
+    }
+    
+    // Additional validation for numeric IDs
+    if (['VehicleTypeID', 'VehicleBrandID', 'VehicleModelID', 'VehicleBodyTypeID'].includes(field.key)) {
+      if (value <= 0 || isNaN(value)) {
+        errors.push(`${field.name} must be selected`);
+      }
+    }
+  });
+  
+  return errors;
+};
 
-  const renderStep = (stepNumber, title, content, isActive) => (
-    <div id={`step-${stepNumber}`} className={`mb-8 transition-all duration-300 ${isActive ? 'block' : 'hidden'}`}>
-      <div className="flex items-center mb-6">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-4 ${
-          currentStep >= stepNumber ? 'bg-emov-purple text-white' : 'bg-gray-300 text-gray-600'
-        }`}>
-          {stepNumber}
-        </div>
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">
-          Step {stepNumber}: {title}
-        </h2>
+// FIXED handleSubmit function that matches your API response format
+
+const handleSubmit = async () => {
+  try {
+    console.log('🚀 Starting form submission...');
+    setSubmitting(true);
+    setError(null);
+    
+    // Check if user is authenticated
+    const token = localStorage.getItem('token');
+    if (!token) {
+      sessionStorage.setItem('pendingAdData', JSON.stringify(formData));
+      sessionStorage.setItem('redirectAfterLogin', '/post-ad');
+      window.location.href = '/login';
+      return;
+    }
+    
+    console.log('📋 Current formData:', formData);
+    
+    // Validate form
+    const validationErrors = validateForm();
+    
+    if (validationErrors.length > 0) {
+      setCurrentStep(1);
+      throw new Error(`Please fill in all required fields: ${validationErrors.join(', ')}`);
+    }
+
+    // Check if we have uploaded images
+    if (!formData.Images || formData.Images.length === 0) {
+      throw new Error('Please upload at least one image');
+    }
+
+    // Get user ID from localStorage or profile
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const userId = user.id || user.UserID;
+    
+    if (!userId) {
+      throw new Error('User not authenticated. Please log in again.');
+    }
+
+    console.log('👤 User ID:', userId);
+    
+    // **CRITICAL FIX**: Ensure Images is always an ARRAY
+    let imagesArray;
+    
+    // Handle different possible formats of Images
+    if (Array.isArray(formData.Images)) {
+      imagesArray = formData.Images;
+    } else if (typeof formData.Images === 'string') {
+      // If it's a string, try to parse it as JSON array, otherwise wrap in array
+      try {
+        imagesArray = JSON.parse(formData.Images);
+        if (!Array.isArray(imagesArray)) {
+          imagesArray = [formData.Images];
+        }
+      } catch (e) {
+        imagesArray = [formData.Images];
+      }
+    } else {
+      imagesArray = [formData.Images];
+    }
+    
+    // Filter out any empty/null values
+    imagesArray = imagesArray.filter(img => img && img.trim() !== '');
+    
+    console.log('🔍 DEBUG - Images data:', {
+      originalImages: formData.Images,
+      processedImages: imagesArray,
+      type: typeof imagesArray,
+      isArray: Array.isArray(imagesArray),
+      length: imagesArray.length
+    });
+
+    // Prepare the request data exactly as backend expects
+    const requestData = {
+      VehicleName: formData.VehicleName || '',
+      VehicleModelID: formData.VehicleModelID ? Number(formData.VehicleModelID) : null,
+      VehiclePrice: formData.VehiclePrice ? Number(formData.VehiclePrice) : null,
+      VehicleTypeID: formData.VehicleTypeID ? Number(formData.VehicleTypeID) : null,
+      VehicleMileage: formData.VehicleMileage || '',
+      RegistrationYear: formData.RegistrationYear ? String(formData.RegistrationYear) : '',
+      VehiclePower: formData.VehiclePower ? `${formData.VehiclePower} HP` : '',
+      VehicleBrandID: formData.VehicleBrandID ? Number(formData.VehicleBrandID) : null,
+      Transmission: formData.Transmission || '',
+      Color: formData.Color || '',
+      SellerComment: formData.SellerComment || '',
+      LocationName: formData.LocationName || '',
+      EngineType: formData.EngineType || '',
+      VehicleBodyTypeID: formData.VehicleBodyTypeID ? Number(formData.VehicleBodyTypeID) : null,
+      LoadCapacity: formData.LoadCapacity || '',
+      Ownership: formData.Ownership || '',
+      ServiceHistory: formData.ServiceHistory || '',
+      UserID: String(userId),
+      // **FIX**: Send as ARRAY of strings
+      Images: imagesArray,
+      AudioURL: formData.AudioURL || null
+    };
+    
+    console.log('📤 Final request data before sending:', requestData);
+    console.log('=== VEHICLEPOWER DEBUG ===');
+    console.log('VehiclePower in requestData:', requestData.VehiclePower);
+    console.log('Type of VehiclePower:', typeof requestData.VehiclePower);
+    console.log('formData.VehiclePower:', formData.VehiclePower);
+    console.log('Type of formData.VehiclePower:', typeof formData.VehiclePower);
+    
+    // Make the API call
+    console.log('📡 Making API call to create ad...');
+    const response = await apiService.ads.create(requestData);
+    
+    console.log('✅ API Response:', response);
+
+    if (response && (response.status === 201 || response.success)) {
+      // Success
+      console.log('🎉 Ad created successfully!');
+      
+      // Show success message
+      alert('Ad created successfully!');
+      
+      // Reset form
+      setFormData({
+        VehicleName: '',
+        VehiclePrice: '',
+        VehicleTypeID: '',
+        VehicleBrandID: '',
+        VehicleModelID: '',
+        VehicleMileage: '',
+        RegistrationYear: '',
+        VehiclePower: '',
+        Transmission: '',
+        Color: '',
+        SellerComment: '',
+        LocationName: '',
+        EngineType: '',
+        VehicleBodyTypeID: '',
+        LoadCapacity: '',
+        Ownership: '',
+        ServiceHistory: '',
+        Images: [],
+        AudioURL: null,
+        IsFeatured: false,
+        IsNegotiable: false,
+        ContactNumber: '',
+        City: '',
+        Address: ''
+      });
+      
+      // Redirect to my ads page
+      setTimeout(() => {
+        navigate('/my-ads');
+      }, 2000);
+      
+    } else {
+      throw new Error(response?.message || 'Failed to create ad');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in handleSubmit:', error);
+    
+    let errorMessage = 'Failed to create ad. Please try again.';
+    
+    if (error.response) {
+      const { status, data } = error.response;
+      console.error(`Server responded with status ${status}:`, data);
+      
+      if (data?.message) {
+        errorMessage = data.message;
+      } else if (data?.error) {
+        errorMessage = data.error;
+      } else if (status === 500) {
+        errorMessage = 'Server error. Please check if the backend is running and try again.';
+      } else if (status === 400) {
+        errorMessage = 'Invalid data. Please check all fields and try again.';
+      }
+    } else if (error.request) {
+      console.error('No response received:', error.request);
+      errorMessage = 'No response from server. Please check your connection and ensure the backend is running.';
+    } else {
+      console.error('Error message:', error.message);
+      errorMessage = error.message;
+    }
+    
+    setError(errorMessage);
+    alert(`Error: ${errorMessage}`);
+  } finally {
+    setSubmitting(false);
+  }
+};
+
+const renderStep = (stepNumber, title, content, isActive) => (
+  <div id={`step-${stepNumber}`} className={`mb-10 transition-all duration-300 ${isActive ? 'block' : 'hidden'}`}>
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+      {/* Step Header */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
+        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+          {stepNumber === 1 && "Enter your vehicle's essential details to move to the next step."}
+          {stepNumber === 2 && "Add images and optional audio description of your vehicle."}
+          {stepNumber === 3 && "Provide additional information about your vehicle."}
+          {stepNumber === 4 && "Review all the information before submitting your ad."}
+        </p>
       </div>
-      <div className="ml-12">
+      
+      {/* Step Content */}
+      <div className="space-y-6">
         {content}
       </div>
     </div>
-  );
+  </div>
+);
 
-  const renderBasicDetails = () => (
-    <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+const renderBasicDetails = () => (
+  <div className="space-y-8">
+    <div className="space-y-1">
+      
+    </div>
+
+    <div className="space-y-6">
+      {/* Row 1: Vehicle Name and Price */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehicleName} <span className="text-red-500">{t.required}</span>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.vehicleName} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             name="VehicleName"
             value={formData.VehicleName || ''}
             onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             placeholder={t.enterVehicleName}
+            className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200 ${
+                       fieldErrors.VehicleName ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                     }`}
             required
           />
+          {fieldErrors.VehicleName && (
+            <p className="text-sm text-red-500">{fieldErrors.VehicleName}</p>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehiclePrice}
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.vehiclePrice} <span className="text-red-500">*</span>
           </label>
-          <input
-            type="number"
-            name="VehiclePrice"
-            value={formData.VehiclePrice || ''}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            placeholder={t.enterVehiclePrice}
-            required
-            min="0"
-            step="0.01"
-          />
+          <div className="relative">
+            <input
+              type="number"
+              name="VehiclePrice"
+              value={formData.VehiclePrice || ''}
+              onChange={handleInputChange}
+              className={`w-full px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200 ${
+                         fieldErrors.VehiclePrice ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                       }`}
+              placeholder={t.enterVehiclePrice}
+              min="0"
+              required
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm">
+              CAD
+            </span>
+          </div>
+          {fieldErrors.VehiclePrice && (
+            <p className="text-sm text-red-500">{fieldErrors.VehiclePrice}</p>
+          )}
         </div>
       </div>
 
+      {/* Row 2: Vehicle Type and Brand */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehicleType} <span className="text-red-500">{t.required}</span>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.vehicleType} <span className="text-red-500">*</span>
           </label>
-          <select
-            name="VehicleTypeID"
-            value={formData.VehicleTypeID || ''}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            required
-          >
-            <option value="">{t.selectVehicleType}</option>
-            {translatedData.vehicleTypes.map((type, index) => (
-              <option key={type} value={index + 1}>{type}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="VehicleTypeID"
+              value={formData.VehicleTypeID || ''}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2.5 appearance-none border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+              required
+              disabled={filterDataLoading}
+            >
+              <option value="">{t.selectVehicleType}</option>
+              {filterData?.category?.map((category) => (
+                <option key={category.VehicleTypeID} value={category.VehicleTypeID}>
+                  {language === 'urdu' ? category.CategoryNameUrdu : 
+                   language === 'french' ? category.CategoryNameFrench : 
+                   category.CategoryName}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+              <FaCaretDown />
+            </div>
+          </div>
+          {filterDataLoading && (
+            <p className="text-sm text-gray-500">Loading vehicle types...</p>
+          )}
+          {filterDataError && (
+            <p className="text-sm text-red-500">Failed to load vehicle types</p>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehicleBrand} <span className="text-red-500">{t.required}</span>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.brand} <span className="text-red-500">*</span>
           </label>
-          <select
-            name="VehicleBrandID"
-            value={formData.VehicleBrandID || ''}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            required
-          >
-            <option value="">{t.selectBrand}</option>
-            <option value="1">Volvo</option>
-            <option value="2">Scania</option>
-            <option value="3">Mercedes</option>
-            <option value="4">MAN</option>
-          </select>
+          <div className="relative">
+            <select
+              name="VehicleBrandID"
+              value={formData.VehicleBrandID || ''}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2.5 appearance-none border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+              required
+              disabled={filterDataLoading}
+            >
+              <option value="">Select Brand</option>
+              {(() => {
+                const allBrands = filterData?.brand || [];
+                const uniqueBrands = [];
+                const brandNames = new Set();
+                
+                allBrands.forEach(brand => {
+                  if (brand.BrandName && brand.BrandName !== 'Various' && !brandNames.has(brand.BrandName)) {
+                    brandNames.add(brand.BrandName);
+                    uniqueBrands.push({
+                      id: brand.BrandID || brand.VehicleBrandID,
+                      name: brand.BrandName
+                    });
+                  }
+                });
+                
+                return uniqueBrands.map((brand) => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </option>
+                ));
+              })()}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+              <FaCaretDown />
+            </div>
+          </div>
+          {filterDataLoading && (
+            <p className="text-sm text-gray-500">Loading brands...</p>
+          )}
+          {filterDataError && (
+            <p className="text-sm text-red-500">Failed to load brands</p>
+          )}
         </div>
       </div>
 
+      {/* Row 3: Model and Location */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehicleModel} <span className="text-red-500">{t.required}</span>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.model} <span className="text-red-500">*</span>
           </label>
-          <select
-            name="VehicleModelID"
-            value={formData.VehicleModelID || ''}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            required
-          >
-            <option value="">{t.selectVehicleModel}</option>
-            {vehicleModels.map((model, index) => (
-              <option key={model} value={index + 1}>{model}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              name="VehicleModelID"
+              value={formData.VehicleModelID || ''}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2.5 appearance-none border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+              required
+              disabled={filterDataLoading}
+            >
+              <option value="">Select Model</option>
+              {filterData?.model?.map((model) => (
+                <option key={model.ModelID || model.VehicleModelID} value={model.ModelID || model.VehicleModelID}>
+                  {language === 'urdu' ? (model.ModelNameUrdu || model.name) :
+                   language === 'french' ? (model.ModelNameFrench || model.name) :
+                   (model.ModelNameEnglish || model.ModelName || model.name)}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+              <FaCaretDown />
+            </div>
+          </div>
+          {filterDataLoading && (
+            <p className="text-sm text-gray-500">Loading models...</p>
+          )}
+          {filterDataError && (
+            <p className="text-sm text-red-500">Failed to load models</p>
+          )}
         </div>
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehicleMileage} <span className="text-red-500">{t.required}</span>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.location} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
-            name="mileage"
-            value={formData.mileage}
+            name="LocationName"
+            value={formData.LocationName || ''}
             onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            placeholder={t.enterVehicleMileage}
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white 
+                     focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+            placeholder={t.enterLocation}
+            required
           />
         </div>
       </div>
 
+      {/* Row 4: Mileage and Registration Year */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.registrationYear} <span className="text-red-500">{t.required}</span>
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.vehicleMileage} <span className="text-red-500">*</span>
           </label>
-          <select
-            name="registrationYear"
-            value={formData.registrationYear}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="">{t.selectRegistrationYear}</option>
-            {registrationYears.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
+          <div className="relative">
+            <input
+              type="text"
+              name="VehicleMileage"
+              value={formData.VehicleMileage || ''}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+              placeholder={t.enterVehicleMileage}
+              required
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm">
+              km
+            </span>
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehiclePower} <span className="text-red-500">{t.required}</span>
+
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.registrationYear} <span className="text-red-500">*</span>
           </label>
-          <input
-            type="text"
-            name="power"
-            value={formData.power}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            placeholder={t.enterVehiclePower}
-          />
+          <div className="relative">
+            <select
+              name="RegistrationYear"
+              value={formData.RegistrationYear || ''}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2.5 appearance-none border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+              required
+            >
+              <option value="">{t.selectRegistrationYear}</option>
+              {registrationYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+              <FaCaretDown />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-          {t.transmission} <span className="text-red-500">{t.required}</span>
+      {/* Row 5: Power and Color */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t.vehiclePower} <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              name="VehiclePower"
+              value={formData.VehiclePower || ''}
+              onChange={handleInputChange}
+              placeholder="Enter power (e.g., 150)"
+              className={`w-full px-4 py-2.5 pr-12 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200 ${
+                         fieldErrors.VehiclePower ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                       }`}
+              required
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">
+              HP
+            </span>
+          </div>
+          {fieldErrors.VehiclePower && (
+            <p className="text-sm text-red-500">{fieldErrors.VehiclePower}</p>
+          )}
+        </div>
+        
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Color <span className="text-red-500">*</span>
+          </label>
+          <div className="flex items-center space-x-3">
+            <input
+              type="color"
+              name="Color"
+              value={formData.Color || '#000000'}
+              onChange={handleInputChange}
+              className={`h-10 w-16 border-2 rounded-lg cursor-pointer ${
+                fieldErrors.Color ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+              }`}
+              required
+            />
+            <input
+              type="text"
+              value={formData.Color || ''}
+              onChange={handleInputChange}
+              placeholder="Select color or enter hex code"
+              className={`flex-1 px-4 py-2.5 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                       focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200 ${
+                         fieldErrors.Color ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
+                       }`}
+              readOnly
+            />
+          </div>
+          {fieldErrors.Color && (
+            <p className="text-sm text-red-500">{fieldErrors.Color}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Transmission */}
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.transmission} <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="flex flex-wrap gap-3">
           {translatedData.transmissionTypes.map((type) => (
-            <label key={type} className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300">
+            <label 
+              key={type} 
+              className={`flex items-center space-x-2 px-4 py-2 border rounded-lg cursor-pointer ${
+                formData.Transmission === type
+                  ? 'bg-emov-purple/10 text-emov-purple'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+            >
               <input
                 type="radio"
-                name="transmission"
+                name="Transmission"
                 value={type}
-                checked={formData.transmission === type}
+                checked={formData.Transmission === type}
                 onChange={handleInputChange}
-                className="w-4 h-4 text-emov-purple"
+                className="w-4 h-4 text-emov-purple border-gray-300"
               />
-              <span>{type}</span>
+              <span className="font-medium">{type}</span>
             </label>
           ))}
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 
   const renderImagesAudio = () => (
-    <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+    <div className="space-y-6">
       <div>
         <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">{t.images}</label>
         <input
@@ -799,249 +1223,336 @@ export default function Ads() {
   );
 
   const renderAdditionalDetails = () => (
-    <div className="space-y-6 bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-        <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-          {t.engineType} <span className="text-red-500">{t.required}</span>
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {translatedData.engineTypes.map((type) => (
-            <label key={type} className={`flex items-center space-x-2 text-sm p-3 rounded-lg cursor-pointer ${
-              formData.engineType === type 
-                ? 'bg-emov-purple/10 border border-emov-purple' 
-                : 'border border-gray-300 dark:border-gray-600'
-            }`}>
-              <input
-                type="radio"
-                name="engineType"
-                value={type}
-                checked={formData.engineType === type}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-emov-purple"
-              />
-              <span className="font-medium">{type}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-          <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-            {t.vehicleBodyType} <span className="text-red-500">{t.required}</span>
+  <div className="space-y-6">
+    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+      <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
+        {t.engineType} <span className="text-red-500">{t.required}</span>
+      </label>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        {translatedData.engineTypes.map((type) => (
+          <label key={type} className={`flex items-center space-x-2 text-sm p-3 rounded-lg cursor-pointer ${
+            formData.EngineType === type
+              ? 'bg-emov-purple/10 border border-emov-purple' 
+              : 'border border-gray-300 dark:border-gray-600'
+          }`}>
+            <input
+              type="radio"
+              name="EngineType"
+              value={type}
+              checked={formData.EngineType === type}
+              onChange={handleInputChange}
+              className="w-4 h-4 text-emov-purple"
+            />
+            <span className="font-medium">{type}</span>
           </label>
-          <select
-            name="vehicleBodyType"
-            value={formData.vehicleBodyType}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <option value="">{t.selectVehicleType}</option>
-            {bodyTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-          <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-            {t.loadCapacity} <span className="text-gray-500">({t.optional})</span>
-          </label>
-          <input
-            type="text"
-            name="loadCapacity"
-            value={formData.loadCapacity}
-            onChange={handleInputChange}
-            className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            placeholder={t.enterLoadCapacity}
-          />
-        </div>
+        ))}
       </div>
+    </div>
 
-      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-        <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-          {t.ownership} <span className="text-red-500">{t.required}</span>
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {translatedData.ownershipTypes.map((type) => (
-            <label key={type} className={`flex items-center space-x-2 text-sm p-3 rounded-lg cursor-pointer ${
-              formData.ownership === type 
-                ? 'bg-emov-purple/10 border border-emov-purple' 
-                : 'border border-gray-300 dark:border-gray-600'
-            }`}>
-              <input
-                type="radio"
-                name="ownership"
-                value={type}
-                checked={formData.ownership === type}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-emov-purple"
-              />
-              <span className="font-medium">{type}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-        <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
-          {t.serviceHistory} <span className="text-gray-500">({t.optional})</span>
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {translatedData.serviceHistoryTypes.map((type) => (
-            <label key={type} className={`flex items-center space-x-2 text-sm p-3 rounded-lg cursor-pointer ${
-              formData.serviceHistory === type 
-                ? 'bg-emov-purple/10 border border-emov-purple' 
-                : 'border border-gray-300 dark:border-gray-600'
-            }`}>
-              <input
-                type="radio"
-                name="serviceHistory"
-                value={type}
-                checked={formData.serviceHistory === type}
-                onChange={handleInputChange}
-                className="w-4 h-4 text-emov-purple"
-              />
-              <span className="font-medium">{type}</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
         <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-          {t.sellerComment} <span className="text-gray-500">({t.optional})</span>
+          {t.vehicleBodyType} <span className="text-red-500">{t.required}</span>
         </label>
-        <textarea
-          name="sellerComment"
-          value={formData.sellerComment}
+        <select
+          name="VehicleBodyTypeID"
+          value={formData.VehicleBodyTypeID || ''}
           onChange={handleInputChange}
           className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          rows="4"
-          placeholder={t.addComments}
+          disabled={filterDataLoading}
+        >
+          <option value="">Select Body Type</option>
+          {(() => {
+            const bodyTypesData = filterData?.body_type || filterData?.bodyType || [];
+            console.log('Body types data:', bodyTypesData);
+            return bodyTypesData.map((bodyType) => (
+              <option key={bodyType.BodyTypeID || bodyType.id} value={bodyType.BodyTypeID || bodyType.id}>
+                {language === 'urdu' ? (bodyType.BodyTypeNameUrdu || bodyType.name) :
+                 language === 'french' ? (bodyType.BodyTypeNameFrench || bodyType.name) :
+                 (bodyType.BodyTypeName || bodyType.name)}
+              </option>
+            ));
+          })()}
+        </select>
+        {filterDataLoading && (
+          <p className="text-sm text-gray-500 mt-2">Loading body types...</p>
+        )}
+        {filterDataError && (
+          <p className="text-sm text-red-500 mt-2">Failed to load body types</p>
+        )}
+      </div>
+      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+          {t.loadCapacity} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <input
+          type="text"
+          name="LoadCapacity"
+          value={formData.LoadCapacity || ''}
+          onChange={handleInputChange}
+          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          placeholder={t.enterLoadCapacity}
         />
       </div>
     </div>
-  );
 
-  const renderPreview = () => {
-    // Helper function to get display value with fallback
-    const getFormValue = (key) => {
-      // Try camelCase first, then lowercase with spaces
-      const value = formData[key] || formData[key.toLowerCase().replace(/\s+/g, '')];
-      if (value === undefined || value === null || value === '') return 'N/A';
-      return value;
-    };
+    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+      <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
+        {t.ownership} <span className="text-red-500">{t.required}</span>
+      </label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {translatedData.ownershipTypes.map((type) => (
+          <label key={type} className={`flex items-center space-x-2 text-sm p-3 rounded-lg cursor-pointer ${
+            formData.Ownership === type
+              ? 'bg-emov-purple/10 border border-emov-purple' 
+              : 'border border-gray-300 dark:border-gray-600'
+          }`}>
+            <input
+              type="radio"
+              name="Ownership"
+              value={type}
+              checked={formData.Ownership === type}
+              onChange={handleInputChange}
+              className="w-4 h-4 text-emov-purple"
+            />
+            <span className="font-medium">{type}</span>
+          </label>
+        ))}
+      </div>
+    </div>
 
-    // Get brand name from ID
-    const getBrandName = (brandId) => {
-      const brands = { 1: 'Volvo', 2: 'Scania', 3: 'Mercedes', 4: 'MAN' };
-      return brands[brandId] || 'N/A';
-    };
+    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+      <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
+        {t.serviceHistory} <span className="text-gray-500">({t.optional})</span>
+      </label>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {translatedData.serviceHistoryTypes.map((type) => (
+          <label key={type} className={`flex items-center space-x-2 text-sm p-3 rounded-lg cursor-pointer ${
+            formData.ServiceHistory === type
+              ? 'bg-emov-purple/10 border border-emov-purple' 
+              : 'border border-gray-300 dark:border-gray-600'
+          }`}>
+            <input
+              type="radio"
+              name="ServiceHistory"
+              value={type}
+              checked={formData.ServiceHistory === type}
+              onChange={handleInputChange}
+              className="w-4 h-4 text-emov-purple"
+            />
+            <span className="font-medium">{type}</span>
+          </label>
+        ))}
+      </div>
+    </div>
 
-    // Get model name from ID
-    const getModelName = (modelId) => {
-      return modelId && vehicleModels[modelId - 1] ? vehicleModels[modelId - 1] : 'N/A';
-    };
+    <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+      <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+        {t.sellerComment} <span className="text-gray-500">({t.optional})</span>
+      </label>
+      <textarea
+        name="SellerComment"
+        value={formData.SellerComment || ''}
+        onChange={handleInputChange}
+        className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        rows="4"
+        placeholder={t.addComments}
+      />
+    </div>
+  </div>
+);
+
+const renderPreview = () => {
+  // Get vehicle type name from ID
+  const getVehicleTypeName = (typeId) => {
+    if (!typeId && typeId !== 0) return 'N/A';
     
-    // Get value with fallback for all possible naming conventions
-    const getValue = (key) => {
-      // Try different key formats
-      const keysToTry = [
-        key, // Original key (e.g., 'VehicleName')
-        key.toLowerCase(), // lowercase (e.g., 'vehiclename')
-        key.replace(/([A-Z])/g, ' $1').trim().toLowerCase() // Add space before caps and lowercase (e.g., 'vehicle name')
-      ];
-      
-      // Try each key format until we find a value
-      for (const k of keysToTry) {
-        const value = formData[k];
-        if (value !== undefined && value !== null && value !== '') {
-          // Special handling for numeric IDs
-          if (k.toLowerCase().includes('id') && typeof value === 'number') {
-            return value;
-          }
-          return value;
-        }
+    // Convert to string for comparison (API returns strings)
+    const id = String(typeId);
+    
+    // Try to find in filterData
+    if (filterData?.category) {
+      const category = filterData.category.find(cat => 
+        String(cat.VehicleTypeID || cat.id) === id
+      );
+      if (category) {
+        return category.CategoryName || category.name || category.CategoryNameEnglish || 'N/A';
       }
-      
-      // If no value found, try to get from the original form data with spaces removed
-      const keyWithoutSpaces = key.replace(/\s+/g, '');
-      if (formData[keyWithoutSpaces] !== undefined) {
-        return formData[keyWithoutSpaces];
-      }
-      
-      return 'N/A';
-    };
+    }
+    
+    // If not found in filterData, try to get from the stored options
+    const storedCategories = JSON.parse(localStorage.getItem('vehicleCategories') || '[]');
+    const category = storedCategories.find(cat => 
+      String(cat.VehicleTypeID || cat.id) === id
+    );
+    return category ? (category.CategoryName || category.name || category.CategoryNameEnglish) : typeId;
+  };
 
-    return (
-      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-        <div className="mb-6">
-          <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
-            {getValue('VehicleName') || t.vehicleNameNotProvided}
-          </h3>
-          <p className="text-xl font-semibold text-emov-green">
-            {getValue('VehiclePrice') !== 'N/A' ? `CAD ${getValue('VehiclePrice')}` : t.priceNotSet}
+  // Get body type name from ID
+  const getBodyTypeName = (bodyTypeId) => {
+    if (!bodyTypeId && bodyTypeId !== 0) return 'N/A';
+    
+    // Convert to string for comparison (API returns strings)
+    const id = String(bodyTypeId);
+    
+    // Try to find in filterData
+    const bodyTypesData = filterData?.body_type || filterData?.bodyType || [];
+    if (bodyTypesData.length > 0) {
+      const bodyType = bodyTypesData.find(bt => 
+        String(bt.BodyTypeID || bt.id) === id
+      );
+      if (bodyType) {
+        return bodyType.BodyTypeName || bodyType.name || bodyType.BodyTypeNameEnglish || 'N/A';
+      }
+    }
+    
+    // If not found in filterData, try to get from the stored options
+    const storedBodyTypes = JSON.parse(localStorage.getItem('vehicleBodyTypes') || '[]');
+    const bodyType = storedBodyTypes.find(bt => 
+      String(bt.BodyTypeID || bt.id) === id
+    );
+    return bodyType ? (bodyType.BodyTypeName || bodyType.name || bodyType.BodyTypeNameEnglish) : bodyTypeId;
+  };
+
+  // Get brand name from ID
+  const getBrandName = (brandId) => {
+    if (!brandId && brandId !== 0) return 'N/A';
+    
+    // Convert to string for comparison (API returns strings)
+    const id = String(brandId);
+    
+    // Try to find in filterData
+    if (filterData?.brand) {
+      const brand = filterData.brand.find(b => 
+        String(b.BrandID || b.id) === id
+      );
+      if (brand) {
+        return brand.BrandName || brand.name || 'N/A';
+      }
+    }
+    
+    // If not found in filterData, try to get from the stored options
+    const storedBrands = JSON.parse(localStorage.getItem('vehicleBrands') || '[]');
+    const brand = storedBrands.find(b => 
+      String(b.BrandID || b.id) === id
+    );
+    return brand ? (brand.BrandName || brand.name) : brandId;
+  };
+
+  // Get model name from ID
+  const getModelName = (modelId) => {
+    if (!modelId && modelId !== 0) return 'N/A';
+    
+    // Convert to string for comparison (API returns strings)
+    const id = String(modelId);
+    
+    console.log('=== Model Lookup ===');
+    console.log('Input modelId:', modelId, 'Type:', typeof modelId);
+    console.log('Converted id:', id);
+    console.log('filterData?.model:', filterData?.model);
+    
+    // Try to find in filterData
+    if (filterData?.model) {
+      if (filterData.model.length > 0) {
+        console.log('Sample model structure:', filterData.model[0]);
+        console.log('Available model IDs:', filterData.model.map(m => m.ModelID || m.VehicleModelID || m.id));
+      }
+      const model = filterData.model.find(m => 
+        String(m.ModelID || m.VehicleModelID || m.id) === id
+      );
+      console.log('Found model:', model);
+      if (model) {
+        const name = model.ModelName || model.name || model.ModelNameEnglish || 'N/A';
+        console.log('Returning model name:', name);
+        return name;
+      }
+    }
+    
+    // If not found in filterData, try to get from the stored options
+    const storedModels = JSON.parse(localStorage.getItem('vehicleModels') || '[]');
+    const model = storedModels.find(m => 
+      String(m.ModelID || m.VehicleModelID || m.id) === id
+    );
+    console.log('Found model in localStorage:', model);
+    if (model) {
+      const name = model.ModelName || model.name || model.ModelNameEnglish;
+      console.log('Returning localStorage model name:', name);
+      return name;
+    }
+    
+    console.log('No model match found, returning ID:', modelId);
+    return modelId;
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+      <div className="mb-6">
+        <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+          {formData.VehicleName || t.vehicleNameNotProvided}
+        </h3>
+        <p className="text-xl font-semibold text-emov-green">
+          {formData.VehiclePrice ? `CAD ${formData.VehiclePrice}` : t.priceNotSet}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="space-y-3">
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.vehicleType}:</strong> {getVehicleTypeName(formData.VehicleTypeID)}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.brand}:</strong> {getBrandName(formData.VehicleBrandID)}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.model}:</strong> {getModelName(formData.VehicleModelID)}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.vehiclePrice}:</strong> {formData.VehiclePrice ? `$${formData.VehiclePrice}` : 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.transmission}:</strong> {formData.Transmission || 'N/A'}
           </p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="space-y-3">
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.vehicleType}:</strong> {formData.VehicleTypeID ? translatedData.vehicleTypes[formData.VehicleTypeID - 1] : getValue('vehicleType')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.brand}:</strong> {formData.VehicleBrandID ? getBrandName(formData.VehicleBrandID) : getValue('brand')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.model}:</strong> {formData.VehicleModelID ? getModelName(formData.VehicleModelID) : getValue('model')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.vehiclePrice}:</strong> {getValue('VehiclePrice') !== 'N/A' ? `$${getValue('VehiclePrice')}` : 'N/A'}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.transmission}:</strong> {getValue('Transmission') || getValue('transmission')}
-            </p>
-          </div>
-          <div className="space-y-3">
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.vehicleMileage}:</strong> {getValue('mileage')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.registrationYear}:</strong> {getValue('registrationYear')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.power}:</strong> {getValue('power')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.engineType}:</strong> {getValue('engineType')}
-            </p>
-          </div>
+        <div className="space-y-3">
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.vehicleMileage}:</strong> {formData.VehicleMileage || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.registrationYear}:</strong> {formData.RegistrationYear || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.power}:</strong> {formData.VehiclePower || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.engineType}:</strong> {formData.EngineType || 'N/A'}
+          </p>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="space-y-3">
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.bodyType}:</strong> {getValue('vehicleBodyType')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.ownership}:</strong> {getValue('ownership')}
-            </p>
-          </div>
-          <div className="space-y-3">
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.loadCapacity}:</strong> {getValue('loadCapacity')}
-            </p>
-            <p className="text-gray-700 dark:text-gray-300">
-              <strong>{t.serviceHistory}:</strong> {getValue('serviceHistory')}
-            </p>
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="space-y-3">
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.bodyType}:</strong> {getBodyTypeName(formData.VehicleBodyTypeID)}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.ownership}:</strong> {formData.Ownership || 'N/A'}
+          </p>
         </div>
+        <div className="space-y-3">
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.loadCapacity}:</strong> {formData.LoadCapacity || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.serviceHistory}:</strong> {formData.ServiceHistory || 'N/A'}
+          </p>
+        </div>
+      </div>
 
-      {formData.sellerComment && (
+      {formData.SellerComment && (
         <div className="mb-6">
           <h4 className="font-semibold mb-3 text-gray-800 dark:text-white">{t.sellerComment}</h4>
           <p className="text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-            {formData.sellerComment}
+            {formData.SellerComment}
           </p>
         </div>
       )}
@@ -1051,79 +1562,78 @@ export default function Ads() {
         <div className="flex flex-wrap gap-3">
           <div className="bg-gray-50 dark:bg-gray-700 px-4 py-2 rounded-lg">
             <span className="text-gray-700 dark:text-gray-300 font-medium">{t.images}: </span>
-            <span className="text-emov-green">{(formData.images && formData.images.length) || 0} {t.uploaded}</span>
+            <span className="text-emov-green">{(formData.Images && formData.Images.length) || 0} {t.uploaded}</span>
           </div>
           <div className="bg-gray-50 dark:bg-gray-700 px-4 py-2 rounded-lg">
             <span className="text-gray-700 dark:text-gray-300 font-medium">{t.audio}: </span>
-            <span className={formData.audio ? "text-emov-green" : "text-gray-500"}>
-              {formData.audio ? t.uploaded : t.notProvided}
+            <span className={formData.AudioURL ? "text-emov-green" : "text-gray-500"}>
+              {formData.AudioURL ? t.uploaded : t.notProvided}
             </span>
           </div>
         </div>
       </div>
     </div>
   );
-  };
+};
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-
-       <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-12 sm:h-16 py-6 border-b border-border-primary">
-                  <div className=" flex items-center space-x-2 ">
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-sm font-medium text-text-primary">Download App</span>
-                  </div>
+      <div className="w-full px-0 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-12 sm:h-16 py-6 border-b border-border-primary">
+        <div className="flex items-center space-x-2">
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          <span className="text-sm font-medium text-text-primary">Download App</span>
+        </div>
       
-                     {/* Right side controls */}
-                          <div className="flex items-center space-x-2 sm:space-x-4">
-                            {/* Desktop Language Selector and Theme Toggle */}
-                            <div className="hidden md:flex items-center space-x-4">
-                              {/* Language Selector */}
-                              <div className="relative">
-                                <select 
-                                  value={language}
-                                  onChange={(e) => setLanguage(e.target.value)}
-                                  className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none"
-                                >
-                                  <option value="english">English</option>
-                                  <option value="urdu">Urdu</option>
-                                  <option value="french">French</option>
-                                </select>
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
-                                  <FaCaretDown className="text-text-secondary w-3 h-3" />
-                                </div>
-                              </div>
-                              
-                              {/* Theme Toggle Button */}
-                              <button 
-                                onClick={toggleTheme}
-                                className="focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
-                                style={{ borderRadius: '12px' }}
-                                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                              >
-                                {theme === 'dark' ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
-                              </button>
-                            </div>
-                  
-                  <div className="flex items-center space-x-4">
-                    <button className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none">
-                      <span>Sign In</span>
-                    </button>
-                    <button className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
-                      style={{
-                        backgroundColor: 'var(--emov-green, #27c583ff)',
-                      }}
-                      onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-                      onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-                    >
-                      <span>Sign Up</span>
-                    </button>
-                    
-                  </div>
-                </div>
-                </div>
+        {/* Right side controls */}
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Desktop Language Selector and Theme Toggle */}
+          <div className="hidden md:flex items-center space-x-4">
+            {/* Language Selector */}
+            <div className="relative">
+              <select 
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none"
+              >
+                <option value="english">English</option>
+                <option value="urdu">Urdu</option>
+                <option value="french">French</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
+                <FaCaretDown className="text-text-secondary w-3 h-3" />
+              </div>
+            </div>
+            
+            {/* Theme Toggle Button */}
+            <button 
+              onClick={toggleTheme}
+              className="focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
+              style={{ borderRadius: '12px' }}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
+            </button>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <button className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none">
+              <span>Sign In</span>
+            </button>
+            <button className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: 'var(--emov-green, #27c583ff)',
+              }}
+              onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
+              onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+            >
+              <span>Sign Up</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <Navbar 
         isDark={theme === 'dark'}
         toggleTheme={toggleTheme}
@@ -1135,49 +1645,72 @@ export default function Ads() {
       
       {/* Main Content */}
       <div className="pt-0">
+        {/* Top Right Button inside Main Content */}
+        <div className="container mx-auto px-0 max-w-4xl">
+         
+        </div>
         <div className="bg-white dark:bg-gray-800 py-12 shadow-sm mb-8">
-          <div className="container mx-auto px-4 max-w-4xl">
+          <div className="container mx-auto px-0 max-w-4xl">
             <div className="text-center">
-              <h1 className="text-3xl md:text-4xl font-bold text-emov-purple mb-4">
+<div className="flex justify-end mb-6">
+  <button
+    onClick={() => navigate('/my-ads-list')}
+    className="inline-flex items-center px-6 py-3 bg-emov-purple text-white rounded-lg font-medium hover:bg-emov-purple/90 transition-colors shadow-lg hover:shadow-xl"
+  >
+    View My Ads
+  </button>
+</div>      <h1 className="text-3xl md:text-4xl font-bold text-emov-purple mb-4">
                 A Smarter Way to Sell Your Vehicle — in 4 Steps
               </h1>
               <p className="text-gray-600 dark:text-gray-300 text-lg">
+                Post your ad in minutes and reach thousands of potential buyers
+              </p>
+              <p className="text-gray-600 dark:text-gray-300 text-lg">
                 Experience a smooth, transparent process designed to save your <br /> time and maximize your return.
               </p>
-                {/* Step Indicator */}
-          <div className="flex justify-between items-center mb-8 p-4 bg-white dark:bg-gray-800 rounded-lg  mt-5">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex flex-col items-center">
-                <div 
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold mb-2 ${
-                    currentStep === step 
-                      ? 'bg-emov-purple text-white' 
-                      : currentStep > step 
-                        ? 'bg-emov-green text-white' 
-                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                  }`}
-                >
-                  {step}
+              
+              
+              {/* Step Indicator */}
+              <div className="flex justify-center items-center mb-8 p-6 bg-white dark:bg-gray-800 rounded-xl mt-5 relative">
+                <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-200 dark:bg-gray-600 -translate-y-1/2 z-0" 
+                     style={{ left: '10%', right: '10%' }}></div>
+                <div className="flex items-center justify-between w-full max-w-2xl">
+                  {[{ id: 1, label: 'Basic Details' }, { id: 2, label: t.additionalDetails }, { id: 3, label: t.media }, { id: 4, label: 'Preview' }].map((step) => (
+                    <div key={step.id} className="flex flex-col items-center relative z-10">
+                      <button
+                        onClick={() => handleStepChange(step.id)}
+                        className={`flex items-center justify-center w-12 h-12 rounded-full font-medium text-lg transition-colors ${
+                          currentStep === step.id
+                            ? 'bg-emov-purple text-white'
+                            : currentStep > step.id
+                            ? 'bg-emov-purple text-white'
+                            : stepErrors[step.id]
+                            ? 'bg-red-500 text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        {step.id}
+                      </button>
+                      <span className={`mt-2 text-sm font-medium text-center ${
+                        currentStep === step.id
+                          ? 'text-emov-purple dark:text-emov-purple'
+                          : currentStep > step.id
+                          ? 'text-emov-purple dark:text-emov-purple'
+                          : stepErrors[step.id]
+                          ? 'text-red-500'
+                          : 'text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {step.label}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                <span className={`text-xs font-medium text-center ${
-                  currentStep >= step 
-                    ? 'text-emov-purple dark:text-emov-purple-light' 
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}>
-                  {step === 1 ? t.basicDetails : 
-                   step === 2 ? t.imagesAudio : 
-                   step === 3 ? t.additionalDetails : t.preview}
-                </span>
               </div>
-            ))}
-          </div>
             </div>
           </div>
         </div>
 
         <div className="container mx-auto px-4 py-8 max-w-4xl">
-        
-          
           <div className="space-y-8">
             {renderStep(1, t.basicDetails, renderBasicDetails(), currentStep >= 1)}
             {renderStep(2, t.imagesAudio, renderImagesAudio(), currentStep >= 2)}
@@ -1201,16 +1734,20 @@ export default function Ads() {
             {currentStep < 4 ? (
               <button
                 onClick={nextStep}
-                className="px-6 py-3 bg-emov-purple text-white rounded-lg font-medium hover:bg-emov-purple/90"
+                className="px-6 py-3 text-white rounded-lg font-medium"
+                style={{ backgroundColor: '#0DFF9A' }}
               >
                 {t.next}
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
-                className="px-6 py-3 bg-emov-green text-white rounded-lg font-medium hover:bg-emov-green/90"
+                disabled={submitting}
+                className={`px-6 py-3 bg-emov-green text-white rounded-lg font-medium hover:bg-emov-green/90 ${
+                  submitting ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
-                {t.submitAd}
+                {submitting ? 'Submitting...' : t.submitAd}
               </button>
             )}
           </div>

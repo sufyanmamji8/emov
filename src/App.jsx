@@ -12,6 +12,8 @@ import FeaturedVehicles from './pages/FeaturedVehicles';
 import Service from "./pages/Service";
 import Chats from './pages/Chats';
 import Ads from './pages/Ads';
+import AdDetail from './pages/AdDetail';
+import MyAds from './pages/MyAds';
 import './index.css'; 
 
 
@@ -64,6 +66,8 @@ const AppContent = ({ children, isAuthenticated, loading, handleLogin, handleLog
           <Route path="/service" element={isAuthenticated ? <Service /> : <Navigate to="/login" />} />
           <Route path="/chats" element={isAuthenticated ? <Chats /> : <Navigate to="/login" />} />
           <Route path="/my-ads" element={isAuthenticated ? <Ads /> : <Navigate to="/login" />} />
+          <Route path="/my-ads-list" element={isAuthenticated ? <MyAds /> : <Navigate to="/login" />} />
+          <Route path="/ad/:adId" element={isAuthenticated ? <AdDetail /> : <Navigate to="/login" />} />
           <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
         </Routes>
       </div>

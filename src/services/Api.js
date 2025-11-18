@@ -1,223 +1,441 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'https://api.emov.com.pk';
+// Use proxy in development to avoid CORS issues
+const API_BASE_URL = import.meta.env.MODE === 'development' ? '/v2' : 'https://api.emov.com.pk/v2';
 
+// Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 60000, // Increased timeout for better reliability
+  withCredentials: false, // Set to false to avoid CORS preflight issues
   headers: {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Content-Type': 'application/json',
   },
-  withCredentials: true
+  maxBodyLength: Infinity,
+  maxContentLength: Infinity
 });
 
-// Request interceptor to add auth token to requests
+// Request interceptor
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
+  async (config) => {
+    // Log the original request
+    console.log(`[API] ${config.method?.toUpperCase() || 'GET'} ${config.url}`, {
+      params: config.params,
+      data: config.data instanceof FormData ? '[FormData]' : config.data
+    });
+
+    // Get token from localStorage or sessionStorage
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    
+    // Log token status (without logging the actual token for security)
+    console.log(`[API] Token available: ${!!token}`);
+    console.log(`[API] Request URL: ${config.url}`);
+    console.log(`[API] Full request URL: ${API_BASE_URL}${config.url}`);
+    
+    // Add Authorization header if token exists
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('[API] Added Authorization header to request');
+    } else {
+      console.warn('[API] No authentication token found - this will likely cause a 401 error');
     }
+
+    // Handle FormData - let browser set Content-Type with boundary
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+      console.log('[API] Handling FormData - removed Content-Type header');
+    }
+
+    // Add cache-busting parameter for GET requests
+    if (config.method?.toLowerCase() === 'get') {
+      config.params = {
+        ...config.params,
+        _t: Date.now()
+      };
+      console.log('[API] Added cache-busting parameter to GET request');
+    }
+
+    // Log request for debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[API] ${config.method?.toUpperCase() || 'GET'} ${config.url}`, {
+        headers: config.headers,
+        params: config.params,
+        data: config.data instanceof FormData ? '[FormData]' : config.data
+      });
+    }
+
     return config;
   },
   (error) => {
+    console.error('[API] Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor to handle 401 responses and token refresh
+// Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log successful responses
+    console.log(`[API] Response ${response.status} ${response.config.url}`, {
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
     
-    // Only handle 401 errors for non-login requests
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      const currentPath = window.location.pathname;
-      const isAuthPage = ['/login', '/signup', '/forgot-password', '/enter-otp', '/reset-password'].includes(currentPath);
+    // Log detailed error information
+    console.error('[API] Request failed:', {
+      url: originalRequest?.url,
+      method: originalRequest?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      error: error.message,
+      response: error.response?.data,
+      headers: error.response?.headers
+    });
+    
+    // Handle 401 Unauthorized errors
+    if (error.response?.status === 401) {
+      console.warn('[API] 401 Unauthorized - User may need to re-authenticate');
       
-      // If we're not on an auth page and this is the first retry
-      if (!isAuthPage) {
+      // Immediate redirect for certain endpoints that don't support token refresh
+      if (originalRequest.url?.includes('/vehiclesfilter') || 
+          originalRequest.url?.includes('/ads')) {
+        console.log('[API] 401 on protected endpoint, redirecting to login immediately');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        // Force redirect
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+      
+      // Try to refresh token if this isn't a refresh request
+      if (originalRequest.url !== '/auth/refresh-token' && !originalRequest._retry) {
         originalRequest._retry = true;
-        
         try {
-          // Try to refresh the token
-          const refreshToken = localStorage.getItem('refreshToken');
-          if (refreshToken) {
-            const response = await axios.post(`${API_BASE_URL}/auth/refresh-token`, { refreshToken });
-            const { token, user } = response.data;
-            
-            // Update the stored tokens
-            localStorage.setItem('token', token);
-            
-            // Update the Authorization header
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            
-            // Retry the original request
+          console.log('[API] Attempting to refresh token...');
+          const newToken = await apiService.auth.refreshToken();
+          if (newToken && newToken.token) {
+            console.log('[API] Token refreshed successfully');
+            localStorage.setItem('token', newToken.token);
+            originalRequest.headers.Authorization = `Bearer ${newToken.token}`;
+            return api(originalRequest);
+          } else if (newToken && newToken.access_token) {
+            console.log('[API] Token refreshed successfully');
+            localStorage.setItem('token', newToken.access_token);
+            originalRequest.headers.Authorization = `Bearer ${newToken.access_token}`;
             return api(originalRequest);
           }
         } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
-          // If refresh fails, proceed to logout
-        }
-        
-        // If we get here, either refresh token failed or wasn't available
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('refreshToken');
-        
-        // Only redirect if not already on an auth page
-        if (!isAuthPage) {
-          sessionStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
-          window.location.href = '/login';
+          console.error('[API] Token refresh failed:', refreshError);
+          // If refresh fails, clear auth and redirect to login
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
+          console.log('[API] Redirecting to login...');
+          window.location.replace('/login');
+          return Promise.reject(refreshError);
         }
       }
-    } else if (error.code === 'ERR_NETWORK') {
-      // Handle network errors separately - don't log out for these
-      console.error('Network error:', error);
-      return Promise.reject(error);
+
+      // If we get here, either it was a refresh request or refresh failed
+      console.log('[API] Authentication required, redirecting to login...');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      window.location.replace('/login');
+    }
+    
+    // Handle CORS errors that might be 401s
+    if (error.code === 'ERR_NETWORK' && error.message.includes('CORS')) {
+      console.warn('[API] CORS error detected - this might be a 401 error');
+      // Check if this is likely an auth error based on the URL
+      if (originalRequest.url?.includes('/vehiclesfilter') || 
+          originalRequest.url?.includes('/ads')) {
+        console.log('[API] CORS error on protected endpoint, redirecting to login');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+    }
+
+    // Use server error message if available
+    if (error.response?.data?.message) {
+      error.message = error.response.data.message;
     }
     
     return Promise.reject(error);
   }
 );
 
+// Main API service object
 const apiService = {
   // Ad related APIs
   ads: {
     // Create a new ad
     create: async (formData) => {
       try {
-        // Log form data for debugging
-        console.log('Sending form data to API...');
-        const formDataObj = {};
+        console.log('[API] 🚀 Starting ad creation request...');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         
-        // Create a new FormData instance to ensure proper file handling
-        const formDataToSend = new FormData();
+        // Log the incoming formData for debugging
+        console.log('[API] 📥 Incoming formData:', formData);
         
-        // Process each form field
-        for (let [key, value] of formData.entries()) {
-          // Skip empty values
-          if (value === undefined || value === null || value === '') continue;
-          
-          // Handle file uploads
-          if (value instanceof File || (typeof value === 'object' && value.uri)) {
-            formDataToSend.append(key, value);
-            formDataObj[key] = value.name || 'file';
-          } 
-          // Handle JSON strings (like the Images array)
-          else if (key === 'Images' && typeof value === 'string' && value.startsWith('[')) {
-            formDataToSend.append(key, value);
-            formDataObj[key] = value;
-          }
-          // Handle regular fields
-          else {
-            formDataToSend.append(key, value);
-            formDataObj[key] = value;
-          }
-        }
+        // Prepare the request data - DON'T MODIFY Images FIELD
+        const requestData = { ...formData };
         
-        console.log('Processed FormData:', formDataObj);
-
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await api.post('/v2/ads/create', formDataToSend, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-          },
-          timeout: 60000, // 60 seconds timeout
-          maxContentLength: 50 * 1024 * 1024, // 50MB max content length
-          withCredentials: true,
+        // Log the Images field as-is
+        console.log('[API] 📷 Images data (as received):', {
+          value: requestData.Images,
+          type: typeof requestData.Images
         });
         
-        console.log('API Response:', response.data);
+        // ✅ FIX: Ensure VehiclePower is a string with unit
+        if (requestData.VehiclePower && typeof requestData.VehiclePower === 'number') {
+          requestData.VehiclePower = `${requestData.VehiclePower} HP`;
+          console.log('[API] ✅ Converted VehiclePower to string:', requestData.VehiclePower);
+        }
         
-        if (response.status === 201) {
-          return { 
-            success: true, 
-            data: response.data.data,
-            message: response.data.message || 'Ad created successfully!'
+        // Ensure all numeric fields are properly converted to numbers
+        const numericFields = ['VehicleModelID', 'VehiclePrice', 'VehicleTypeID', 'VehicleBrandID', 'VehicleBodyTypeID'];
+        
+        numericFields.forEach(field => {
+          if (requestData[field] !== undefined && requestData[field] !== '') {
+            requestData[field] = Number(requestData[field]);
+            console.log(`[API] Converted ${field} to number:`, requestData[field]);
+          }
+        });
+        
+        // UserID should be a string
+        if (requestData.UserID) {
+          requestData.UserID = String(requestData.UserID);
+        }
+        
+        // RegistrationYear should be a string
+        if (requestData.RegistrationYear) {
+          requestData.RegistrationYear = String(requestData.RegistrationYear);
+        }
+        
+        // Log the final request data
+        console.log('[API] 📤 Final request payload:', requestData);
+        console.log('[API] 📝 Raw request data:', JSON.stringify(requestData, null, 2));
+        
+        // Make the API request to create the ad
+        console.log('[API] 📡 Sending create ad request...');
+        const response = await axios({
+          method: 'post',
+          url: `${API_BASE_URL}/ads/create`,
+          data: requestData,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          withCredentials: true,
+          timeout: 30000
+        });
+        
+        console.log('[API] ✅ Create ad successful:', response.data);
+        
+        if (response.status >= 200 && response.status < 300) {
+          return {
+            success: true,
+            data: response.data,
+            message: response.data?.message || 'Ad created successfully!',
+            status: response.status
           };
         } else {
-          throw new Error(response.data?.message || `Server responded with status ${response.status}`);
+          throw new Error(response.data?.message || 'Failed to create ad');
         }
       } catch (error) {
-        console.error('API Error:', {
+        console.log('[API] === ERROR DEBUG ===');
+        console.log('[API] Error status:', error.response?.status);
+        console.log('[API] Error data:', error.response?.data);
+        console.log('[API] Error message:', error.message);
+        console.log('[API] Full error:', error);
+        console.log('[API] === END ERROR DEBUG ===');
+        
+        console.error('[API] Create ad failed:', {
           message: error.message,
-          response: error.response?.data,
           status: error.response?.status,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            headers: error.config?.headers,
-            data: error.config?.data,
-          },
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          request: error.config?.data ? JSON.parse(error.config.data) : 'No request data'
         });
         
-        let errorMessage = 'Failed to create ad';
-        if (error.response) {
-          errorMessage = error.response.data?.message || 
-                        error.response.data?.error || 
-                        `Server error (${error.response.status})`;
-        } else if (error.request) {
-          errorMessage = 'No response from server';
-        }
+        // Create a more detailed error message
+        const errorMessage = error.response?.data?.message || 
+                         error.response?.data?.error || 
+                         error.message || 
+                         'Failed to create ad';
         
-        const customError = new Error(errorMessage);
-        customError.response = error.response;
-        throw customError;
+        const apiError = new Error(errorMessage);
+        apiError.status = error.response?.status || 500;
+        apiError.response = error.response;
+        throw apiError;
       }
     },
     
-    // Get all ads (example)
+    // Get all ads
     getAll: async () => {
       try {
-        const response = await api.get('/v2/ads');
+        const response = await api.get('/ads');
         return response.data;
       } catch (error) {
-        console.error('Error fetching ads:', error);
+        console.error('[API] Get all ads failed:', error);
         throw error;
       }
     },
     
-    // Get ad by ID (example)
+    // Get ad by ID
     getById: async (id) => {
       try {
-        const response = await api.get(`/v2/ads/${id}`);
+        // Fetch all ads and find the specific one
+        const response = await api.get('/ads');
+        const allAds = response.data?.data || response.data || [];
+        const ad = allAds.find(ad => (ad.AdID || ad.id) == id);
+        
+        if (ad) {
+          return { data: ad };
+        } else {
+          throw new Error('Ad not found');
+        }
+      } catch (error) {
+        console.error('[API] Get ad by ID failed:', error);
+        throw error;
+      }
+    },
+
+    // Get user's ads
+    getMyAds: async (page = 1, perPage = 10) => {
+      try {
+        const response = await api.get(`/ads/my-ads?page=${page}&perPage=${perPage}`);
         return response.data;
       } catch (error) {
-        console.error(`Error fetching ad ${id}:`, error);
+        console.error('[API] Get my ads failed:', error);
+        throw error;
+      }
+    },
+
+    // Delete an ad
+    delete: async (adId) => {
+      try {
+        const response = await api.delete(`/delete-ad/${adId}`);
+        return response.data;
+      } catch (error) {
+        console.error('[API] Delete ad failed:', error);
+        throw error;
+      }
+    },
+
+    // Get recent ads for Recently Added section
+    getRecentAds: async () => {
+      try {
+        console.log('[API] Fetching recent ads...');
+        
+        // First, get the total count and first page
+        const response = await api.get('/ads?limit=100');
+        console.log('[API] Full response:', response);
+        console.log('[API] Response data:', response.data);
+        console.log('[API] Data array:', response.data?.data);
+        console.log('[API] Data length:', response.data?.data?.length);
+        console.log('[API] Pagination:', response.data?.pagination);
+        
+        // If we have pagination and more pages, fetch all pages
+        if (response.data?.pagination && response.data.pagination.totalPages > 1) {
+          const allAds = [...response.data.data];
+          const totalPages = response.data.pagination.totalPages;
+          
+          // Fetch remaining pages
+          for (let page = 2; page <= totalPages; page++) {
+            console.log(`[API] Fetching page ${page} of ${totalPages}`);
+            const pageResponse = await api.get(`/ads?page=${page}&limit=100`);
+            if (pageResponse.data?.data) {
+              allAds.push(...pageResponse.data.data);
+            }
+          }
+          
+          // Return combined response with all ads
+          return {
+            ...response,
+            data: {
+              ...response.data,
+              data: allAds,
+              pagination: {
+                ...response.data.pagination,
+                total: allAds.length,
+                page: 1,
+                perPage: allAds.length,
+                totalPages: 1
+              }
+            }
+          };
+        }
+        
+        return response;
+      } catch (error) {
+        console.error('[API] Error fetching recent ads:', error);
         throw error;
       }
     },
   },
   
-  // Vehicle related APIs (from Dashboard)
+  // Vehicle related APIs
   vehicles: {
     // Get vehicle filters
     getFilters: async () => {
       try {
-        const response = await api.get('/v2/vehiclesfilter');
-        return response.data;
+        console.log('Trying alternative endpoint with slash...');
+        try {
+          const altResponse = await api.get('/vehiclesfilter');
+          return altResponse.data;
+        } catch (altError) {
+          console.error('All filter endpoints failed:', {
+            altError: altError.message
+          });
+          return {
+            types: [],
+            brands: [],
+            models: [],
+            bodyTypes: []
+          };
+        }
       } catch (error) {
         console.error('Error fetching vehicle filters:', error);
-        throw error;
+        return {
+          types: [],
+          brands: [],
+          models: [],
+          bodyTypes: []
+        };
       }
     },
     
-    // Get featured vehicles (example)
+    // Get vehicle models by brand ID
+    getModelsByBrand: async (brandId) => {
+      try {
+        const response = await api.get(`/v2/vehicles/models?brand_id=${brandId}`);
+        return response.data;
+      } catch (error) {
+        console.error('Error fetching vehicle models:', error);
+        return [];
+      }
+    },
+    
+    // Get featured vehicles
     getFeatured: async () => {
       try {
-        const response = await api.get('/v2/vehicles/featured');
+        const response = await api.get('/vehicles/featured');
         return response.data;
       } catch (error) {
         console.error('Error fetching featured vehicles:', error);
-        throw error;
+        return [];
       }
     },
   },
@@ -227,11 +445,48 @@ const apiService = {
     // Get user profile
     getProfile: async () => {
       try {
-        const response = await api.get('/api/user/profile');
-        return response.data;
+        const response = await api.get('/api/user/profile', {
+          // Don't throw on 404, we'll handle it
+          validateStatus: status => status < 500
+        });
+        
+        // If we get a 404, return a default user
+        if (response.status === 404) {
+          console.log('Profile endpoint not found, using default user');
+          const userFromStorage = localStorage.getItem('user');
+          if (userFromStorage) {
+            return { data: JSON.parse(userFromStorage) };
+          }
+          return { 
+            data: {
+              name: 'User',
+              email: '',
+              phone: '',
+              location: ''
+            }
+          };
+        }
+        
+        // For other successful responses
+        if (response.data) {
+          // Save to localStorage for offline use
+          localStorage.setItem('user', JSON.stringify(response.data));
+          return { data: response.data };
+        }
+        
+        // Fallback if no data
+        return { data: {} };
       } catch (error) {
-        console.error('Error fetching user profile:', error);
-        throw error;
+        console.error('Error in getProfile:', error);
+        // Return default user on error
+        return { 
+          data: {
+            name: 'User',
+            email: '',
+            phone: '',
+            location: ''
+          }
+        };
       }
     },
     
@@ -247,43 +502,185 @@ const apiService = {
     },
   },
   
-  // Auth related APIs (already in AuthApi.js, but included here for completeness)
+  // File upload API
+  upload: {
+    // Upload image file
+    uploadImage: async (file) => {
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        // Get token for authorization
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        
+        const response = await axios.post('https://api.emov.com.pk/v2/upload/image', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          withCredentials: true
+        });
+        
+        console.log('Image upload successful:', response.data);
+        return response.data;
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        throw error;
+      }
+    }
+  },
+  
+  // Auth related APIs
   auth: {
     login: async (email, password) => {
       try {
-        const response = await api.post('/v2/login', { email, password });
-        return response.data;
+        // Clear any existing tokens before login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Make the login request
+        const response = await api.post('/auth/login', { email, password });
+        
+        console.log('Login response:', response.data);
+        
+        // Handle different response formats
+        let token, user;
+        
+        // Check for response.data.token (direct token)
+        if (response.data && response.data.token) {
+          token = response.data.token;
+          user = response.data.user || {};
+        }
+        // Check for response.data.data.token (nested token)
+        else if (response.data && response.data.data && response.data.data.token) {
+          token = response.data.data.token;
+          user = response.data.data.user || {};
+        }
+        // Check for response.data.access_token (OAuth style)
+        else if (response.data && response.data.access_token) {
+          token = response.data.access_token;
+          user = response.data.user || {};
+        }
+        
+        if (token) {
+          // Store the token and user data
+          localStorage.setItem('token', token);
+          if (user) {
+            localStorage.setItem('user', JSON.stringify(user));
+          }
+          
+          // Return the user data
+          return { 
+            success: true, 
+            token, 
+            user,
+            message: 'Login successful'
+          };
+        }
+        
+        // If we get here, the token wasn't found in the expected format
+        const error = new Error('Invalid response format: No token found');
+        error.response = response;
+        throw error;
+        
       } catch (error) {
         console.error('Login error:', error);
+        
+        // Clear any existing tokens on login error
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Extract error message from response if available
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response data:', error.response.data);
+          
+          // Try to get error message from response
+          if (error.response.data) {
+            if (error.response.data.message) {
+              error.message = error.response.data.message;
+            } else if (error.response.data.error) {
+              error.message = error.response.data.error;
+            } else if (typeof error.response.data === 'string') {
+              error.message = error.response.data;
+            }
+          }
+        }
+        
+        // Add more context to the error
+        error.isAuthError = true;
         throw error;
       }
     },
     
     logout: async () => {
       try {
-        const response = await api.post('/v2/logout');
+        const response = await api.post('/auth/logout');
+        // Clear local storage on successful logout
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         return response.data;
       } catch (error) {
         console.error('Logout error:', error);
+        // Clear local storage even if the request fails
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         throw error;
       }
     },
     
     refreshToken: async () => {
       try {
-        const response = await api.post('/v2/refresh-token', {}, {
+        const response = await api.post('/auth/refresh-token', {}, {
           withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json'
-          }
         });
         return response.data;
       } catch (error) {
         console.error('Refresh token error:', error);
+        // If refresh fails, clear the token and redirect to login
+        if (error.response?.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.replace('/login');
+        }
         throw error;
       }
     },
   },
 };
+
+// Utility function to handle 401 errors
+export const handleUnauthorized = () => {
+  console.log('[API] Handling unauthorized access - redirecting to login');
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  sessionStorage.removeItem('token');
+  window.location.href = '/login';
+};
+
+// Global error handler for 401 errors and CORS errors
+window.addEventListener('unhandledrejection', (event) => {
+  // Check for 401 errors
+  if (event.reason && event.reason.response && event.reason.response.status === 401) {
+    console.log('[API] Caught 401 error in global handler, redirecting to login');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    window.location.href = '/login';
+  }
+  // Check for CORS errors on protected endpoints
+  else if (event.reason && event.reason.code === 'ERR_NETWORK' && 
+           event.reason.message && event.reason.message.includes('CORS') &&
+           event.reason.config && event.reason.config.url) {
+    const url = event.reason.config.url;
+    if (url.includes('/vehiclesfilter') || url.includes('/ads') || url.includes('/ads')) {
+      console.log('[API] Caught CORS error on protected endpoint in global handler, redirecting to login');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+  }
+});
 
 export default apiService;

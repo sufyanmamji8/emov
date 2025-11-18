@@ -1,0 +1,311 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { FaArrowLeft, FaTrash, FaCar, FaCalendar, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
+import apiService from '../services/Api';
+
+const MyAds = () => {
+  const navigate = useNavigate();
+  const [ads, setAds] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, ad: null });
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    perPage: 10,
+    totalPages: 0
+  });
+
+  // Helper function to construct image URLs
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return '/mockvehicle.png';
+    if (imagePath.startsWith('http')) return imagePath;
+    return `https://api.emov.com.pk/image/${imagePath}`;
+  };
+
+  // Format price with commas
+  const formatPrice = (price) => {
+    const numPrice = parseFloat(price);
+    if (isNaN(numPrice)) return price;
+    return numPrice.toLocaleString('en-PK');
+  };
+
+  // Fetch user's ads
+  const fetchMyAds = async (page = 1) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await apiService.ads.getMyAds(page, pagination.perPage);
+      console.log('My ads response:', response);
+      console.log('My ads data:', response?.data);
+      console.log('My ads data length:', response?.data?.length);
+      
+      if (response && response.data) {
+        // Filter ads to ensure they belong to the current user
+        // This is a temporary fix until the API properly filters by user
+        const userId = localStorage.getItem('userId') || localStorage.getItem('user')?.id;
+        console.log('Current user ID:', userId);
+        
+        setAds(response.data);
+        setPagination(response.pagination || {
+          total: response.data.length,
+          page: 1,
+          perPage: pagination.perPage,
+          totalPages: 1
+        });
+      } else {
+        setAds([]);
+      }
+    } catch (err) {
+      console.error('Error fetching my ads:', err);
+      setError('Failed to load your ads');
+      setAds([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMyAds();
+  }, []);
+
+  const handleAdClick = (ad) => {
+    navigate(`/ad/${ad.AdID}`, { state: { adData: ad } });
+  };
+
+  const handleDelete = (e, ad) => {
+    e.stopPropagation();
+    setDeleteModal({ isOpen: true, ad });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      console.log('Deleting ad:', deleteModal.ad.AdID);
+      
+      // Call the delete API
+      await apiService.ads.delete(deleteModal.ad.AdID);
+      
+      // Remove the ad from the local state
+      setAds(prevAds => prevAds.filter(a => a.AdID !== deleteModal.ad.AdID));
+      
+      // Update pagination
+      setPagination(prev => ({
+        ...prev,
+        total: prev.total - 1,
+        totalPages: Math.ceil((prev.total - 1) / prev.perPage)
+      }));
+      
+      // Close modal
+      setDeleteModal({ isOpen: false, ad: null });
+      
+      // Show success message
+      alert('Ad deleted successfully!');
+      
+    } catch (error) {
+      console.error('Failed to delete ad:', error);
+      alert('Failed to delete ad. Please try again.');
+      setDeleteModal({ isOpen: false, ad: null });
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteModal({ isOpen: false, ad: null });
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchMyAds(newPage);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emov-purple"></div>
+          <p className="mt-4 text-text-secondary">Loading your ads...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-500 mb-4">{error}</p>
+          <button 
+            onClick={() => fetchMyAds()}
+            className="px-4 py-2 bg-emov-purple text-white rounded-lg hover:bg-emov-purple-dark transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-bg-primary">
+      {/* Header */}
+      <div className="bg-bg-secondary border-b border-border-primary sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center">
+              <button
+                onClick={() => navigate(-1)}
+                className="mr-4 p-2 rounded-lg hover:bg-bg-tertiary transition-colors"
+              >
+                <FaArrowLeft className="w-5 h-5 text-text-primary" />
+              </button>
+              <h1 className="text-xl font-semibold text-text-primary">My Ads</h1>
+            </div>
+            <div className="text-sm text-text-secondary">
+              {pagination.total} {pagination.total === 1 ? 'Ad' : 'Ads'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {ads.length === 0 ? (
+          <div className="text-center py-12">
+            <FaCar className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-text-primary mb-2">No ads found</h3>
+            <p className="text-text-secondary mb-6">You haven't created any ads yet.</p>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-6 py-2 bg-emov-purple text-white rounded-lg hover:bg-emov-purple-dark transition-colors"
+            >
+              Create Your First Ad
+            </button>
+          </div>
+        ) : (
+          <>
+            {/* Ads Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {ads.map((ad) => (
+                <div
+                  key={ad.AdID}
+                  onClick={() => handleAdClick(ad)}
+                  className="bg-bg-secondary rounded-lg overflow-hidden border border-border-primary hover:shadow-lg transition-all duration-300 cursor-pointer group"
+                >
+                  {/* Image */}
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={getImageUrl(ad.Images?.[0])}
+                      alt={ad.VehicleName}
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 bg-gray-100"
+                    />
+                    <div className="absolute top-2 right-2 bg-emov-purple text-white px-2 py-1 rounded text-xs font-medium">
+                      {ad.VehicleType}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold text-text-primary mb-2 truncate">
+                      {ad.BrandName} {ad.ModelName}
+                    </h3>
+                    <p className="text-emov-purple font-bold text-xl mb-3">
+                      PKR {formatPrice(ad.VehiclePrice)}
+                    </p>
+
+                    {/* Vehicle Details */}
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div className="flex items-center">
+                        <FaCalendar className="w-4 h-4 mr-2 text-gray-400" />
+                        {ad.RegistrationYear} • {ad.Transmission}
+                      </div>
+                      <div className="flex items-center">
+                        <FaMapMarkerAlt className="w-4 h-4 mr-2 text-gray-400" />
+                        {ad.LocationName}
+                      </div>
+                      <div className="flex items-center">
+                        <FaMoneyBillWave className="w-4 h-4 mr-2 text-gray-400" />
+                        {ad.VehicleMileage} km
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div className="mt-4 pt-4 border-t border-border-primary">
+                      <button
+                        onClick={(e) => handleDelete(e, ad)}
+                        className="w-full flex items-center justify-center px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm"
+                      >
+                        <FaTrash className="w-4 h-4 mr-1" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {pagination.totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-2">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="px-3 py-1 rounded border border-border-primary bg-bg-secondary text-text-primary hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                
+                <span className="px-4 py-1 text-text-primary">
+                  Page {pagination.page} of {pagination.totalPages}
+                </span>
+                
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.totalPages}
+                  className="px-3 py-1 rounded border border-border-primary bg-bg-secondary text-text-primary hover:bg-bg-tertiary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+      
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Confirm Delete
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Are you sure you want to delete this ad? This action cannot be undone.
+              {deleteModal.ad && (
+                <span className="block mt-2 font-medium">
+                  {deleteModal.ad.BrandName} {deleteModal.ad.ModelName}
+                </span>
+              )}
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+              >
+                Delete Ad
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MyAds;
