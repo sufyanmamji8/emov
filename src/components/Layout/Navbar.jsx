@@ -126,11 +126,11 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
             </a>
             <a 
-              href="" 
+              href="/" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               More
-              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
+              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/' ? 'w-full' : ''}`}></span>
             </a>
           </div>
         </div>

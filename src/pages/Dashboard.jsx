@@ -137,9 +137,28 @@ function Dashboard() {
         return { ...prevSlides, [tab]: newSlide };
       } else {
         const transformedData = transformApiData();
-        const currentTabData = tab === 'Category' 
-          ? transformedData.categories || [] 
-          : transformedData[`${tab.toLowerCase()}s`] || [];
+        
+        // Use the same tabDataMap logic as in the carousel
+        const tabDataMap = {
+          'Category': 'categories',
+          'Model': 'models',
+          'Brand': 'brands',
+          'Body Type': 'bodytypes',
+          'Budget': 'budgets'
+        };
+        
+        const normalizedTab = tab.replace(/\s+/g, ' ');
+        let dataKey = tabDataMap[normalizedTab];
+        
+        if (!dataKey) {
+          const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
+          dataKey = Object.entries(tabDataMap).find(([key]) => 
+            key.toLowerCase().replace(/\s+/g, '') === lowerTab
+          )?.[1];
+        }
+        
+        const currentTabData = Array.isArray(transformedData[dataKey]) ? 
+          transformedData[dataKey] : [];
         const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
         const newSlide = Math.max(prevSlides[tab] - 1, 0);
         return { ...prevSlides, [tab]: newSlide };
@@ -155,9 +174,28 @@ function Dashboard() {
         return { ...prevSlides, [tab]: newSlide };
       } else {
         const transformedData = transformApiData();
-        const currentTabData = tab === 'Category' 
-          ? transformedData.categories || [] 
-          : transformedData[`${tab.toLowerCase()}s`] || [];
+        
+        // Use the same tabDataMap logic as in the carousel
+        const tabDataMap = {
+          'Category': 'categories',
+          'Model': 'models',
+          'Brand': 'brands',
+          'Body Type': 'bodytypes',
+          'Budget': 'budgets'
+        };
+        
+        const normalizedTab = tab.replace(/\s+/g, ' ');
+        let dataKey = tabDataMap[normalizedTab];
+        
+        if (!dataKey) {
+          const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
+          dataKey = Object.entries(tabDataMap).find(([key]) => 
+            key.toLowerCase().replace(/\s+/g, '') === lowerTab
+          )?.[1];
+        }
+        
+        const currentTabData = Array.isArray(transformedData[dataKey]) ? 
+          transformedData[dataKey] : [];
         const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
         const newSlide = Math.min(prevSlides[tab] + 1, maxSlide);
         return { ...prevSlides, [tab]: newSlide };
@@ -183,9 +221,28 @@ function Dashboard() {
       return currentSlides[tab] < maxSlide;
     } else {
       const transformedData = transformApiData();
-      const currentTabData = tab === 'Category' 
-        ? transformedData.categories || [] 
-        : transformedData[`${tab.toLowerCase()}s`] || [];
+      
+      // Use the same tabDataMap logic as in the carousel
+      const tabDataMap = {
+        'Category': 'categories',
+        'Model': 'models',
+        'Brand': 'brands',
+        'Body Type': 'bodytypes',
+        'Budget': 'budgets'
+      };
+      
+      const normalizedTab = tab.replace(/\s+/g, ' ');
+      let dataKey = tabDataMap[normalizedTab];
+      
+      if (!dataKey) {
+        const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
+        dataKey = Object.entries(tabDataMap).find(([key]) => 
+          key.toLowerCase().replace(/\s+/g, '') === lowerTab
+        )?.[1];
+      }
+      
+      const currentTabData = Array.isArray(transformedData[dataKey]) ? 
+        transformedData[dataKey] : [];
       const maxSlide = Math.ceil(currentTabData.length / itemsPerPage) - 1;
       return currentSlides[tab] < maxSlide;
     }
@@ -733,6 +790,7 @@ useEffect(() => {
       bodytypes: (() => {
         // Check both possible property names for body types
         const bodyTypesData = apiData.bodyType || apiData.bodytypes || [];
+        console.log('Body Types from API:', bodyTypesData.length, bodyTypesData);
         
         return bodyTypesData.map((item, index) => ({
           id: item.BodyTypeID || item.id || `body-${index + 1}`,
@@ -1475,6 +1533,11 @@ useEffect(() => {
               currentTabData = Array.isArray(transformedData[dataKey]) ? 
                 transformedData[dataKey] : [];
 
+              console.log(`Current tab (${activeTab}) data:`, currentTabData.length, currentTabData);
+              console.log(`Items per page:`, itemsPerPage);
+              console.log(`Total slides:`, Math.ceil(currentTabData.length / itemsPerPage));
+              console.log(`Current slide:`, currentSlides[activeTab]);
+
               if (currentTabData.length === 0) {
                 return (
                   <div className="w-full py-8 text-center flex-shrink-0" style={{ width: '100%' }}>
@@ -1546,43 +1609,48 @@ useEffect(() => {
                         );
 
                         // DESKTOP card layout (original)
-                        const desktopCard = () => (
-                          <div className="relative flex flex-col items-center p-3 h-full w-full">
-                            {item.image || item.icon ? (
-                              <div className="relative w-full" style={{ height: '71px' }}>
-                                {item.icon ? (
-                                  <div 
-                                    className="flex items-center justify-center bg-bg-primary rounded-full"
-                                    style={{
-                                      position: 'absolute',
-                                      left: '-20px',
-                                      top: '-10px',
-                                      width: '40px',
-                                      height: '40px',
-                                      zIndex: 20,
-                                      border: '1px solid #e9f0feff'
-                                    }}
-                                  >
-                                    {React.cloneElement(item.icon, { size: 20, style: { color: '#878787' } })}
-                                  </div>
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center p-2">
-                                    <img 
-                                      src={item.image} 
-                                      alt={displayName}
-                                      className="max-w-full max-h-full object-contain"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            ) : null}
-                            <div className="text-center w-full">
-                              <div className="text-base mt-4 font-medium text-text-primary line-clamp-2">
-                                {displayName}
+                        const desktopCard = () => {
+                          // Check if current tab should have smaller layout (no images)
+                          const isSmallTab = ['Budget', 'Model', 'Body Type'].includes(activeTab);
+                          
+                          return (
+                            <div className="relative flex flex-col items-center p-3 h-full w-full">
+                              {(!isSmallTab && (item.image || item.icon)) ? (
+                                <div className="relative w-full" style={{ height: '71px' }}>
+                                  {item.icon ? (
+                                    <div 
+                                      className="flex items-center justify-center bg-bg-primary rounded-full"
+                                      style={{
+                                        position: 'absolute',
+                                        left: '-20px',
+                                        top: '-10px',
+                                        width: '40px',
+                                        height: '40px',
+                                        zIndex: 20,
+                                        border: '1px solid #e9f0feff'
+                                      }}
+                                    >
+                                      {React.cloneElement(item.icon, { size: 20, style: { color: '#878787' } })}
+                                    </div>
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center p-2">
+                                      <img 
+                                        src={item.image} 
+                                        alt={displayName}
+                                        className="max-w-full max-h-full object-contain"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              ) : null}
+                              <div className="text-center w-full">
+                                <div className={`text-base font-medium text-text-primary line-clamp-2 ${isSmallTab ? 'mt-4' : 'mt-4'}`}>
+                                  {displayName}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
+                          );
+                        };
 
                         return (
                           <div 
@@ -1594,7 +1662,7 @@ useEffect(() => {
                             }`}
                             style={{
                               width: window.innerWidth < 768 ? '100%' : '180px',
-                              height: window.innerWidth < 768 ? '70px' : '158px',
+                              height: window.innerWidth < 768 ? '70px' : (['Budget', 'Model', 'Body Type'].includes(activeTab) ? '70px' : '158px'),
                             }}
                           >
                             {window.innerWidth < 768 ? mobileCard() : desktopCard()}
