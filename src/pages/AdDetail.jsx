@@ -1,9 +1,7 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../services/Api';
 import { useChat } from '../contexts/ChatContext';
-import chatService from '../services/chatService';
-
 
 const AdDetail = () => {
   const { adId } = useParams();
@@ -65,11 +63,19 @@ const AdDetail = () => {
 
   useEffect(() => {
     const loadAdData = async () => {
+      if (!adId) {
+        setError('No ad ID provided');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
+        setError(null);
         console.log('Fetching ad details for ID:', adId);
+        
         const response = await apiService.ads.getById(adId);
-        const adData = response.data || response;
+        const adData = response?.data || response;
         
         if (adData) {
           console.log('Full ad data:', adData);
@@ -77,19 +83,25 @@ const AdDetail = () => {
           console.log('All available fields:', Object.keys(adData));
           setAd(adData);
         } else {
-          setError('Ad not found');
+          throw new Error('Ad data is empty');
         }
       } catch (err) {
         console.error('Error loading ad details:', err);
-        setError('Failed to load ad details');
+        
+        // Handle different error cases
+        if (err.message === 'Ad not found' || err.status === 404) {
+          setError('This ad is no longer available or has been removed.');
+        } else if (err.response?.status === 401) {
+          setError('Please log in to view this ad');
+        } else {
+          setError('Failed to load ad details. Please try again later.');
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    if (adId) {
-      loadAdData();
-    }
+    loadAdData();
   }, [adId]);
 
   const handleGoBack = () => {
@@ -108,15 +120,63 @@ const AdDetail = () => {
         return;
       }
 
-      // Start a new chat with the ad owner
-      const newChat = await startNewChat(adId, `Hi, I'm interested in your ${ad?.title || 'item'}`);
+      // Get seller's user ID from the ad data
+      const sellerUserId = ad.SellerID || ad.UserID || ad.seller_id || '19';
       
-      // Navigate to the chat
-      navigate('/chats', { state: { activeChatId: newChat._id } });
+      console.log('Starting chat for ad:', ad.AdID, 'with seller:', sellerUserId);
+      
+      const newChat = await startNewChat(
+        ad.AdID, 
+        `Hi, I'm interested in your ${ad.VehicleName}`,
+        sellerUserId
+      );
+      
+      console.log('New chat created:', newChat);
+      
+      // Navigate to chats page with the new chat active
+      navigate('/chats', { 
+        state: { 
+          activeChatId: newChat.conversation_id
+        } 
+      });
     } catch (error) {
       console.error('Error starting chat:', error);
-      alert('Failed to start chat. Please try again.');
+      alert(`Failed to start chat: ${error.message}`);
     }
+  };
+
+  // Improved avatar component function
+  const renderSellerAvatar = (sellerInfo, size = 'w-24 h-24', textSize = 'text-3xl') => {
+    const { image, name } = sellerInfo;
+    const displayName = name && name !== 'N/A' ? name : 'User';
+    const firstLetter = displayName.charAt(0).toUpperCase();
+    
+    // Check if image exists and is not default
+    const hasValidImage = image && image !== '/default-avatar.png' && image !== 'N/A';
+    
+    return (
+      <div className={`relative ${size}`}>
+        {hasValidImage ? (
+          <img
+            src={image}
+            alt={displayName}
+            className="w-full h-full rounded-full object-cover border-2 border-emov-purple/20"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.style.display = 'none';
+              // Show the fallback letter when image fails to load
+              const fallback = e.target.parentElement.querySelector('.avatar-fallback');
+              if (fallback) fallback.style.display = 'flex';
+            }}
+          />
+        ) : null}
+        <div 
+          className={`avatar-fallback ${!hasValidImage ? 'flex' : 'hidden'} items-center justify-center w-full h-full rounded-full bg-emov-purple/10 border-2 border-emov-purple/20 ${textSize} font-bold text-emov-purple`}
+        >
+          {firstLetter}
+        </div>
+      </div>
+    );
   };
 
   const getImageUrls = (imageData) => {
@@ -144,10 +204,10 @@ const AdDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen surface-primary flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-emov-purple border-t-transparent mx-auto mb-4"></div>
-          <p className="text-secondary text-lg font-medium">Loading vehicle details...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-300">Loading ad details...</p>
         </div>
       </div>
     );
@@ -155,25 +215,60 @@ const AdDetail = () => {
 
   if (error || !ad) {
     return (
-      <div className="min-h-screen surface-primary flex items-center justify-center">
-        <div className="text-center p-8 max-w-md">
-          <div className="w-20 h-20 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center px-4">
+        <div className="text-center p-8 max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+          <div className="w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-primary mb-2">Ad Not Found</h2>
-          <p className="text-secondary mb-6">{error || 'The ad you are looking for does not exist or has been removed.'}</p>
-          <button
-            onClick={handleGoBack}
-            className="px-8 py-3 bg-emov-purple text-white rounded-lg font-semibold hover:bg-emov-purple/90 transition-all duration-200 shadow-theme"
-          >
-            Go Back to Ads
-          </button>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+            {error?.includes('log in') ? 'Authentication Required' : 'Ad Not Found'}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-8">
+            {error || 'The ad you are looking for does not exist or has been removed.'}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={handleGoBack}
+              className="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+            >
+              Go Back
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="flex-1 px-6 py-3 bg-emov-purple text-white rounded-lg font-medium hover:bg-emov-purple/90 transition-colors duration-200"
+            >
+              Go to Home
+            </button>
+          </div>
+          {error?.includes('log in') && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Already have an account?</p>
+              <button
+                onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                className="w-full py-2.5 px-4 text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition-colors duration-200"
+              >
+                Sign In to Continue
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
   }
+
+  // Debug: Log the full ad data to inspect available fields
+  console.log('Ad data:', ad);
+  
+  // Extract seller information
+  const sellerInfo = {
+    name: ad?.sellerName || ad?.seller?.name || ad?.SellerName || 'N/A',
+    email: ad?.emailAddress || ad?.seller?.email || ad?.SellerEmail || 'N/A',
+    image: ad?.UserProfile || ad?.seller?.image || ad?.SellerImage || '/default-avatar.png',
+    phone: ad?.mobileNo || ad?.seller?.phone || ad?.SellerPhone || 'N/A',
+    joinedDate: ad?.CreatedAt ? new Date(ad.CreatedAt).toLocaleDateString() : 'N/A'
+  };
 
   const detailCards = [
     { label: 'Price', value: `Rs. ${parseInt(ad.VehiclePrice || 0).toLocaleString()}`, icon: '💰', highlight: true },
@@ -372,6 +467,49 @@ const AdDetail = () => {
               )}
             </div>
 
+            {/* Seller Information */}
+            {/* <div className="surface-card rounded-xl shadow-theme p-6 border border-primary">
+              <h2 className="text-xl font-bold text-primary mb-6">Seller Information</h2>
+              <div className="flex flex-col sm:flex-row items-start gap-6">
+              
+                {renderSellerAvatar(sellerInfo)}
+                
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-primary mb-1">{sellerInfo.name}</h3>
+                  <p className="text-sm text-secondary mb-3">Member since {sellerInfo.joinedDate}</p>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center text-sm">
+                      <svg className="w-4 h-4 text-emov-purple mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      <a href={`mailto:${sellerInfo.email}`} className="text-emov-purple hover:underline">
+                        {sellerInfo.email}
+                      </a>
+                    </div>
+                    
+                    {sellerInfo.phone && sellerInfo.phone !== 'N/A' && (
+                      <div className="flex items-center text-sm">
+                        <svg className="w-4 h-4 text-emov-purple mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        </svg>
+                        <a href={`tel:${sellerInfo.phone}`} className="text-emov-purple hover:underline">
+                          {sellerInfo.phone}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <button 
+                    onClick={handleContactSeller}
+                    className="mt-4 w-full sm:w-auto px-6 py-2.5 bg-emov-purple text-white rounded-lg hover:bg-emov-purple/90 transition-colors duration-200 font-medium"
+                  >
+                    Contact Seller
+                  </button>
+                </div>
+              </div>
+            </div> */}
+
             {/* Description */}
             <div className="surface-card rounded-xl shadow-theme p-6 border border-primary">
               <h2 className="text-xl font-bold text-primary mb-4">Vehicle Description</h2>
@@ -400,7 +538,7 @@ const AdDetail = () => {
           {/* Right Column - Sidebar */}
           <div className="w-full lg:w-80 xl:w-96">
             {/* Price & Actions Card */}
-            <div className="surface-card rounded-xl mb-4 shadow-theme p-6 border border-primary sticky top-24 h-fit z-40">
+            {/* <div className="surface-card rounded-xl mb-4 shadow-theme p-6 border border-primary sticky top-24 h-fit z-40">
               <div className="text-center mb-6">
                 <div className="text-3xl font-bold text-emov-purple mb-2">
                   Rs. {parseInt(ad?.VehiclePrice || 0).toLocaleString()}
@@ -409,21 +547,99 @@ const AdDetail = () => {
               </div>
               
               <div className="space-y-3">
- {/* In your AdDetail.jsx - update the chat button
-In your AdDetail.jsx - update the chat button */}
+                <button
+                  onClick={handleContactSeller}
+                  className="w-full bg-emov-purple text-white py-4 rounded-lg font-semibold hover:bg-emov-purple/90 transition-all duration-200 shadow-theme flex items-center justify-center space-x-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <span>Chat with Seller</span>
+                </button>
+                
+                <button className="w-full surface-primary border-2 border-emov-purple text-emov-purple py-4 rounded-lg font-semibold hover:surface-secondary transition-all duration-200">
+                  💰 Make Offer
+                </button>
+                
+                <button className="w-full surface-tertiary border border-primary text-secondary py-3 rounded-lg font-medium hover:surface-primary transition-colors duration-200 flex items-center justify-center space-x-2">
+                  <span>❤️ Save Ad</span>
+                </button>
+              </div>
+            </div> */}
+
+            {/* Seller Information */}
+            <div className="surface-card rounded-xl shadow-theme p-6 mb-8 border border-primary">
+              <h3 className="text-xl font-bold text-primary mb-6 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Seller Information
+              </h3>
+              
+              <div className="flex flex-col items-center text-center mb-6">
+                {/* Seller Avatar using the render function with smaller size */}
+                {renderSellerAvatar(sellerInfo, 'w-20 h-20', 'text-2xl')}
+                
+                <div className="mt-4">
+                  <h4 className="text-xl font-bold text-primary">{sellerInfo.name}</h4>
+                  <p className="text-emov-purple font-medium">
+                    <svg className="w-4 h-4 inline-block mr-1 -mt-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                      <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                    </svg>
+                    {sellerInfo.email}
+                  </p>
+                  <div className="flex items-center justify-center mt-2 text-sm text-tertiary">
+                    <span className="flex items-center">
+                      <svg className="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      4.8 (24 reviews)
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span>Member since {sellerInfo.joinedDate}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="p-2 bg-emov-purple/10 rounded-lg mr-3">
+                    <svg className="w-6 h-6 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Phone Number</p>
+                    <p className="font-medium text-primary">{sellerInfo.phone || 'Not provided'}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="p-2 bg-emov-purple/10 rounded-lg mr-3">
+                    <svg className="w-6 h-6 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Location</p>
+                    <p className="font-medium text-primary">{ad.LocationName || 'Not specified'}</p>
+                  </div>
+                </div>
+                
 <button
   onClick={async () => {
     try {
       // Get seller's user ID from the ad data
-      // You might need to adjust this based on your ad data structure
-      const sellerUserId = ad.SellerID || ad.UserID || ad.seller_id || '19'; // Fallback to 19 as per your example
+      const sellerUserId = ad.SellerID || ad.UserID || ad.seller_id || '19';
       
       console.log('Starting chat for ad:', ad.AdID, 'with seller:', sellerUserId);
       
       const newChat = await startNewChat(
         ad.AdID, 
         `Hi, I'm interested in your ${ad.VehicleName}`,
-        sellerUserId // Pass the seller's user ID
+        sellerUserId
       );
       
       console.log('New chat created:', newChat);
@@ -434,6 +650,12 @@ In your AdDetail.jsx - update the chat button */}
           activeChatId: newChat.conversation_id
         } 
       });
+      
+      // Force reload chats after navigation
+      setTimeout(() => {
+        window.dispatchEvent(new Event('chatsRefresh'));
+      }, 1000);
+      
     } catch (error) {
       console.error('Error starting chat:', error);
       alert(`Failed to start chat: ${error.message}`);
@@ -446,50 +668,6 @@ In your AdDetail.jsx - update the chat button */}
   </svg>
   <span>Chat with Seller</span>
 </button>
-                
-                <button className="w-full surface-primary border-2 border-emov-purple text-emov-purple py-4 rounded-lg font-semibold hover:surface-secondary transition-all duration-200">
-                  💰 Make Offer
-                </button>
-                
-                <button className="w-full surface-tertiary border border-primary text-secondary py-3 rounded-lg font-medium hover:surface-primary transition-colors duration-200 flex items-center justify-center space-x-2">
-                  <span>❤️ Save Ad</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Seller Information */}
-            <div className="surface-card rounded-xl shadow-theme p-6 border border-primary">
-              <h3 className="text-lg font-bold text-primary mb-4 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Seller Information
-              </h3>
-              
-              <div className="flex items-center mb-6">
-                <div className="w-14 h-14 bg-emov-purple rounded-full flex items-center justify-center text-white font-bold text-lg mr-4">
-                  {(ad.SellerName || ad.UserName || 'PS').charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-bold text-primary">{ad.SellerName || ad.UserName || 'Private Seller'}</p>
-                  <p className="text-tertiary text-sm">⭐ 4.8 • Member since {ad.MemberSince || '2020'}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center text-secondary p-3 surface-tertiary rounded-lg">
-                  <svg className="w-5 h-5 mr-3 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                  <span className="font-medium">{ad.Phone || ad.ContactNumber || 'Contact for details'}</span>
-                </div>
-                <div className="flex items-center text-secondary p-3 surface-tertiary rounded-lg">
-                  <svg className="w-5 h-5 mr-3 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span className="font-medium">{ad.LocationName || 'N/A'}</span>
-                </div>
               </div>
             </div>
 

@@ -271,7 +271,7 @@ const MyAds = () => {
       <div className="flex justify-end mb-6  px-4 sm:px-6 lg:px-8 mt-10 w-full">
         <button
           onClick={() => navigate('/my-ads-list')}
-          className="inline-flex items-center px-6 py-3 text-white rounded-lg font-medium hover:opacity-90 transition-opacity shadow-lg hover:shadow-xl"
+          className="inline-flex items-center px-6 py-3 text-black rounded-lg font-medium hover:opacity-90 transition-opacity shadow-lg hover:shadow-xl"
           style={{ backgroundColor: 'var(--emov-green)' }}
         >
           Create New Ad

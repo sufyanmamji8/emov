@@ -1,4 +1,76 @@
 const chatService = {
+  // Upload image file - FIXED: Return the full response
+  async uploadImage(file) {
+    try {
+      console.log('📤 Uploading image file:', file.name, file.type, file.size);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('https://api.emov.com.pk/v2/upload/image', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: formData
+      });
+
+      console.log('📥 Image upload response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Image upload successful - full response:', data);
+      
+      // Return the entire response object so we can access original, url, resized, etc.
+      return data;
+
+    } catch (error) {
+      console.error('💥 Error uploading image:', error);
+      throw error;
+    }
+  },
+
+  // Upload audio file
+  async uploadAudio(file) {
+    try {
+      console.log('📤 Uploading audio file:', file.name, file.type, file.size);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      const formData = new FormData();
+      formData.append('audio', file);
+
+      const response = await fetch('https://api.emov.com.pk/v2/upload/audio', {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: formData
+      });
+
+      console.log('📥 Audio upload response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Audio upload successful:', data);
+      
+      // Return the URL for sending in messages
+      return data.original || data.url;
+
+    } catch (error) {
+      console.error('💥 Error uploading audio:', error);
+      throw error;
+    }
+  },
+
   // Start a new conversation with the ad owner
   async startConversation(adId, message, user2Id) {
     try {
@@ -70,9 +142,9 @@ const chatService = {
   },
 
   // Send a message in a conversation
-  async sendMessage(conversationId, content, senderId = null) {
+  async sendMessage(conversationId, content, senderId = null, messageType = "text") {
     try {
-      console.log('💬 Sending message to conversation:', conversationId);
+      console.log('💬 Sending message to conversation:', conversationId, 'Type:', messageType, 'Content:', content);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       
       // Get sender ID if not provided
@@ -87,9 +159,15 @@ const chatService = {
       const payload = {
         conversation_id: parseInt(conversationId),
         sender_id: parseInt(senderId),
-        message_type: "text",
+        message_type: messageType,
         message_text: content
       };
+
+      // For media messages, include the URL in message_text
+      if (messageType === 'image' || messageType === 'audio') {
+        payload.message_text = content; // The uploaded URL
+        console.log(`📤 Sending ${messageType} message with URL:`, content);
+      }
 
       console.log('📤 Sending message with payload:', payload);
 
@@ -120,92 +198,185 @@ const chatService = {
     }
   },
 
-  // Get all conversations for the current user
+  // Get all conversations for the current user - FIXED ENDPOINT
   async getChats(userId) {
     try {
-      console.log('📞 Fetching conversations for user:', userId);
+      console.log('🔍 Fetching chats for user:', userId);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       
-      const response = await fetch(`https://api.emov.com.pk/v2/get-user-conversations/${userId}`, {
+      if (!token) {
+        console.error('❌ No authentication token found');
+        throw new Error('Authentication required. Please log in again.');
+      }
+
+      // Use the correct endpoint
+      const url = `https://api.emov.com.pk/v2/get-user-conversations/${userId}`;
+      
+      console.log('🌐 API Request URL:', url);
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
+          'Authorization': `Bearer ${token}`
         }
       });
-      
-      console.log('📥 Conversations response status:', response.status);
+
+      console.log('📥 Response status:', response.status);
       
       if (!response.ok) {
-        // If 404, return empty array instead of throwing
-        if (response.status === 404) {
-          console.log('📭 No conversations found for user');
-          return [];
-        }
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        console.error('❌ Error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: errorText
+        });
+        
+        if (response.status === 401) {
+          // Clear invalid token
+          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
+          window.dispatchEvent(new Event('unauthorized'));
+        }
+        
+        throw new Error(`HTTP ${response.status}: ${errorText || 'Failed to fetch chats'}`);
       }
-      
+
       const data = await response.json();
-      console.log('✅ Conversations API response:', data);
+      console.log('✅ Chats data received:', data);
+      return data;
       
-      // Handle different response formats
-      if (Array.isArray(data)) {
-        return data;
-      } else if (data && Array.isArray(data.conversations)) {
-        return data.conversations;
-      } else if (data && Array.isArray(data.data)) {
-        return data.data;
-      } else {
-        console.log('⚠️ Unexpected response format, returning empty array');
-        return [];
-      }
     } catch (error) {
-      console.error('💥 Error fetching conversations:', error);
-      // Return empty array instead of throwing to prevent UI blocking
-      return [];
+      console.error('💥 Error in getChats:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      throw error;
     }
   },
 
-  // Get messages for a specific conversation
+  // Get messages for a conversation - FIXED: Now properly outside getChats
   async getMessages(conversationId) {
+    let response;
+    
     try {
+      // Validate conversationId
+      if (!conversationId) {
+        console.error('❌ No conversation ID provided');
+        throw new Error('Conversation ID is required');
+      }
+
       console.log('📩 Fetching messages for conversation:', conversationId);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       
-      const response = await fetch(`https://api.emov.com.pk/v2/get-messages/${conversationId}`, {
+      if (!token) {
+        console.error('❌ No authentication token found');
+        throw new Error('Authentication required');
+      }
+
+      response = await fetch(`https://api.emov.com.pk/v2/get-messages/${conversationId}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
+          'Authorization': `Bearer ${token}`
         }
       });
       
       console.log('📥 Messages response status:', response.status);
       
-      if (!response.ok) {
-        // If 404, return empty messages instead of throwing error
-        if (response.status === 404) {
-          console.log('📭 No messages found for this conversation');
-          return { messages: [] };
-        }
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      // Handle 204 No Content
+      if (response.status === 204) {
+        console.log('📭 No messages found (204)');
+        return [];
       }
       
-      const data = await response.json();
-      console.log('✅ Messages response:', data);
+      // Handle empty response body
+      const responseText = await response.text();
+      let responseData;
       
-      // Ensure we always return an object with messages array
-      return {
-        messages: data.messages || data.data || []
-      };
+      try {
+        responseData = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('❌ Failed to parse JSON response:', {
+          status: response.status,
+          statusText: response.statusText,
+          responseText,
+          error: parseError.message
+        });
+        
+        if (response.status === 500) {
+          throw new Error('Server returned an invalid response. Please try again later.');
+        }
+        
+        // If we can't parse the response but got a 200, return empty array
+        if (response.ok) {
+          console.warn('⚠️ Invalid JSON but status 200, returning empty array');
+          return [];
+        }
+        
+        throw new Error(`Invalid server response (${response.status}): ${response.statusText}`);
+      }
+      
+      if (!response.ok) {
+        console.error('❌ Server error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: responseData
+        });
+        
+        // Handle common error cases
+        if (response.status === 401) {
+          // Clear invalid token
+          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
+          window.dispatchEvent(new Event('unauthorized'));
+          throw new Error('Your session has expired. Please log in again.');
+        }
+        
+        if (response.status === 404) {
+          throw new Error('Chat not found. It may have been deleted.');
+        }
+        
+        if (response.status === 500) {
+          throw new Error('Server error occurred while loading messages. Please try again later.');
+        }
+        
+        throw new Error(responseData.message || `Error ${response.status}: ${response.statusText}`);
+      }
+      
+      console.log('✅ Messages response:', responseData);
+      
+      // Handle different response formats
+      if (Array.isArray(responseData)) {
+        return responseData;
+      } else if (responseData && Array.isArray(responseData.messages)) {
+        return responseData.messages;
+      } else if (responseData && Array.isArray(responseData.data)) {
+        return responseData.data;
+      }
+      
+      console.warn('⚠️ Unexpected response format, returning empty array');
+      return [];
+      
     } catch (error) {
-      console.error('💥 Error fetching messages:', error);
-      // Return empty messages instead of throwing to prevent UI blocking
-      return { messages: [] };
+      console.error('💥 Error in getMessages:', {
+        error: error.message,
+        conversationId,
+        status: response?.status,
+        statusText: response?.statusText,
+        stack: error.stack
+      });
+      
+      // Convert network errors to more user-friendly messages
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        throw new Error('Network error: Unable to connect to the server. Please check your internet connection.');
+      }
+      
+      // Re-throw the error to be handled by the caller
+      throw error;
     }
   },
 

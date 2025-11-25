@@ -1,10 +1,112 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaCaretDown, FaSun, FaMoon, FaPaperPlane, FaImage, FaTimes, FaSearch } from 'react-icons/fa';
+import { FaCaretDown, FaSun, FaMoon, FaPaperPlane, FaImage, FaTimes, FaSearch, FaMicrophone } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { useChat } from '../contexts/ChatContext';
+import chatService from '../services/chatService'; 
 import axios from 'axios';
+
+// Convert date to Pakistan time (UTC+5)
+const toPakistanTime = (dateString) => {
+  if (!dateString) return new Date();
+  
+  const date = new Date(dateString);
+  // Convert to Pakistan time (UTC+5)
+  const offset = date.getTimezoneOffset() + 300; // 300 minutes = 5 hours
+  return new Date(date.getTime() + offset * 60 * 1000);
+};
+
+// Format time for message timestamps (e.g., '2:30 PM')
+const formatMessageTime = (dateString) => {
+  if (!dateString) return '';
+  
+  const date = toPakistanTime(dateString);
+  return date.toLocaleTimeString('en-PK', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+// Utility function for time formatting
+const formatTimeAgo = (dateString) => {
+  if (!dateString) return 'Just now';
+  
+  const date = toPakistanTime(dateString);
+  const now = toPakistanTime();
+  const seconds = Math.floor((now - date) / 1000);
+  
+  const intervals = {
+    year: 31536000,
+    month: 2592000,
+    week: 604800,
+    day: 86400,
+    hour: 3600,
+    minute: 60
+  };
+
+  if (seconds < 60) return 'Just now';
+  if (seconds < 3600) {
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes}m ago`;
+  }
+  if (seconds < 86400) {
+    const hours = Math.floor(seconds / 3600);
+    return `${hours}h ago`;
+  }
+  if (seconds < 604800) {
+    const days = Math.floor(seconds / 86400);
+    return `${days}d ago`;
+  }
+  
+  // For older dates, return a formatted date in Pakistan time
+  return date.toLocaleDateString('en-PK', {
+    month: 'short',
+    day: 'numeric',
+    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+  });
+};
+
+// Fixed: Avatar component with proper centering
+const Avatar = ({ user, size = 'md' }) => {
+  const sizeClasses = {
+    sm: 'w-8 h-8 text-sm',
+    md: 'w-10 h-10 text-base',
+    lg: 'w-12 h-12 text-lg'
+  };
+
+  const [imageError, setImageError] = useState(false);
+  
+  // Check if we should show image or fallback
+  const showImage = user.avatar && user.avatar !== '/default-avatar.png' && !imageError;
+
+  return (
+    <div className="relative flex-shrink-0">
+      {showImage ? (
+        <img
+          src={user.avatar}
+          alt={user.name}
+          className={`${sizeClasses[size]} rounded-full object-cover border-2 border-emerald-200`}
+          onError={() => {
+            console.log('❌ Avatar image failed to load:', user.avatar);
+            setImageError(true);
+          }}
+          onLoad={() => {
+            console.log('✅ Avatar image loaded successfully:', user.avatar);
+            setImageError(false);
+          }}
+        />
+      ) : (
+        <div 
+          className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-emerald-100 border-2 border-emerald-200 font-bold text-emerald-600`}
+        >
+          {user.firstLetter}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export default function Chats() {
   const { theme, toggleTheme } = useTheme();
@@ -18,22 +120,190 @@ export default function Chats() {
     unreadCount,
     markMessagesAsRead,
     loading,
-    error,
-    currentUserId
+    currentUserId,
+    error
   } = useChat();
+  
+  // Get current user info
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = {
+    id: user.id || user.userId || currentUserId,
+    name: user.name || 'You',
+    avatar: user.profileImage || '/default-avatar.png',
+    firstLetter: (user.name || 'Y').charAt(0).toUpperCase()
+  };
   const [language, setLanguage] = useState('english');
   const [userProfile, setUserProfile] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
+  const [selectedAudio, setSelectedAudio] = useState(null);
+  const [selectedAudioFile, setSelectedAudioFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
+  const audioInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   
   const [messageLoading, setMessageLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+
+  // Add these upload functions
+// Update handleSendImage to convert the URL
+  const handleSendImage = async () => {
+    if (!selectedImageFile) {
+      throw new Error('No image file selected');
+    }
+
+    try {
+      console.log('📤 Uploading image file...');
+      const response = await chatService.uploadImage(selectedImageFile);
+      console.log('✅ Image upload response:', response);
+      
+      // Extract filename from the response
+      let filename = '';
+      if (response.filename) {
+        filename = response.filename;
+      } else if (response.original) {
+        // Extract filename from URL if full URL is returned
+        const urlParts = response.original.split('/');
+        filename = urlParts[urlParts.length - 1];
+      } else if (response.data?.filename) {
+        filename = response.data.filename;
+      } else if (response.data) {
+        // If data is just the filename
+        filename = response.data.split('/').pop();
+      }
+      
+      if (!filename) {
+        console.error('❌ Could not extract filename from response:', response);
+        throw new Error('Could not determine filename from server response');
+      }
+      
+      // Return null as content since we'll use the message_type to identify it's an image
+      // The server should handle storing the image URL based on the message_type
+      console.log('✅ Image uploaded successfully, returning null content');
+      return null;
+    } catch (error) {
+      console.error('❌ Image upload failed:', error);
+      throw error;
+    }
+  };
+
+  const handleSendAudio = async () => {
+    if (!selectedAudioFile) {
+      throw new Error('No audio file selected');
+    }
+
+    try {
+      console.log('📤 Uploading audio file...');
+      const audioUrl = await chatService.uploadAudio(selectedAudioFile);
+      console.log('✅ Audio uploaded, URL:', audioUrl);
+      return audioUrl;
+    } catch (error) {
+      console.error('❌ Audio upload failed:', error);
+      throw error;
+    }
+  };
+
+  // Fixed: Proper image URL handling for upload API responses
+ // Fixed: Better image URL handling that preserves full URLs from API
+// Fixed: Correct image URL handling
+// Fixed: Use correct image URL path
+const getImageUrl = (imagePath, isAvatar = false) => {
+  console.log('🖼️ Processing image URL:', imagePath, 'isAvatar:', isAvatar);
+  
+  // Handle null/undefined/empty cases
+  if (!imagePath || ['N/A', 'null', 'undefined', ''].includes(String(imagePath))) {
+    console.log('⚠️ No valid image path provided, using default avatar');
+    return isAvatar ? '/default-avatar.png' : null;
+  }
+
+  // Convert to string and trim
+  let url = String(imagePath).trim();
+  
+  // Check if it's already a full URL
+  if (url.startsWith('http')) {
+    // Convert /writable/uploads/ to /image/ for consistency
+    if (url.includes('/writable/uploads/')) {
+      const convertedUrl = url.replace('/writable/uploads/', '/image/');
+      console.log('🔄 Converted URL:', convertedUrl);
+      return convertedUrl;
+    }
+    return url;
+  }
+  
+  // Handle avatar images (like profile photos)
+  if (isAvatar) {
+    // For avatars, we use the direct path without /uploads/
+    const avatarUrl = `https://api.emov.com.pk/image/${url}`;
+    console.log('👤 Avatar URL:', avatarUrl);
+    return avatarUrl;
+  }
+  
+  // For regular images, use the standard format
+  const imageUrl = `https://api.emov.com.pk/image/${url}`;
+  console.log('🌅 Regular image URL:', imageUrl);
+  return imageUrl;
+};
+
+  // Add this function for audio URLs
+  const getAudioUrl = (audioPath) => {
+    if (!audioPath || audioPath === 'N/A' || audioPath === 'null' || audioPath === 'undefined') {
+      console.log('❌ Invalid audio path:', audioPath);
+      return null;
+    }
+    
+    // If it's already a full URL, use it as is
+    if (audioPath.startsWith('http')) {
+      return audioPath;
+    }
+    
+    // If it's from the upload API response, construct the full URL
+    if (audioPath.includes('writable/uploads')) {
+      return `https://api.emov.com.pk/${audioPath}`;
+    }
+    
+    // Otherwise, assume it's a filename and prepend the uploads path
+    return `https://api.emov.com.pk/writable/uploads/${audioPath}`;
+  };
+
+  // Add this helper function for consistent image rendering
+ // Update the renderImageContent function
+const renderImageContent = (imageUrl) => {
+  console.log('🎨 Rendering image content with URL:', imageUrl);
+  
+  // Ensure we have a valid URL before rendering
+  const finalUrl = getImageUrl(imageUrl);
+  
+  return (
+    <div className="space-y-2">
+      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">📸 Image</div>
+      <div className="relative">
+        <img 
+          src={finalUrl} 
+          alt="Shared content" 
+          className="max-w-full h-auto rounded-lg max-h-60 object-contain border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
+          onError={(e) => {
+            console.error('❌ Image failed to load:', finalUrl);
+            e.target.style.display = 'none';
+            // Show fallback text
+            const fallback = e.target.parentElement.querySelector('.image-fallback');
+            if (fallback) fallback.style.display = 'block';
+          }}
+          onLoad={() => {
+            console.log('✅ Image loaded successfully:', finalUrl);
+          }}
+        />
+        <div className="image-fallback hidden text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+          📸 Image not available
+        </div>
+      </div>
+    </div>
+  );
+};
 
   // Handle chat selection
   const handleChatSelect = async (chat) => {
@@ -94,108 +364,245 @@ export default function Chats() {
       setInitialLoadDone(true);
     }
   }, []);
+
+  // Listen for chat refresh events
+  useEffect(() => {
+    const handleChatsRefresh = () => {
+      console.log('🔄 Refreshing chats from external event');
+      loadChats();
+    };
+
+    window.addEventListener('chatsRefresh', handleChatsRefresh);
+    return () => {
+      window.removeEventListener('chatsRefresh', handleChatsRefresh);
+    };
+  }, [loadChats]);
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
   
+  // Fixed: Handle send message with better media handling
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if ((!newMessage.trim() && !selectedImage) || !currentChat || sendingMessage) return;
+    
+    // Prevent sending if no content
+    if (!newMessage.trim() && !selectedImage && !selectedAudio) {
+      console.log('🚫 No content to send');
+      return;
+    }
+    
+    if (!currentChat || sendingMessage) return;
     
     try {
       setSendingMessage(true);
-      console.log('📤 Sending message:', newMessage);
       
-      await sendMessage(newMessage);
+      let messageType = 'text';
+      let messageContent = newMessage.trim();
+      
+      // Handle image upload and send
+  // In handleSendMessage function, replace the image sending part:
+if (selectedImage && selectedImageFile) {
+  console.log('🖼️ Handling image upload and send');
+  try {
+    const imageUrl = await handleSendImage();
+    if (imageUrl) {
+      messageType = 'image';
+      messageContent = imageUrl; // Use the actual image URL, not null
+      console.log('✅ Image ready to send, URL:', messageContent);
+      
+      // Send the message with the image URL
+      console.log(`📤 Sending ${messageType} message with URL:`, messageContent);
+      await sendMessage(messageContent, messageType);
+      
+      // Clear all states
       setNewMessage('');
-      setSelectedImage(null);
+      clearMediaSelection();
+      console.log('✅ Image message sent successfully');
+      return;
+    } else {
+      throw new Error('Image upload returned no URL');
+    }
+  } catch (error) {
+    console.error('❌ Error sending image:', error);
+    alert('Failed to send image. Please try again.');
+    return;
+  }
+}
       
-      console.log('✅ Message sent successfully');
-      
-      // Reload messages to see the updated conversation
-      setTimeout(() => {
-        if (currentChat) {
-          console.log('🔄 Reloading messages after send');
-          setActiveChat(currentChat); // This will reload messages
+      // Handle audio upload and send
+      if (selectedAudio && selectedAudioFile) {
+        console.log('🎵 Handling audio upload and send');
+        try {
+          const audioUrl = await handleSendAudio();
+          if (audioUrl) {
+            messageType = 'audio';
+            messageContent = audioUrl;
+            console.log('✅ Audio ready to send:', messageContent);
+            
+            // Send the audio message
+            console.log(`📤 Sending ${messageType} message with URL:`, messageContent);
+            await sendMessage(messageContent, messageType);
+            
+            // Clear all states
+            setNewMessage('');
+            clearMediaSelection();
+            console.log('✅ Audio message sent successfully');
+            return;
+          } else {
+            throw new Error('Audio upload returned no URL');
+          }
+        } catch (error) {
+          console.error('❌ Audio upload failed:', error);
+          alert('Failed to upload audio. Please try again.');
+          return;
         }
-      }, 500);
+      }
+      
+      // Handle text message (no media)
+      if (messageContent) {
+        console.log(`📤 Sending text message:`, messageContent);
+        await sendMessage(messageContent, messageType);
+        setNewMessage('');
+        console.log('✅ Text message sent successfully');
+      }
       
     } catch (error) {
       console.error('❌ Error sending message:', error);
+      alert('Failed to send message. Please try again.');
     } finally {
       setSendingMessage(false);
     }
   };
-  
+
+  // Fixed: Handle image selection properly
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setSelectedImage(URL.createObjectURL(file));
-    }
-  };
-  
-  const formatTime = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (error) {
-      return '';
+      // Check if it's an image
+      if (file.type.startsWith('image/')) {
+        // Clear any existing audio selection
+        clearAudioSelection();
+        
+        setSelectedImage(URL.createObjectURL(file));
+        setSelectedImageFile(file);
+        console.log('📸 Image selected:', file.name);
+      } else {
+        alert('Please select a valid image file');
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
     }
   };
 
-  const formatDate = (dateString) => {
+  // Fixed: Handle audio selection properly
+  const handleAudioSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check if it's an audio file
+      if (file.type.startsWith('audio/')) {
+        // Clear any existing image selection
+        clearImageSelection();
+        
+        setSelectedAudio(URL.createObjectURL(file));
+        setSelectedAudioFile(file);
+        console.log('🎵 Audio selected:', file.name);
+      } else {
+        alert('Please select a valid audio file');
+        // Reset file input
+        if (audioInputRef.current) {
+          audioInputRef.current.value = '';
+        }
+      }
+    }
+  };
+
+  // Clear image selection
+  const clearImageSelection = () => {
+    setSelectedImage(null);
+    setSelectedImageFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Clear audio selection
+  const clearAudioSelection = () => {
+    setSelectedAudio(null);
+    setSelectedAudioFile(null);
+    if (audioInputRef.current) {
+      audioInputRef.current.value = '';
+    }
+  };
+
+  // Clear all media selections
+  const clearMediaSelection = () => {
+    clearImageSelection();
+    clearAudioSelection();
+  };
+  
+  // Fixed: Better time formatting for messages
+  const formatMessageTime = (dateString) => {
     if (!dateString) return '';
     try {
       const date = new Date(dateString);
       const now = new Date();
-      const diffTime = Math.abs(now - date);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffInHours = (now - date) / (1000 * 60 * 60);
       
-      if (diffDays === 1) return 'Yesterday';
-      if (diffDays < 7) return `${diffDays} days ago`;
-      if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-      return date.toLocaleDateString();
+      // If message is from today, show time only
+      if (date.toDateString() === now.toDateString()) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      // If message is from yesterday, show "Yesterday"
+      else if (diffInHours < 48) {
+        return 'Yesterday';
+      }
+      // If message is from this week, show day name
+      else if (diffInHours < 168) {
+        return date.toLocaleDateString([], { weekday: 'short' });
+      }
+      // Otherwise show date
+      else {
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      }
     } catch (error) {
+      console.error('Error formatting message time:', error);
       return '';
     }
   };
-  
-  // FIXED: Proper image URL handling
+
+  // Fixed: Get other user info with better avatar handling
   const getOtherUser = (chat) => {
     if (!chat.otherUser) {
+      console.warn('❌ No otherUser found in chat:', chat);
       return {
         name: 'Seller',
-        avatar: '/default-avatar.png'
+        avatar: '/default-avatar.png',
+        firstLetter: 'S'
       };
     }
 
     const otherUser = { ...chat.otherUser };
+    const displayName = otherUser.name || 'Seller';
+    const firstLetter = displayName.charAt(0).toUpperCase();
 
-    // Fix avatar URL - handle different URL formats
-    if (otherUser.avatar) {
-      if (otherUser.avatar.startsWith('http')) {
-        // Already a full URL, use as is
-        console.log('🌐 Using full avatar URL:', otherUser.avatar);
-      } else if (otherUser.avatar.startsWith('/')) {
-        // Relative path, prepend base URL
-        otherUser.avatar = `https://api.emov.com.pk${otherUser.avatar}`;
-        console.log('🔗 Converted relative avatar URL:', otherUser.avatar);
-      } else {
-        // Just a filename, use image endpoint
-        const imagePath = otherUser.avatar.replace(/^\/|\/$/g, '');
-        otherUser.avatar = `https://api.emov.com.pk/image/${imagePath}`;
-        console.log('📷 Using image endpoint URL:', otherUser.avatar);
-      }
-    } else {
-      otherUser.avatar = '/default-avatar.png';
-      console.log('👤 Using default avatar');
-    }
+    // Fix avatar URL using the centralized function
+    otherUser.avatar = getImageUrl(otherUser.avatar);
+    otherUser.firstLetter = firstLetter;
+
+    console.log('👤 User info for chat:', {
+      chatId: chat._id,
+      name: displayName,
+      avatar: otherUser.avatar,
+      firstLetter: firstLetter
+    });
 
     return {
-      name: otherUser.name || 'Seller',
-      avatar: otherUser.avatar
+      name: displayName,
+      avatar: otherUser.avatar,
+      firstLetter: firstLetter
     };
   };
 
@@ -205,22 +612,117 @@ export default function Chats() {
     (chat.adTitle && chat.adTitle.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Fixed: Better image URL handling in message rendering
+// Fixed: Better image URL handling in message rendering
+const renderMessageContent = (message) => {
+  console.log('📨 Rendering message:', message);
+
+  // Safe extraction with defaults
+  const content = message?.content || '';
+  const messageType = message?.message_type || 'text';
+  
+  // Ensure content is a string
+  const safeContent = String(content);
+
+  try {
+    if (messageType === 'image') {
+      // FIXED: Check multiple possible locations for the image URL
+      let imageUrl = safeContent;
+      
+      // If content is empty, check the _original object and other possible locations
+      if (!imageUrl || imageUrl === 'undefined' || imageUrl === 'null' || imageUrl === '') {
+        console.log('🔍 Checking alternative locations for image URL');
+        
+        // Check multiple possible properties in _original and root level
+        imageUrl = message?._original?.media_url || 
+                   message?._original?.image_url || 
+                   message?._original?.message_text || // ADDED THIS LINE
+                   message?.media_url ||
+                   message?.image_url ||
+                   message?.message_text; // ADDED THIS LINE
+        
+        console.log('🖼️ Found image URL in alternative location:', imageUrl);
+      }
+      
+      // Final check if we have a valid URL
+      if (!imageUrl || imageUrl === 'undefined' || imageUrl === 'null' || imageUrl === '') {
+        console.log('❌ No valid image URL found in message:', message);
+        return (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">📸 Image</div>
+            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-500 dark:text-gray-400">
+              Image not available
+            </div>
+          </div>
+        );
+      }
+      
+      console.log('🖼️ Rendering image message with URL:', imageUrl);
+      const formattedUrl = getImageUrl(imageUrl);
+      return renderImageContent(formattedUrl);
+      
+    } else if (messageType === 'audio') {
+      // Similar fix for audio messages if needed
+      let audioUrl = safeContent;
+      
+      if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
+        audioUrl = message?._original?.media_url || 
+                   message?._original?.audio_url || 
+                   message?._original?.message_text || // ADDED THIS LINE
+                   message?.media_url ||
+                   message?.audio_url ||
+                   message?.message_text; // ADDED THIS LINE
+      }
+      
+      if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
+        console.log('❌ Empty audio URL in message:', message);
+        return (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">🎵 Audio</div>
+            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-500 dark:text-gray-400">
+              Audio not available
+            </div>
+          </div>
+        );
+      }
+      
+      console.log('🎵 Rendering audio message with URL:', audioUrl);
+      const finalAudioUrl = getAudioUrl(audioUrl);
+      
+      return (
+        <div className="space-y-2">
+          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">🎵 Audio</div>
+          <audio controls className="w-full max-w-xs">
+            <source src={finalAudioUrl} type="audio/mpeg" />
+            <source src={finalAudioUrl} type="audio/wav" />
+            <source src={finalAudioUrl} type="audio/ogg" />
+            Your browser does not support the audio element.
+          </audio>
+        </div>
+      );
+    } else {
+      return <div className="break-words whitespace-pre-wrap">{safeContent}</div>;
+    }
+  } catch (error) {
+    console.error('Error rendering message content:', error);
+    return <div className="break-words whitespace-pre-wrap text-red-500">Error displaying message</div>;
+  }
+};
+
   // Fetch user profile
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
         const savedUser = localStorage.getItem('user');
         if (savedUser) {
-          const userData = JSON.parse(savedUser);
-          const formattedUser = {
-            name: userData.name || userData.username || 'User',
-            email: userData.email || '',
-            picture: userData.picture || userData.imageUrl ? 
-              `https://api.emov.com.pk/${(userData.picture || userData.imageUrl).replace(/^\//, '')}` : null,
-            username: userData.username,
-            id: userData.id || userData.userId
+          const user = JSON.parse(savedUser);
+          const userProfileData = {
+            id: user.id || user.userId || currentUserId,
+            name: user.name || 'You',
+            avatar: user.profileImage || '/default-avatar.png',
+            firstLetter: (user.name || 'Y').charAt(0).toUpperCase()
           };
-          setUserProfile(formattedUser);
+          setUserProfile(userProfileData);
           return;
         }
 
@@ -234,7 +736,7 @@ export default function Chats() {
           const formattedUser = {
             name: userData.name || userData.username || 'User',
             email: userData.email || '',
-            picture: userData.imageUrl ? `https://api.emov.com.pk/${userData.imageUrl.replace(/^\//, '')}` : null,
+            picture: userData.imageUrl ? getImageUrl(userData.imageUrl) : null,
             username: userData.username,
             id: userData.id || userData.userId
           };
@@ -384,58 +886,46 @@ export default function Chats() {
               </div>
             ) : (
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {filteredChats.map(chat => (
-                  <div
-                    key={chat._id || chat.conversation_id}
-                    onClick={() => handleChatSelect(chat)}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      (currentChat?._id === chat._id || currentChat?.conversation_id === chat.conversation_id) 
-                        ? 'bg-emerald-50 dark:bg-emerald-900/20 border-l-4 border-l-emerald-500' 
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="relative flex-shrink-0">
-                        <img
-                          src={getOtherUser(chat).avatar}
-                          alt={getOtherUser(chat).name}
-                          className="w-12 h-12 rounded-full object-cover bg-gray-200 dark:bg-gray-600"
-                          onError={(e) => {
-                            console.error('❌ Error loading avatar:', e.target.src);
-                            e.target.onerror = null;
-                            e.target.src = '/default-avatar.png';
-                          }}
-                          onLoad={(e) => {
-                            console.log('✅ Avatar loaded successfully:', e.target.src);
-                          }}
-                        />
-                        {chat.unreadCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                            {chat.unreadCount}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start mb-1">
-                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                            {getOtherUser(chat).name}
+                {filteredChats.map((chat) => {
+                  const otherUser = getOtherUser(chat);
+                  const isUnread = chat.unreadCount > 0;
+                  
+                  return (
+                    <div
+                      key={chat._id}
+                      className={`flex items-center p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                      }`}
+                      onClick={() => handleChatSelect(chat)}
+                    >
+                      <Avatar user={otherUser} size="lg" />
+                      <div className="ml-4 flex-1 min-w-0">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {otherUser.name}
                           </h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap ml-2">
-                            {formatDate(chat.updatedAt)}
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {formatTimeAgo(chat.lastMessage?.createdAt)}
                           </span>
                         </div>
-                        {chat.adTitle && (
-                          <p className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 truncate font-medium">
-                            {chat.adTitle}
-                          </p>
-                        )}
-                        <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                          {chat.lastMessage?.content || 'No messages yet'}
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {chat.lastMessage?.content?.includes('/image/') || chat.lastMessage?.message_type === 'image' ? (
+                            (chat.lastMessage?.sender === 'me' || chat.lastMessage?.sender_id === currentUser?.id) 
+                              ? 'recieved an image' 
+                              : 'You sent an image'
+                          ) : chat.lastMessage?.content ? (
+                            chat.lastMessage.content.length > 30 
+                              ? `${chat.lastMessage.content.substring(0, 30)}...` 
+                              : chat.lastMessage.content
+                          ) : 'No messages yet'}
                         </p>
                       </div>
+                      {isUnread && (
+                        <div className="ml-2 w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -455,18 +945,7 @@ export default function Chats() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </button>
-                <img
-                  src={getOtherUser(currentChat).avatar}
-                  alt={getOtherUser(currentChat).name}
-                  className="w-10 h-10 rounded-full object-cover bg-gray-200 dark:bg-gray-600"
-                  onError={(e) => {
-                    console.error('❌ Error loading chat header avatar:', e.target.src);
-                    e.target.src = '/default-avatar.png';
-                  }}
-                  onLoad={(e) => {
-                    console.log('✅ Chat header avatar loaded:', e.target.src);
-                  }}
-                />
+                <Avatar user={getOtherUser(currentChat)} size="md" />
                 <div>
                   <h2 className="font-semibold text-gray-900 dark:text-white">
                     {getOtherUser(currentChat).name}
@@ -514,29 +993,54 @@ export default function Chats() {
                 </div>
               ) : (
                 <>
-                  {messages.map((message) => (
-                    <div
-                      key={message._id}
-                      className={`flex ${message.sender === 'me' ? 'justify-end' : 'justify-start'}`}
-                    >
+                  {messages.filter(message => message && message._id).map((message) => {
+                    const isCurrentUser = message.sender === 'me' || message.sender === currentUserId;
+                    const senderInfo = message.senderInfo || (isCurrentUser ? {
+                      id: currentUserId,
+                      name: userProfile?.name || 'You',
+                      avatar: userProfile?.picture || '/default-avatar.png'
+                    } : currentChat?.otherUser);
+                    
+                    return (
                       <div
-                        className={`max-w-xs md:max-w-md lg:max-w-lg p-4 rounded-2xl ${
-                          message.sender === 'me'
-                            ? 'bg-emerald-500 text-white rounded-br-none'
-                            : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none border border-gray-200 dark:border-gray-600'
-                        } shadow-sm`}
+                        key={message._id}
+                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3`}
                       >
-                        <div className="break-words">{message.content}</div>
-                        <div className={`text-xs mt-2 ${message.sender === 'me' ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'} text-right`}>
-                          {formatTime(message.createdAt)}
-                          {message.status === 'sending' && ' • Sending...'}
-                          {message.status === 'sent' && ' • Sent'}
-                          {message.status === 'failed' && ' • Failed'}
-                          {message.read && message.sender === 'me' && ' • Read'}
+                        {/* Sender's avatar for received messages */}
+                        {!isCurrentUser && senderInfo && (
+                          <div className="flex-shrink-0 mr-2 self-end">
+                            <Avatar user={senderInfo} size="sm" />
+                          </div>
+                        )}
+                        
+                        <div className={`flex flex-col max-w-xs md:max-w-md lg:max-w-lg`}>
+                          {/* Sender's name for received messages */}
+                          {!isCurrentUser && senderInfo && (
+                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 ml-1">
+                              {senderInfo.name}
+                            </span>
+                          )}
+                          
+                          <div
+                            className={`p-4 rounded-2xl ${
+                              isCurrentUser
+                                ? 'bg-emerald-500 text-white rounded-br-none'
+                                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none border border-gray-200 dark:border-gray-600'
+                            } shadow-sm`}
+                          >
+                            {renderMessageContent(message)}
+                            <div className={`text-xs mt-2 ${isCurrentUser ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'} text-right`}>
+                              {formatMessageTime(message.createdAt)}
+                              {message.status === 'sending' && ' • Sending...'}
+                              {message.status === 'sent' && ' • Sent'}
+                              {message.status === 'failed' && ' • Failed'}
+                              {message.read && isCurrentUser && ' • Read'}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div ref={messagesEndRef} />
                 </>
               )}
@@ -544,6 +1048,7 @@ export default function Chats() {
             
             {/* Message input */}
             <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              {/* Selected image preview */}
               {selectedImage && (
                 <div className="relative mb-3 max-w-xs">
                   <img
@@ -552,14 +1057,32 @@ export default function Chats() {
                     className="rounded-lg max-h-40 object-cover border border-gray-200 dark:border-gray-600"
                   />
                   <button
-                    onClick={() => setSelectedImage(null)}
+                    onClick={clearImageSelection}
                     className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
                   >
                     <FaTimes className="w-3 h-3" />
                   </button>
                 </div>
               )}
+
+              {/* Selected audio preview */}
+              {selectedAudio && (
+                <div className="relative mb-3 max-w-xs bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <FaMicrophone className="text-emerald-500" />
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Audio selected</span>
+                  </div>
+                  <button
+                    onClick={clearAudioSelection}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <FaTimes className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+
               <form onSubmit={handleSendMessage} className="flex items-end space-x-3">
+                {/* Image upload button */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -575,6 +1098,24 @@ export default function Chats() {
                     className="hidden"
                   />
                 </button>
+
+                {/* Audio upload button */}
+                <button
+                  type="button"
+                  onClick={() => audioInputRef.current?.click()}
+                  className="flex-shrink-0 p-3 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  disabled={sendingMessage}
+                >
+                  <FaMicrophone className="w-5 h-5" />
+                  <input
+                    type="file"
+                    ref={audioInputRef}
+                    onChange={handleAudioSelect}
+                    accept="audio/*"
+                    className="hidden"
+                  />
+                </button>
+
                 <div className="flex-1 relative">
                   <input
                     type="text"
@@ -586,9 +1127,9 @@ export default function Chats() {
                   />
                   <button
                     type="submit"
-                    disabled={(!newMessage.trim() && !selectedImage) || sendingMessage}
+                    disabled={(!newMessage.trim() && !selectedImage && !selectedAudio) || sendingMessage}
                     className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors ${
-                      (newMessage.trim() || selectedImage) && !sendingMessage
+                      (newMessage.trim() || selectedImage || selectedAudio) && !sendingMessage
                         ? 'bg-emerald-500 text-white hover:bg-emerald-600'
                         : 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
                     }`}

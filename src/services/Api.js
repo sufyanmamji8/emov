@@ -295,19 +295,68 @@ const apiService = {
     
     // Get ad by ID
     getById: async (id) => {
+      if (!id) {
+        const error = new Error('Ad ID is required');
+        error.status = 400;
+        throw error;
+      }
+
+      console.log(`[API] Fetching ad with ID: ${id}`);
+      
       try {
-        // Fetch all ads and find the specific one
+        // First try the direct endpoint if it exists
+        try {
+          console.log(`[API] Trying direct endpoint: /ads/${id}`);
+          const response = await api.get(`/ads/${id}`);
+          
+          if (response.data) {
+            console.log(`[API] Successfully fetched ad ${id} from direct endpoint`);
+            return { data: response.data };
+          }
+        } catch (directError) {
+          // Only log if it's not a 404, as we expect 404 for non-existent ads
+          if (directError.response?.status !== 404) {
+            console.warn(`[API] Direct endpoint failed for ad ${id}:`, directError.message);
+          } else {
+            console.log(`[API] Ad ${id} not found via direct endpoint, trying fallback`);
+          }
+        }
+
+        // Fallback: Fetch all ads and filter (only if direct endpoint fails)
+        console.log(`[API] Falling back to fetching all ads`);
         const response = await api.get('/ads');
         const allAds = response.data?.data || response.data || [];
+        console.log(`[API] Fetched ${allAds.length} total ads`);
+        
         const ad = allAds.find(ad => (ad.AdID || ad.id) == id);
         
         if (ad) {
+          console.log(`[API] Found ad ${id} in full ads list`);
           return { data: ad };
-        } else {
-          throw new Error('Ad not found');
         }
+        
+        // Return a consistent error response
+        console.warn(`[API] Ad ${id} not found in any data source`);
+        const error = new Error('Ad not found');
+        error.status = 404;
+        error.code = 'AD_NOT_FOUND';
+        throw error;
       } catch (error) {
-        console.error('[API] Get ad by ID failed:', error);
+        // Only log if it's not a 404, as those are handled gracefully in the UI
+        if (error.status !== 404) {
+          console.error(`[API] Get ad by ID ${id} failed:`, error);
+        }
+        
+        // Ensure error has a status code
+        if (!error.status) {
+          error.status = error.response?.status || 500;
+        }
+        
+        // Add error code if not present
+        if (!error.code) {
+          error.code = error.status === 404 ? 'AD_NOT_FOUND' : 'SERVER_ERROR';
+        }
+        
         throw error;
       }
     },
