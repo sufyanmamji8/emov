@@ -5,7 +5,11 @@ import Navbar from '../components/Layout/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { useChat } from '../contexts/ChatContext';
 import chatService from '../services/chatService'; 
+import { FaTrash, FaUserSlash } from 'react-icons/fa';
 import axios from 'axios';
+
+
+
 
 // Convert date to Pakistan time (UTC+5)
 const toPakistanTime = (dateString) => {
@@ -16,6 +20,7 @@ const toPakistanTime = (dateString) => {
   const offset = date.getTimezoneOffset() + 300; // 300 minutes = 5 hours
   return new Date(date.getTime() + offset * 60 * 1000);
 };
+
 
 // Format time for message timestamps (e.g., '2:30 PM')
 const formatMessageTime = (dateString) => {
@@ -119,6 +124,7 @@ export default function Chats() {
     loadChats,
     unreadCount,
     markMessagesAsRead,
+     deleteMessage,
     loading,
     currentUserId,
     error
@@ -149,9 +155,46 @@ export default function Chats() {
   
   const [messageLoading, setMessageLoading] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [hoveredMessage, setHoveredMessage] = useState(null);
+  const [isDeleteConversationModalOpen, setIsDeleteConversationModalOpen] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState(null);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
+  const [hoveredChatId, setHoveredChatId] = useState(null);
+
+  // Handle deleting a conversation
+  const handleDeleteConversation = async () => {
+    if (!conversationToDelete) return;
+
+    try {
+      setIsDeletingConversation(true);
+      await chatService.deleteConversation(conversationToDelete.conversation_id || conversationToDelete.id);
+      
+      // Remove the conversation from the list
+      setChats(prevChats => prevChats.filter(chat => chat.conversation_id !== conversationToDelete.conversation_id && chat.id !== conversationToDelete.id));
+      
+      // If the deleted conversation is the current chat, clear it
+      if (currentChat && (currentChat.conversation_id === conversationToDelete.conversation_id || currentChat.id === conversationToDelete.id)) {
+        setCurrentChat(null);
+        setMessages([]);
+      }
+      
+      // Close the modal and reset state
+      setIsDeleteConversationModalOpen(false);
+      setConversationToDelete(null);
+    } catch (error) {
+      console.error('Error deleting conversation:', error);
+    } finally {
+      setIsDeletingConversation(false);
+    }
+  };
 
   // Add these upload functions
-// Update handleSendImage to convert the URL
+  // Update handleSendImage to convert the URL
   const handleSendImage = async () => {
     if (!selectedImageFile) {
       throw new Error('No image file selected');
@@ -162,30 +205,38 @@ export default function Chats() {
       const response = await chatService.uploadImage(selectedImageFile);
       console.log('✅ Image upload response:', response);
       
-      // Extract filename from the response
-      let filename = '';
-      if (response.filename) {
-        filename = response.filename;
+      // Extract the image URL from the response
+      let imageUrl = '';
+      
+      // Handle different response formats
+      if (response.url) {
+        // If the response has a direct URL
+        imageUrl = response.url;
       } else if (response.original) {
-        // Extract filename from URL if full URL is returned
-        const urlParts = response.original.split('/');
-        filename = urlParts[urlParts.length - 1];
-      } else if (response.data?.filename) {
-        filename = response.data.filename;
-      } else if (response.data) {
-        // If data is just the filename
-        filename = response.data.split('/').pop();
+        // If the response has an original field
+        imageUrl = response.original;
+      } else if (response.data?.url) {
+        // If the response is nested in a data object
+        imageUrl = response.data.url;
+      } else if (response) {
+        // If the response is the URL directly
+        imageUrl = response;
       }
       
-      if (!filename) {
-        console.error('❌ Could not extract filename from response:', response);
-        throw new Error('Could not determine filename from server response');
+      // Remove any '/uploads/' segment from the URL if present
+      if (imageUrl) {
+        imageUrl = imageUrl.replace('/uploads/', '/');
+        
+        // If it's not a full URL, prepend the base URL
+        if (!imageUrl.startsWith('http')) {
+          imageUrl = `https://api.emov.com.pk/image/${imageUrl}`;
+        }
+        
+        console.log('✅ Image URL after formatting:', imageUrl);
+        return imageUrl;
       }
       
-      // Return null as content since we'll use the message_type to identify it's an image
-      // The server should handle storing the image URL based on the message_type
-      console.log('✅ Image uploaded successfully, returning null content');
-      return null;
+      throw new Error('Could not determine image URL from server response');
     } catch (error) {
       console.error('❌ Image upload failed:', error);
       throw error;
@@ -270,6 +321,47 @@ const getImageUrl = (imagePath, isAvatar = false) => {
     return `https://api.emov.com.pk/writable/uploads/${audioPath}`;
   };
 
+  // Handle message options click
+  const handleMessageOptions = (message, e) => {
+    e.stopPropagation();
+    setSelectedMessage(message);
+    setDeleteModalOpen(true);
+  };
+
+  // Handle delete message
+  const handleDeleteMessage = async (deleteType) => {
+    if (!selectedMessage || deleteLoading) return;
+    
+    try {
+      setDeleteLoading(true);
+      console.log(`🗑️ Deleting message for: ${deleteType}`);
+      
+      await deleteMessage(selectedMessage._id, deleteType);
+      
+      // Refresh the chat list to update the last message
+      if (currentChat) {
+        // Use loadChats from useChat hook to refresh the chat list
+        await loadChats();
+      }
+      
+      setDeleteModalOpen(false);
+      setSelectedMessage(null);
+      setHoveredMessage(null);
+      
+    } catch (error) {
+      console.error('❌ Error deleting message:', error);
+      alert('Failed to delete message. Please try again.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  // Close modal
+  const handleCloseModal = () => {
+    setDeleteModalOpen(false);
+    setSelectedMessage(null);
+  };
+
   // Add this helper function for consistent image rendering
  // Update the renderImageContent function
 const renderImageContent = (imageUrl) => {
@@ -327,6 +419,17 @@ const renderImageContent = (imageUrl) => {
     }
   };
 
+  // Debug effect to see what's in the chats
+useEffect(() => {
+  if (chats.length > 0) {
+    console.log('📋 Current chats state:', chats.map(chat => ({
+      id: chat._id,
+      lastMessage: chat.lastMessage,
+      otherUser: chat.otherUser.name
+    })));
+  }
+}, [chats]);
+
   // Set active chat from URL state when component mounts
   useEffect(() => {
     if (location.state?.activeChatId && chats.length > 0) {
@@ -383,97 +486,113 @@ const renderImageContent = (imageUrl) => {
   };
   
   // Fixed: Handle send message with better media handling
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    
-    // Prevent sending if no content
-    if (!newMessage.trim() && !selectedImage && !selectedAudio) {
-      console.log('🚫 No content to send');
-      return;
-    }
-    
-    if (!currentChat || sendingMessage) return;
-    
-    try {
-      setSendingMessage(true);
-      
-      let messageType = 'text';
-      let messageContent = newMessage.trim();
-      
-      // Handle image upload and send
-  // In handleSendMessage function, replace the image sending part:
-if (selectedImage && selectedImageFile) {
-  console.log('🖼️ Handling image upload and send');
-  try {
-    const imageUrl = await handleSendImage();
-    if (imageUrl) {
-      messageType = 'image';
-      messageContent = imageUrl; // Use the actual image URL, not null
-      console.log('✅ Image ready to send, URL:', messageContent);
-      
-      // Send the message with the image URL
-      console.log(`📤 Sending ${messageType} message with URL:`, messageContent);
-      await sendMessage(messageContent, messageType);
-      
-      // Clear all states
-      setNewMessage('');
-      clearMediaSelection();
-      console.log('✅ Image message sent successfully');
-      return;
-    } else {
-      throw new Error('Image upload returned no URL');
-    }
-  } catch (error) {
-    console.error('❌ Error sending image:', error);
-    alert('Failed to send image. Please try again.');
+ const handleSendMessage = async (e) => {
+  e.preventDefault();
+  
+  // Prevent sending if no content
+  if (!newMessage.trim() && !selectedImage && !selectedAudio) {
+    console.log('🚫 No content to send');
     return;
   }
-}
-      
-      // Handle audio upload and send
-      if (selectedAudio && selectedAudioFile) {
-        console.log('🎵 Handling audio upload and send');
-        try {
-          const audioUrl = await handleSendAudio();
-          if (audioUrl) {
-            messageType = 'audio';
-            messageContent = audioUrl;
-            console.log('✅ Audio ready to send:', messageContent);
-            
-            // Send the audio message
-            console.log(`📤 Sending ${messageType} message with URL:`, messageContent);
-            await sendMessage(messageContent, messageType);
-            
-            // Clear all states
-            setNewMessage('');
-            clearMediaSelection();
-            console.log('✅ Audio message sent successfully');
-            return;
-          } else {
-            throw new Error('Audio upload returned no URL');
-          }
-        } catch (error) {
-          console.error('❌ Audio upload failed:', error);
-          alert('Failed to upload audio. Please try again.');
+  
+  if (!currentChat || sendingMessage) return;
+  
+  try {
+    setSendingMessage(true);
+    
+    let messageType = 'text';
+    let messageContent = newMessage.trim();
+    
+    // Handle image upload and send
+    if (selectedImage && selectedImageFile) {
+      console.log('🖼️ Starting image upload and send process');
+      try {
+        console.log('📤 Uploading image file...');
+        const imageUrl = await handleSendImage();
+        
+        if (imageUrl) {
+          console.log('✅ Image uploaded successfully, URL:', imageUrl);
+          
+          // Extract just the image ID from the URL
+          const imageId = imageUrl.split('/').pop();
+          console.log(`📤 Sending image message with ID: ${imageId}`);
+          await sendMessage(imageId, 'image');
+          
+          // Clear the image selection and input
+          setSelectedImage(null);
+          setSelectedImageFile(null);
+          setNewMessage('');
+          
+          console.log('✅ Image message sent successfully');
           return;
+        } else {
+          throw new Error('Image upload was successful but no URL was returned');
         }
+      } catch (error) {
+        console.error('❌ Error during image upload/send:', {
+          error: error.message,
+          stack: error.stack,
+          response: error.response?.data
+        });
+        
+        // Reset the image selection on error
+        setSelectedImage(null);
+        setSelectedImageFile(null);
+        
+        // Show a more specific error message if available
+        const errorMessage = error.response?.data?.message || 
+                           error.message || 
+                           'Failed to send image. Please try again.';
+        
+        alert(errorMessage);
+        return;
       }
-      
-      // Handle text message (no media)
-      if (messageContent) {
-        console.log(`📤 Sending text message:`, messageContent);
-        await sendMessage(messageContent, messageType);
-        setNewMessage('');
-        console.log('✅ Text message sent successfully');
-      }
-      
-    } catch (error) {
-      console.error('❌ Error sending message:', error);
-      alert('Failed to send message. Please try again.');
-    } finally {
-      setSendingMessage(false);
     }
-  };
+    
+    // Handle audio upload and send
+    if (selectedAudio && selectedAudioFile) {
+      console.log('🎵 Handling audio upload and send');
+      try {
+        const audioUrl = await handleSendAudio();
+        if (audioUrl) {
+          messageType = 'audio';
+          messageContent = audioUrl;
+          console.log('✅ Audio ready to send:', messageContent);
+          
+          // Send the audio message
+          console.log(`📤 Sending ${messageType} message with URL:`, messageContent);
+          await sendMessage(messageContent, messageType);
+          
+          // Clear all states
+          setNewMessage('');
+          clearMediaSelection();
+          console.log('✅ Audio message sent successfully');
+          return;
+        } else {
+          throw new Error('Audio upload returned no URL');
+        }
+      } catch (error) {
+        console.error('❌ Audio upload failed:', error);
+        alert('Failed to upload audio. Please try again.');
+        return;
+      }
+    }
+    
+    // Handle text message (no media)
+    if (messageContent) {
+      console.log(`📤 Sending text message:`, messageContent);
+      await sendMessage(messageContent, messageType);
+      setNewMessage('');
+      console.log('✅ Text message sent successfully');
+    }
+    
+  } catch (error) {
+    console.error('❌ Error sending message:', error);
+    alert('Failed to send message. Please try again.');
+  } finally {
+    setSendingMessage(false);
+  }
+};
 
   // Fixed: Handle image selection properly
   const handleImageSelect = (e) => {
@@ -613,53 +732,103 @@ if (selectedImage && selectedImageFile) {
   );
 
   // Fixed: Better image URL handling in message rendering
-// Fixed: Better image URL handling in message rendering
-const renderMessageContent = (message) => {
-  console.log('📨 Rendering message:', message);
+  const renderMessageContent = (message, isCurrentUser) => {
+    console.log('📨 Rendering message:', message);
 
-  // Safe extraction with defaults
-  const content = message?.content || '';
-  const messageType = message?.message_type || 'text';
-  
-  // Ensure content is a string
-  const safeContent = String(content);
+    // Safe extraction with defaults
+    const content = message?.content || '';
+    const messageType = message?.message_type || 'text';
+    
+    // Ensure content is a string
+    const safeContent = String(content);
 
-  try {
-    if (messageType === 'image') {
-      // FIXED: Check multiple possible locations for the image URL
-      let imageUrl = safeContent;
-      
-      // If content is empty, check the _original object and other possible locations
-      if (!imageUrl || imageUrl === 'undefined' || imageUrl === 'null' || imageUrl === '') {
-        console.log('🔍 Checking alternative locations for image URL');
+    try {
+      if (messageType === 'image') {
+        // Check multiple possible locations for the image URL
+        let imageUrl = safeContent || 
+                      message?.media_url || 
+                      message?.image_url || 
+                      message?.message_text ||
+                      message?._original?.media_url || 
+                      message?._original?.image_url || 
+                      message?._original?.message_text ||
+                      message?.image ||
+                      message?._original?.image ||
+                      message?.file_url ||
+                      message?._original?.file_url;
         
-        // Check multiple possible properties in _original and root level
-        imageUrl = message?._original?.media_url || 
-                   message?._original?.image_url || 
-                   message?._original?.message_text || // ADDED THIS LINE
-                   message?.media_url ||
-                   message?.image_url ||
-                   message?.message_text; // ADDED THIS LINE
+        console.log('🖼️ Found image URL in message object:', {
+          content: message?.content,
+          media_url: message?.media_url,
+          image_url: message?.image_url,
+          message_text: message?.message_text,
+          _original: message?._original,
+          final_url: imageUrl
+        });
         
-        console.log('🖼️ Found image URL in alternative location:', imageUrl);
-      }
-      
-      // Final check if we have a valid URL
-      if (!imageUrl || imageUrl === 'undefined' || imageUrl === 'null' || imageUrl === '') {
-        console.log('❌ No valid image URL found in message:', message);
+        // Final check if we have a valid URL
+        if (!imageUrl || imageUrl === 'undefined' || imageUrl === 'null' || imageUrl === '') {
+          console.log('❌ No valid image URL found in message:', message);
+          return (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">📸 Image</div>
+              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-500 dark:text-gray-400">
+                Image not available
+              </div>
+            </div>
+          );
+        }
+        
+        // Format the URL properly
+        let formattedUrl;
+        
+        // If we have a full URL that includes '/image/' but not in the correct format
+        if (imageUrl.includes('/image/') && !imageUrl.endsWith('.jpg') && !imageUrl.endsWith('.jpeg') && !imageUrl.endsWith('.png')) {
+          // Extract the image ID from the path
+          const imageId = imageUrl.split('/image/')[1]?.split('/')[0];
+          if (imageId) {
+            formattedUrl = `https://api.emov.com.pk/image/${imageId}`;
+          } else {
+            formattedUrl = imageUrl;
+          }
+        } 
+        // If we just have an image ID
+        else if (!imageUrl.includes('/') && !imageUrl.includes('.')) {
+          formattedUrl = `https://api.emov.com.pk/image/${imageUrl}`;
+        }
+        // If it's already a full URL
+        else if (imageUrl.startsWith('http')) {
+          formattedUrl = imageUrl;
+        }
+        // For any other case, construct the URL
+        else {
+          const cleanPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+          formattedUrl = `https://api.emov.com.pk/image/${cleanPath}`;
+        }
+        
+        console.log('🖼️ Rendering image with URL:', formattedUrl);
+        
+        // Return the image with error handling
         return (
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">📸 Image</div>
-            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-500 dark:text-gray-400">
-              Image not available
+
+          
+          <div className="relative group">
+            <div className="relative w-full max-w-xs h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+              <img
+                src={formattedUrl}
+                alt="Sent image"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('❌ Error loading image:', formattedUrl);
+                  e.target.onerror = null;
+                  e.target.src = '/image-placeholder.png';
+                  e.target.className = 'w-full h-full object-contain p-4';
+                }}
+              />
+              {/* Delete button for image messages is now handled in the parent component */}
             </div>
           </div>
         );
-      }
-      
-      console.log('🖼️ Rendering image message with URL:', imageUrl);
-      const formattedUrl = getImageUrl(imageUrl);
-      return renderImageContent(formattedUrl);
       
     } else if (messageType === 'audio') {
       // Similar fix for audio messages if needed
@@ -893,10 +1062,12 @@ const renderMessageContent = (message) => {
                   return (
                     <div
                       key={chat._id}
-                      className={`flex items-center p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                      className={`flex items-center p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 relative group ${
                         isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                       }`}
                       onClick={() => handleChatSelect(chat)}
+                      onMouseEnter={() => setHoveredChatId(chat._id)}
+                      onMouseLeave={() => setHoveredChatId(null)}
                     >
                       <Avatar user={otherUser} size="lg" />
                       <div className="ml-4 flex-1 min-w-0">
@@ -904,21 +1075,38 @@ const renderMessageContent = (message) => {
                           <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {otherUser.name}
                           </h3>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {formatTimeAgo(chat.lastMessage?.createdAt)}
-                          </span>
+                          <div className="flex items-center">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 mr-2">
+                              {formatTimeAgo(chat.lastMessage?.createdAt)}
+                            </span>
+                            {hoveredChatId === chat._id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConversationToDelete(chat);
+                                  setIsDeleteConversationModalOpen(true);
+                                }}
+                                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                title="Delete conversation"
+                              >
+                                <FaTrash className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {chat.lastMessage?.content?.includes('/image/') || chat.lastMessage?.message_type === 'image' ? (
-                            (chat.lastMessage?.sender === 'me' || chat.lastMessage?.sender_id === currentUser?.id) 
-                              ? 'recieved an image' 
-                              : 'You sent an image'
-                          ) : chat.lastMessage?.content ? (
-                            chat.lastMessage.content.length > 30 
-                              ? `${chat.lastMessage.content.substring(0, 30)}...` 
-                              : chat.lastMessage.content
-                          ) : 'No messages yet'}
-                        </p>
+<p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+  {chat.lastMessage ? (
+    chat.lastMessage.message_type === 'image' ? (
+      chat.lastMessage.sender === 'me' || chat.lastMessage.sender_id === currentUser?.id ? 
+        'You sent a photo' : 'Sent a photo'
+    ) : chat.lastMessage.message_type === 'audio' ? (
+      chat.lastMessage.sender === 'me' || chat.lastMessage.sender_id === currentUser?.id ? 
+        'You sent an audio' : 'Sent an audio'
+    ) : (
+      chat.lastMessage.content || 'No messages yet'
+    )
+  ) : 'No messages yet'}
+</p>
                       </div>
                       {isUnread && (
                         <div className="ml-2 w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
@@ -955,7 +1143,7 @@ const renderMessageContent = (message) => {
                       {currentChat.adTitle}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Online</p>
+                  {/* <p className="text-xs text-gray-500 dark:text-gray-400">Online</p> */}
                 </div>
               </div>
               <div className="flex space-x-1">
@@ -1004,7 +1192,9 @@ const renderMessageContent = (message) => {
                     return (
                       <div
                         key={message._id}
-                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3`}
+                        className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3 group relative`}
+                        onMouseEnter={() => setHoveredMessage(message._id)}
+                        onMouseLeave={() => setHoveredMessage(null)}
                       >
                         {/* Sender's avatar for received messages */}
                         {!isCurrentUser && senderInfo && (
@@ -1021,21 +1211,40 @@ const renderMessageContent = (message) => {
                             </span>
                           )}
                           
-                          <div
-                            className={`p-4 rounded-2xl ${
-                              isCurrentUser
-                                ? 'bg-emerald-500 text-white rounded-br-none'
-                                : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none border border-gray-200 dark:border-gray-600'
-                            } shadow-sm`}
-                          >
-                            {renderMessageContent(message)}
-                            <div className={`text-xs mt-2 ${isCurrentUser ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'} text-right`}>
-                              {formatMessageTime(message.createdAt)}
-                              {message.status === 'sending' && ' • Sending...'}
-                              {message.status === 'sent' && ' • Sent'}
-                              {message.status === 'failed' && ' • Failed'}
-                              {message.read && isCurrentUser && ' • Read'}
+                          <div className="relative">
+                            <div
+                              className={`p-4 rounded-2xl ${
+                                isCurrentUser
+                                  ? 'bg-emerald-500 text-white rounded-br-none'
+                                  : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none border border-gray-200 dark:border-gray-600'
+                              } shadow-sm`}
+                            >
+                              {renderMessageContent(message, isCurrentUser)}
+                              <div className={`text-xs mt-2 ${isCurrentUser ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'} text-right`}>
+                                {formatMessageTime(message.createdAt)}
+                                {message.status === 'sending' && ' • Sending...'}
+                                {message.status === 'sent' && ' • Sent'}
+                                {message.status === 'failed' && ' • Failed'}
+                                {message.read && isCurrentUser && ' • Read'}
+                              </div>
                             </div>
+                            
+                            {/* Delete button - only show on hover for current user's messages */}
+                            {isCurrentUser && hoveredMessage === message._id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMessage(message);
+                                  setDeleteModalOpen(true);
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all duration-200"
+                                title="Delete message"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1164,6 +1373,123 @@ const renderMessageContent = (message) => {
           </div>
         )}
       </div>
+      {/* Delete Message Modal */}
+{deleteModalOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-xl">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Delete Message
+        </h3>
+        <button
+          onClick={handleCloseModal}
+          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          disabled={deleteLoading}
+        >
+          <FaTimes className="w-5 h-5" />
+        </button>
+      </div>
+      
+      <p className="text-gray-600 dark:text-gray-300 mb-6">
+        Are you sure you want to delete this message?
+      </p>
+      
+      <div className="space-y-3">
+        <button
+          onClick={() => handleDeleteMessage("me")}
+          disabled={deleteLoading}
+          className="w-full flex items-center justify-center space-x-3 p-3 text-left border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+        >
+          <FaUserSlash className="w-5 h-5 text-blue-500" />
+          <div className="flex-1">
+            <div className="font-medium text-gray-900 dark:text-white">Delete for Me</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Remove this message from your chat only
+            </div>
+          </div>
+        </button>
+        
+        <button
+          onClick={() => handleDeleteMessage("everyone")}
+          disabled={deleteLoading}
+          className="w-full flex items-center justify-center space-x-3 p-3 text-left border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+        >
+          <FaTrash className="w-5 h-5 text-red-500" />
+          <div className="flex-1">
+            <div className="font-medium text-gray-900 dark:text-white">Delete for Everyone</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Remove this message for everyone
+            </div>
+          </div>
+        </button>
+      </div>
+      
+      {deleteLoading && (
+        <div className="mt-4 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+          <span className="ml-2 text-sm text-gray-500">Deleting...</span>
+        </div>
+      )}
+    </div>
+  </div>
+)}
+
+      {/* Delete Conversation Confirmation Modal */}
+      {isDeleteConversationModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Delete Conversation
+              </h3>
+              <button
+                onClick={() => {
+                  setIsDeleteConversationModalOpen(false);
+                  setConversationToDelete(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                disabled={isDeletingConversation}
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-300 mb-6">
+              Are you sure you want to delete this conversation? This action cannot be undone.
+            </p>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setIsDeleteConversationModalOpen(false);
+                  setConversationToDelete(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                disabled={isDeletingConversation}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConversation}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center"
+                disabled={isDeletingConversation}
+              >
+                {isDeletingConversation ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

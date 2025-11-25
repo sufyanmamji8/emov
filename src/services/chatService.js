@@ -26,7 +26,20 @@ const chatService = {
       const data = await response.json();
       console.log('✅ Image upload successful - full response:', data);
       
-      // Return the entire response object so we can access original, url, resized, etc.
+      // Format the URL to the correct format: https://api.emov.com.pk/image/filename
+      let imageUrl = data.url || data.original || '';
+      if (imageUrl) {
+        // Remove any '/uploads/' segment from the URL
+        imageUrl = imageUrl.replace('/uploads/', '/');
+        // Extract just the filename from the URL
+        const filename = imageUrl.split('/').pop();
+        // Construct the correct URL format
+        const formattedUrl = `https://api.emov.com.pk/image/${filename}`;
+        console.log('🖼️ Formatted image URL:', formattedUrl);
+        return formattedUrl;
+      }
+      
+      // Fallback to original data if we can't format the URL
       return data;
 
     } catch (error) {
@@ -163,10 +176,11 @@ const chatService = {
         message_text: content
       };
 
-      // For media messages, include the URL in message_text
+      // For media messages, include the URL in media_url
       if (messageType === 'image' || messageType === 'audio') {
-        payload.message_text = content; // The uploaded URL
-        console.log(`📤 Sending ${messageType} message with URL:`, content);
+        payload.media_url = content; // The uploaded URL
+        payload.message_text = ''; // Clear message_text for media messages
+        console.log(`📤 Sending ${messageType} message with media URL:`, content);
       }
 
       console.log('📤 Sending message with payload:', payload);
@@ -189,8 +203,18 @@ const chatService = {
       }
 
       const data = await response.json();
-      console.log('✅ Message sent successfully:', data);
-      return data;
+      // The API now returns just the message_id, so we'll format it to match the expected format
+      const result = {
+        id: data.message_id,
+        conversation_id: parseInt(conversationId),
+        sender_id: parseInt(senderId),
+        message_type: messageType,
+        message_text: messageType === 'image' || messageType === 'audio' ? '' : content,
+        media_url: messageType === 'image' || messageType === 'audio' ? content : null,
+        created_at: new Date().toISOString()
+      };
+      console.log('✅ Message sent successfully:', result);
+      return result;
 
     } catch (error) {
       console.error('💥 Error sending message:', error);
@@ -257,7 +281,7 @@ const chatService = {
     }
   },
 
-  // Get messages for a conversation - FIXED: Now properly outside getChats
+  // Get messages for a conversation
   async getMessages(conversationId) {
     let response;
     
@@ -276,13 +300,26 @@ const chatService = {
         throw new Error('Authentication required');
       }
 
-      response = await fetch(`https://api.emov.com.pk/v2/get-messages/${conversationId}`, {
-        method: 'GET',
+      // Get current user ID
+      const userData = localStorage.getItem('user');
+      if (!userData) {
+        throw new Error('User data not found');
+      }
+      const currentUser = JSON.parse(userData);
+      const userId = currentUser.id || currentUser.userId;
+
+      // New POST request with payload
+      response = await fetch('https://api.emov.com.pk/v2/get-messages', {
+        method: 'POST',
         headers: {
           'Accept': 'application/json',
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({
+          conversation_id: parseInt(conversationId),
+          user_id: parseInt(userId)
+        })
       });
       
       console.log('📥 Messages response status:', response.status);
@@ -293,7 +330,7 @@ const chatService = {
         return [];
       }
       
-      // Handle empty response body
+      // Handle response body
       const responseText = await response.text();
       let responseData;
       
@@ -380,34 +417,6 @@ const chatService = {
     }
   },
 
-  // Delete a message
-  async deleteMessage(messageId) {
-    try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await fetch('https://api.emov.com.pk/v2/delete-message', {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({
-          message_id: messageId
-        })
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('Error deleting message:', error);
-      throw error;
-    }
-  },
-
   // Delete a conversation
   async deleteConversation(conversationId) {
     try {
@@ -432,6 +441,47 @@ const chatService = {
       return await response.json();
     } catch (error) {
       console.error('Error deleting conversation:', error);
+      throw error;
+    }
+  },
+
+  // Delete message for current user or everyone
+  async deleteMessage(messageIds, deleteType = "me") {
+    try {
+      console.log('🗑️ Deleting messages:', { messageIds, deleteType });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const userData = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || '{}');
+      
+      const payload = {
+        message_ids: Array.isArray(messageIds) ? messageIds : [messageIds],
+        delete_type: deleteType,
+        user_id: userData.id || userData.userId || 16 // Fallback to 16 if not found
+      };
+      
+      console.log('📤 Delete message payload:', payload);
+
+      const response = await fetch('https://api.emov.com.pk/v2/delete-message', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📥 Delete message response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Message deleted successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('💥 Error deleting message:', error);
       throw error;
     }
   },

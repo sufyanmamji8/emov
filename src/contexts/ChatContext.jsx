@@ -33,9 +33,35 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  // Transform API response to UI format - FIXED: Proper user identification
+  // Delete message function - MOVED TO COMPONENT LEVEL (ONLY CHANGE)
+  const deleteMessage = async (messageId, deleteType = "me") => {
+    try {
+      console.log('🗑️ Deleting message:', { messageId, deleteType });
+      
+      // Remove message from UI immediately
+      setMessages(prev => prev.filter(msg => msg._id !== messageId));
+      
+      // Call API to delete message
+      await chatService.deleteMessage([messageId], deleteType);
+      
+      console.log('✅ Message deleted successfully');
+      
+    } catch (error) {
+      console.error('❌ Error deleting message:', error);
+      
+      // Reload messages to restore the deleted message if API call failed
+      if (currentChat) {
+        const updatedMessages = await loadMessages(currentChat.conversation_id || currentChat._id);
+        setMessages(updatedMessages);
+      }
+      
+      throw error;
+    }
+  };
+
+  // Transform API response to UI format - Grouped by other user ID
   const transformChatsData = (apiData) => {
-    console.log(' Transforming chats data from API:', apiData);
+    console.log('Transforming chats data from API:', apiData);
     
     let conversationsArray = [];
     
@@ -46,13 +72,14 @@ export const ChatProvider = ({ children }) => {
     } else if (apiData?.data) {
       conversationsArray = Array.isArray(apiData.data) ? apiData.data : [];
     } else {
-      console.log(' No conversations data found in API response format');
+      console.log('No conversations data found in API response format');
       return [];
     }
 
-    return conversationsArray.map(conv => {
-      console.log(' Processing conversation:', conv);
-      
+    // Group conversations by other user ID
+    const chatsByUser = {};
+    
+    conversationsArray.forEach(conv => {
       // Convert currentUserId to number for proper comparison
       const currentUserNum = parseInt(currentUserId);
       const user1Num = parseInt(conv.user1_id);
@@ -62,90 +89,90 @@ export const ChatProvider = ({ children }) => {
       const isUser1 = currentUserNum === user1Num;
       const isUser2 = currentUserNum === user2Num;
       
-      console.log(' User identification:', {
-        currentUserId: currentUserNum,
-        user1_id: user1Num,
-        user2_id: user2Num,
-        isUser1,
-        isUser2
-      });
-
-      let otherUserId, otherUserName, otherUserImage;
+      let otherUserId, otherUserName, otherUserAvatar;
       
       if (isUser1) {
-        // Current user is user1, so other user is user2 (SELLER)
         otherUserId = conv.user2_id;
-        otherUserName = conv.user2_name || conv.user1_name || 'Seller';
-        otherUserImage = conv.user2_imageUrl || conv.user1_imageUrl;
+        otherUserName = conv.user2_name || 'User';
+        otherUserAvatar = conv.user2_imageUrl || '/default-avatar.png';
       } else if (isUser2) {
-        // Current user is user2, so other user is user1 (SELLER)
         otherUserId = conv.user1_id;
-        otherUserName = conv.user1_name || conv.user2_name || 'Seller';
-        otherUserImage = conv.user1_imageUrl || conv.user2_imageUrl;
+        otherUserName = conv.user1_name || 'User';
+        otherUserAvatar = conv.user1_imageUrl || '/default-avatar.png';
       } else {
-        // Fallback - use the one that's NOT current user
-        console.warn(' Current user not found in conversation participants, using fallback');
-        otherUserId = currentUserNum === user1Num ? user2Num : user1Num;
-        otherUserName = (currentUserNum === user1Num ? conv.user2_name : conv.user1_name) || 'Seller';
-        otherUserImage = currentUserNum === user1Num ? conv.user2_imageUrl : conv.user1_imageUrl;
+        // Skip if current user is not in the conversation
+        return;
+      }
+      
+      // Determine message content and type
+      const messageType = conv.last_message_type || 'text';
+      const messageContent = conv.last_message || '';
+      const isFromCurrentUser = parseInt(conv.last_message_sender_id) === currentUserNum;
+      
+      let lastMessageContent = messageContent;
+      
+      // Handle different message types
+      if (messageType === 'image') {
+        lastMessageContent = isFromCurrentUser ? 'You sent a photo' : 'Sent a photo';
+      } else if (messageType === 'audio') {
+        lastMessageContent = isFromCurrentUser ? 'You sent an audio' : 'Sent an audio';
+      } else if (messageType === 'file') {
+        lastMessageContent = isFromCurrentUser ? 'You sent a file' : 'Sent a file';
       }
 
-      // Format image URL
-      const formatImageUrl = (url) => {
-        if (!url || url === 'N/A' || url === 'null' || url === 'undefined' || url === '') {
-          return null;
+      // Create or update chat for this user
+      if (!chatsByUser[otherUserId]) {
+        chatsByUser[otherUserId] = {
+          _id: `user_${otherUserId}`,
+          conversation_id: conv.conversation_id || conv.id,
+          otherUser: {
+            id: otherUserId,
+            name: otherUserName,
+            avatar: otherUserAvatar,
+            firstLetter: otherUserName ? otherUserName.charAt(0).toUpperCase() : 'U'
+          },
+          lastMessage: {
+            content: lastMessageContent,
+            createdAt: conv.last_message_time || conv.updated_at || conv.created_at || getPakistanTime().toISOString(),
+            message_type: messageType,
+            sender: isFromCurrentUser ? 'me' : 'other',
+            sender_id: conv.last_message_sender_id
+          },
+          updatedAt: conv.updated_at || conv.last_message_time || conv.created_at || getPakistanTime().toISOString(),
+          unreadCount: conv.unread_count || 0,
+          adTitle: conv.ad_title || 'Vehicle',
+          adImage: formatImageUrl(conv.ad_image)
+        };
+      } else {
+        // Update existing chat if this message is more recent
+        const existingChat = chatsByUser[otherUserId];
+        const currentMessageTime = new Date(conv.last_message_time || conv.updated_at || conv.created_at || getPakistanTime().toISOString());
+        const existingMessageTime = new Date(existingChat.lastMessage.createdAt);
+        
+        if (currentMessageTime > existingMessageTime) {
+          existingChat.lastMessage = {
+            content: lastMessageContent,
+            createdAt: conv.last_message_time || conv.updated_at || conv.created_at || getPakistanTime().toISOString(),
+            message_type: messageType,
+            sender: isFromCurrentUser ? 'me' : 'other',
+            sender_id: conv.last_message_sender_id
+          };
+          existingChat.updatedAt = conv.updated_at || conv.last_message_time || conv.created_at || getPakistanTime().toISOString();
+          existingChat.unreadCount = (existingChat.unreadCount || 0) + (conv.unread_count || 0);
         }
-        if (url.startsWith('http')) {
-          // Convert to correct path if needed
-          return url.includes('/writable/uploads/') 
-            ? url.replace('/writable/uploads/', '/image/uploads/')
-            : url;
-        }
-        return `https://api.emov.com.pk/image/uploads/${url}`;
-      };
-
-      const otherUserAvatar = formatImageUrl(otherUserImage);
-      const displayName = otherUserName || 'Seller';
-      const firstLetter = displayName.charAt(0).toUpperCase();
-
-      console.log(' Final user info:', {
-        currentUser: currentUserNum,
-        otherUser: {
-          id: otherUserId,
-          name: displayName,
-          avatar: otherUserAvatar,
-          firstLetter: firstLetter
-        }
-      });
-
-      return {
-        _id: conv.conversation_id || conv.id || conv._id,
-        conversation_id: conv.conversation_id || conv.id,
-        otherUser: {
-          id: otherUserId,
-          name: displayName,
-          avatar: otherUserAvatar,
-          firstLetter: firstLetter
-        },
-        lastMessage: {
-          content: conv.last_message || conv.last_message_text || 'No messages yet',
-          createdAt: conv.last_message_time || conv.updated_at || conv.created_at || getPakistanTime().toISOString(),
-          message_type: conv.last_message_type || 'text',
-          sender: conv.last_message_sender_id === currentUserId.toString() ? 'me' : 'other',
-          sender_id: conv.last_message_sender_id
-        },
-        updatedAt: conv.updated_at || conv.last_message_time || conv.created_at || getPakistanTime().toISOString(),
-        unreadCount: conv.unread_count || 0,
-        adTitle: conv.ad_title || 'Vehicle',
-        adImage: formatImageUrl(conv.ad_image),
-        // Store both users for debugging
-        _debug: {
-          user1: { id: conv.user1_id, name: conv.user1_name },
-          user2: { id: conv.user2_id, name: conv.user2_name },
-          currentUserId: currentUserNum
-        }
-      };
+      }
     });
+    
+    // Convert to array and sort by last message time
+    const result = Object.values(chatsByUser).sort((a, b) => {
+      if (!a.lastMessage && !b.lastMessage) return 0;
+      if (!a.lastMessage) return 1;
+      if (!b.lastMessage) return -1;
+      return new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt);
+    });
+    
+    console.log('Grouped chats by user:', result);
+    return result;
   };
 
   // Load all chats for the current user
@@ -375,23 +402,67 @@ export const ChatProvider = ({ children }) => {
   }, [currentChat]);
 
   // Send message function
-  const sendMessage = async (content, messageType = 'text') => {
-    if (!currentChat) {
-      throw new Error('No active chat selected');
-    }
+const sendMessage = async (content, messageType = 'text') => {
+  if (!currentChat) {
+    throw new Error('No active chat selected');
+  }
+  
+  // Get current user from localStorage
+  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const currentUser = {
+    id: userData.id || userData.userId || currentUserId,
+    name: userData.name || 'You',
+    avatar: userData.profileImage || userData.avatar || '/default-avatar.png'
+  };
+
+  if (!currentUser.id) {
+    throw new Error('User not authenticated');
+  }
+
+  const tempId = `temp-${Date.now()}`;
+  const messageContent = content;
+  
+  // Create temporary message with current time in Pakistan timezone
+  const tempMessage = {
+    _id: tempId,
+    content: messageContent,
+    sender: currentUser.id,
+    senderInfo: {
+      id: currentUser.id,
+      name: currentUser.name,
+      avatar: currentUser.avatar
+    },
+    createdAt: getPakistanTime().toISOString(),
+    status: 'sending',
+    message_type: messageType,
+    read: false
+  };
+
+  setMessages(prev => [...prev, tempMessage]);
+
+  try {
+    console.log('Sending message with content:', {
+      content: messageContent,
+      type: messageType,
+      chatId: currentChat.conversation_id || currentChat._id,
+      userId: currentUser.id
+    });
+
+    const response = await chatService.sendMessage(
+      currentChat.conversation_id || currentChat._id, 
+      messageContent,
+      currentUser.id,
+      messageType
+    );
     
-    const tempId = `temp-${Date.now()}`;
-    const currentUser = {
-      id: user.id || user.userId,
-      name: user.name || 'You',
-      avatar: user.profileImage || '/default-avatar.png'
-    };
+    console.log('Message sent to API, response:', response);
     
-    const messageContent = content;
+    // Use server's timestamp if available, otherwise use our Pakistan time
+    const serverTime = response.createdAt || getPakistanTime().toISOString();
     
-    // Create temporary message with current time in Pakistan timezone
-    const message = {
-      _id: tempId,
+    const newMessage = {
+      _id: response.message_id || response.id || tempId,
+      message_id: response.message_id || response.id,
       content: messageContent,
       sender: currentUser.id,
       senderInfo: {
@@ -399,90 +470,105 @@ export const ChatProvider = ({ children }) => {
         name: currentUser.name,
         avatar: currentUser.avatar
       },
-      createdAt: getPakistanTime().toISOString(),
-      status: 'sending',
-      message_type: messageType,
-      read: false
+      createdAt: serverTime,
+      status: 'sent',
+      read: false,
+      message_type: messageType
     };
-
-    setMessages(prev => [...prev, tempMessage]);
-
-    try {
-      const response = await chatService.sendMessage(
-        currentChat.conversation_id || currentChat._id, 
-        messageContent,
-        currentUser.id,
-        messageType
-      );
-      
-      console.log(' Message sent to API, response:', response);
-      
-      // Use server's timestamp if available, otherwise use our Pakistan time
-      const serverTime = response.createdAt || getPakistanTime().toISOString();
-      
-      const newMessage = {
-        _id: response.message_id || response.id || tempId,
-        message_id: response.message_id || response.id,
-        content: messageContent,
-        sender: currentUser.id,
-        senderInfo: {
-          id: currentUser.id,
-          name: currentUser.name,
-          avatar: currentUser.avatar
-        },
-        createdAt: serverTime,
-        status: 'sent',
-        read: false,
-        message_type: messageType
-      };
-      
-      // Update the temporary message with the actual server response
-      setMessages(prev => 
-        prev.map(msg => 
-          msg._id === tempId ? newMessage : msg
-        )
-      );
-      
-      // Update the chat's last message
-      setChats(prevChats => 
-        prevChats.map(chat => {
-          if (chat._id === currentChat._id || chat.conversation_id === currentChat.conversation_id) {
-            return {
-              ...chat,
-              lastMessage: {
-                content: messageType === 'image' ? 'Image' : messageContent,
-                message_type: messageType,
-                sender: 'me',
-                sender_id: currentUser.id,
-                createdAt: serverTime
-              },
-              updatedAt: serverTime
-            };
+    
+    // Update the temporary message with the actual server response
+    setMessages(prev => 
+      prev.map(msg => 
+        msg._id === tempId ? newMessage : msg
+      )
+    );
+    
+    // Update the chat's last message
+    const chatId = currentChat.conversation_id || currentChat._id;
+    setChats(prevChats => 
+      prevChats.map(chat => {
+        const currentChatId = chat.conversation_id || chat._id;
+        
+        if (currentChatId === chatId) {
+          let lastMessageContent = messageContent;
+          if (messageType === 'image') {
+            lastMessageContent = 'You sent a photo';
+          } else if (messageType === 'audio') {
+            lastMessageContent = 'You sent an audio';
+          } else if (messageType === 'file') {
+            lastMessageContent = 'You sent a file';
           }
-          return chat;
-        })
-      );
+          
+          return {
+            ...chat,
+            lastMessage: {
+              content: lastMessageContent,
+              message_type: messageType,
+              sender: 'me',
+              sender_id: currentUser.id,
+              createdAt: serverTime
+            },
+            updatedAt: serverTime,
+            unreadCount: 0
+          };
+        }
+        return chat;
+      })
+    );
+    
+    // Update the current chat in state if needed
+    setCurrentChat(prev => {
+      if (!prev) return null;
+      let lastMessageContent = messageContent;
+      if (messageType === 'image') {
+        lastMessageContent = 'You sent a photo';
+      } else if (messageType === 'audio') {
+        lastMessageContent = 'You sent an audio';
+      } else if (messageType === 'file') {
+        lastMessageContent = 'You sent a file';
+      }
       
-      // Reload messages to ensure consistency
-      setTimeout(async () => {
-        const updatedMessages = await loadMessages(currentChat.conversation_id || currentChat._id);
+      return {
+        ...prev,
+        lastMessage: {
+          content: lastMessageContent,
+          message_type: messageType,
+          sender: 'me',
+          sender_id: currentUser.id,
+          createdAt: serverTime
+        },
+        updatedAt: serverTime
+      };
+    });
+    
+    // Reload messages to ensure consistency
+    setTimeout(async () => {
+      try {
+        const updatedMessages = await loadMessages(chatId);
         setMessages(updatedMessages);
-      }, 500);
-      
-      return newMessage;
-    } catch (err) {
-      // Update message status to failed
-      setMessages(prev => 
-        prev.map(msg => 
-          msg._id === tempId ? { ...msg, status: 'failed' } : msg
-        )
-      );
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to send message';
-      setError(errorMsg);
-      console.error('Error sending message:', err);
-      throw err;
-    }
-  };
+      } catch (error) {
+        console.error('Error reloading messages:', error);
+      }
+    }, 500);
+    
+    return newMessage;
+  } catch (error) {
+    console.error('Error sending message:', {
+      error: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
+    
+    // Update message status to failed
+    setMessages(prev => 
+      prev.map(msg => 
+        msg._id === tempId ? { ...msg, status: 'failed' } : msg
+      )
+    );
+    
+    throw new Error('Failed to send message. Please try again.');
+  }
+};
 
   // Set the current active chat - FIXED: Better error handling
   const setActiveChat = useCallback(async (chat) => {
@@ -551,6 +637,7 @@ export const ChatProvider = ({ children }) => {
         setActiveChat,
         markMessagesAsRead,
         deleteConversation,
+        deleteMessage, 
         currentUserId
       }}
     >
