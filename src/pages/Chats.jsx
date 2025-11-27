@@ -965,10 +965,16 @@ useEffect(() => {
           </div>
   
           <div className="flex items-center space-x-3">
-            <button className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 transition-colors">
+            <button
+              className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 transition-colors"
+              onClick={() => navigate('/login')}
+            >
               Sign In
             </button>
-            <button className="bg-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-emerald-600 transition-colors">
+            <button
+              className="bg-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-emerald-600 transition-colors"
+              onClick={() => navigate('/signup')}
+            >
               Sign Up
             </button>
           </div>

@@ -15,12 +15,15 @@ import Chats from './pages/Chats';
 import Ads from './pages/Ads';
 import AdDetail from './pages/AdDetail';
 import MyAds from './pages/MyAds';
-import './index.css'; 
+import FilteredVehicles from './pages/FilteredVehicles';
+import Profile from './pages/Profile';
 
+import './index.css'; 
 
 // Create a wrapper component to handle theme
 const AppContent = ({ children, isAuthenticated, loading, handleLogin, handleLogout }) => {
   if (loading) {
+
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
         <div className="flex flex-col items-center">
@@ -31,21 +34,6 @@ const AppContent = ({ children, isAuthenticated, loading, handleLogin, handleLog
           <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return (
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/enter-otp" element={<EnterOTP />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </Router>
     );
   }
 
@@ -60,18 +48,27 @@ const AppContent = ({ children, isAuthenticated, loading, handleLogin, handleLog
           <Route path="/change-password" element={<ChangePassword />} />
           <Route 
             path="/dashboard" 
-            element={isAuthenticated ? <Dashboard /> : <Navigate to="/login" state={{ from: '/dashboard' }} />} 
+            element={<Dashboard />} 
+          />
+          <Route 
+            path="/profile" 
+            element={isAuthenticated ? <Profile /> : <Navigate to="/login" state={{ from: '/profile' }} />} 
           />
           <Route path="/vehicles" element={isAuthenticated ? <Vehicles /> : <Navigate to="/login" />} />
+
+          {/* FIXED ROUTES - Single route with parameters */}
+          <Route path="/vehicles/:filterType/:filterId" element={isAuthenticated ? <FilteredVehicles /> : <Navigate to="/login" />} />
+          
           <Route path="/featured-vehicles" element={isAuthenticated ? <FeaturedVehicles /> : <Navigate to="/login" />} />
           <Route path="/service" element={isAuthenticated ? <Service /> : <Navigate to="/login" />} />
           <Route path="/chats" element={isAuthenticated ? <Chats /> : <Navigate to="/login" />} />
           <Route path="/my-ads" element={isAuthenticated ? <Ads /> : <Navigate to="/login" />} />
           <Route path="/my-ads-list" element={isAuthenticated ? <MyAds /> : <Navigate to="/login" />} />
-          <Route path="/ad/:adId" element={isAuthenticated ? <AdDetail /> : <Navigate to="/login" />} />
-          <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
+          <Route path="/ad/:adId" element={<AdDetail />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </div>
+
     </Router>
   );
 };
@@ -85,10 +82,7 @@ function App() {
     const token = localStorage.getItem('token');
     
     if (token) {
-      // Verify the token is still valid
       try {
-        // If you have a token validation endpoint, you can call it here
-        // For now, we'll just check if the token exists
         setIsAuthenticated(true);
       } catch (error) {
         console.error('Token validation failed:', error);
@@ -106,7 +100,6 @@ function App() {
   };
 
   const handleLogout = () => {
-    // Clear localStorage
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     setIsAuthenticated(false);

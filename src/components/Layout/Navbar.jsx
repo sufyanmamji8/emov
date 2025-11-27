@@ -135,8 +135,8 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
           </div>
         </div>
 
-        {/* Right side - Theme Toggle, Language Selector, and Profile (Commented Out) */}
-        {false && (
+        {/* Right side - Theme Toggle, Language Selector, and Profile */}
+        {userProfile && (
         <div className="flex items-center space-x-4 sm:space-x-6">
           {/* User Profile Dropdown */}
           <div className="relative profile-dropdown">
@@ -212,7 +212,13 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   </div>
                 </div>
               </div>
-              <div className="p-1">
+              <div className="p-1 space-y-1">
+                <a
+                  href="/profile"
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
+                >
+                  <span>Show all details</span>
+                </a>
                 <button
                   onClick={handleLogout}
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"

@@ -219,15 +219,20 @@ const MyAds = () => {
                       </div>
             
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none">
+              <button
+                className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none"
+                onClick={() => navigate('/login')}
+              >
                 <span>Sign In</span>
               </button>
-              <button className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
+              <button
+                className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
                 style={{
                   backgroundColor: 'var(--emov-green, #27c583ff)',
                 }}
-                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+                onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
+                onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
+                onClick={() => navigate('/signup')}
               >
                 <span>Sign Up</span>
               </button>

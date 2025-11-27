@@ -5,6 +5,8 @@ import { FiMapPin, FiCalendar } from 'react-icons/fi';
 import { useTheme } from '../hooks/useTheme';
 import apiService, { handleUnauthorized } from '../services/Api';
 import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
+import { useFilterNavigation } from '../hooks/useFilterNavigation';
+
 
 // Gradient image paths from public folder
 const gradientLeft = 'gradientleft.png';
@@ -53,8 +55,38 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
 );
 
 function Dashboard() {
+      const { navigateToFilteredAds } = useFilterNavigation(); 
+
+      // Ensure navigateToFilteredAds exists; provide safe fallback
+      const safeNavigateToFilteredAds = (tab, item) => {
+        if (typeof navigateToFilteredAds === 'function') {
+          try {
+            navigateToFilteredAds(tab, item);
+            return;
+          } catch (e) {
+            console.error('navigateToFilteredAds failed:', e);
+          }
+        }
+        // Fallback: navigate to /ads with simple query params
+        const params = new URLSearchParams();
+        if (tab) params.set('filter', tab);
+        if (item) {
+          if (item.id) params.set('id', item.id);
+          else if (item.CategoryName) params.set('q', item.CategoryName);
+          else if (item.name) params.set('q', item.name);
+        }
+        navigate(`/ads?${params.toString()}`);
+      }; 
+
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('Category');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window === 'undefined') return 'Category';
+    try {
+      return localStorage.getItem('dashboardActiveTab') || 'Category';
+    } catch {
+      return 'Category';
+    }
+  });
   const [language, setLanguage] = useState('english');
   const [scrollPositions, setScrollPositions] = useState({
     Category: 0,
@@ -97,7 +129,22 @@ function Dashboard() {
   });
   const [itemsPerRow, setItemsPerRow] = useState(5); // Default for desktop
   const itemsPerPage = itemsPerRow * 2; // 2 rows of items
-  
+
+  // Handle tab changes for the browse section
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    try {
+      localStorage.setItem('dashboardActiveTab', tab);
+    } catch {
+      // ignore storage errors
+    }
+    // Reset the slide index for the newly selected tab
+    setCurrentSlides((prev) => ({
+      ...prev,
+      [tab]: 0,
+    }));
+  };
+
   // State for Recently Added vehicles from API
   const [recentlyAddedVehicles, setRecentlyAddedVehicles] = useState([]);
   const [loadingRecentAds, setLoadingRecentAds] = useState(true);
@@ -533,7 +580,7 @@ useEffect(() => {
           console.log('Ad images:', ad.Images);
           console.log('First image path:', ad.Images?.[0]);
           
-          // ✅ CORRECT: Use /images/ directory instead of /uploads/
+          // CORRECT: Use /images/ directory instead of /uploads/
           let imageUrl = '/mockvehicle.png';
           if (ad.Images && ad.Images.length > 0) {
             const imageFilename = ad.Images[0];
@@ -541,7 +588,7 @@ useEffect(() => {
             if (imageFilename.startsWith('http')) {
               imageUrl = imageFilename;
             } else {
-              // ✅ CORRECT PATTERN: https://api.emov.com.pk/images/filename.jpg
+              // CORRECT PATTERN: https://api.emov.com.pk/images/filename.jpg
               imageUrl = `https://api.emov.com.pk/image/${imageFilename}`;
             }
             console.log('Dashboard - Constructed image URL:', imageUrl);
@@ -563,7 +610,17 @@ useEffect(() => {
             RegistrationYear: ad.RegistrationYear,
             VehicleMileage: ad.VehicleMileage,
             LocationName: ad.LocationName,
-            SellerComment: ad.SellerComment
+            SellerComment: ad.SellerComment,
+            // Seller information (forwarded so AdDetail can display it)
+            sellerName: ad.sellerName,
+            emailAddress: ad.emailAddress,
+            mobileNo: ad.mobileNo,
+            UserProfile: ad.UserProfile,
+            // Also provide alternative field names that AdDetail expects
+            SellerName: ad.sellerName,
+            SellerEmail: ad.emailAddress,
+            SellerPhone: ad.mobileNo,
+            SellerImage: ad.UserProfile,
           };
         });
         
@@ -1305,19 +1362,27 @@ useEffect(() => {
                       </div>
             
             <div className="flex items-center space-x-4">
-              <button className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none">
-                <span>Sign In</span>
-              </button>
-              <button className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
-                style={{
-                  backgroundColor: 'var(--emov-green, #27c583ff)',
-                }}
-                onMouseOver={(e) => e.currentTarget.style.opacity = '0.9'}
-                onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
-              >
-                <span>Sign Up</span>
-              </button>
-              
+              {!userProfile && (
+                <div className="flex items-center space-x-4">
+                  <button
+                    className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none"
+                    onClick={() => navigate('/login')}
+                  >
+                    <span>Sign In</span>
+                  </button>
+                  <button
+                    className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
+                    style={{
+                      backgroundColor: 'var(--emov-green, #27c583ff)',
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
+                    onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
+                    onClick={() => navigate('/signup')}
+                  >
+                    <span>Sign Up</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           </div>
@@ -1335,67 +1400,95 @@ useEffect(() => {
         </div>
 
         {/* Hero Section */}
-        <section className="relative w-full overflow-hidden pb-12 sm:pb-16 ">
-          <div className="relative max-w-[2000px] mx-auto">
-              {/* Content */}
-              {/* Hero Text */}
-              <div className="text-left mt-8 md:mt-5 px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
-                <div className="ml-0 md:ml-16 max-w-4xl">
-                  <h1 className="text-text-primary ml-16 mt-12 font-semibold text-base sm:text-2xl md:text-5xl font-normal mb-1 sm:mb-3 leading-tight whitespace-nowrap">
-                    {t.findVehicles}
-                  </h1>
-                  <h1 className="text-lg ml-16 sm:text-3xl md:text-6xl font-normal mb-2 sm:mb-4 leading-tight text-text-tertiary whitespace-nowrap">
-                    {t.tagline}
-                  </h1>
+       <section className="relative w-full overflow-hidden pb-12 sm:pb-16 ">
+              <div className="relative max-w-[2000px] mx-auto">
+                {/* Content */}
+                {/* Hero Text */}
+                <div className="text-left mt-8 md:mt-5 px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
+                  <div className="mt-12 w-full text-center max-w-6xl mx-auto">
+                    <h1 className="text-text-primary font-semibold text-xl sm:text-3xl md:text-5xl font-normal mb-2 sm:mb-4 leading-tight">
+                      {t.findVehicles}
+                    </h1>
+                    <h1 className="text-lg sm:text-3xl md:text-5xl font-normal mb-4 sm:mb-6 leading-tight text-text-tertiary">
+                      {t.tagline}
+                    </h1>
+                  </div>
                 </div>
+
+                {/* Search Bar */}
+  <div className="w-full px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40">
+  <div className="relative">
+    {/* Glass background layer */}
+    <div 
+      className="absolute inset-0 rounded-xl"
+      style={{
+        background: 'rgba(255, 255, 255, 0.25)',
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        border: '1px solid rgba(255, 255, 255, 0.3)'
+      }}
+    />
+    
+    {/* Glass reflection effect */}
+    <div 
+      className="absolute inset-0 rounded-xl pointer-events-none"
+      style={{
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(255,255,255,0.2) 100%)',
+        mixBlendMode: 'overlay',
+        opacity: '0.6'
+      }}
+    />
+
+    <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none z-10">
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        className="h-6 w-6 text-gray-800" 
+        fill="none" 
+        viewBox="0 0 24 24" 
+        stroke="currentColor"
+        style={{
+          minWidth: '24px',
+          minHeight: '24px'
+        }}
+      >
+        <path 
+          strokeLinecap="round" 
+          strokeLinejoin="round" 
+          strokeWidth={2} 
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+        />
+      </svg>
+    </div>
+    
+    <input
+      type="text"
+      className="relative w-full pl-12 sm:pl-14 pr-12 sm:pr-14 py-4 sm:py-5 bg-transparent border-none focus:outline-none focus:ring-0 text-gray-800 placeholder-gray-600 text-base sm:text-lg font-medium z-10"
+      style={{
+        borderRadius: '12px',
+      }}
+      placeholder={t.searchPlaceholder}
+    />
+    
+    <div className="absolute inset-y-0 right-0 pr-4 sm:pr-5 flex items-center z-10">
+      <button 
+        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-white/50 hover:bg-white/70 backdrop-blur-sm border border-white/40 rounded-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/30"
+        style={{
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)'
+        }}
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
               </div>
 
-              {/* Search Bar */}
-              <div className="w-full px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40">
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none z-10">
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className="h-6 w-6 text-text-tertiary" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                      style={{
-                        minWidth: '24px',
-                        minHeight: '24px'
-                      }}
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-                      />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    className="w-full pl-10 sm:pl-12 pr-12 sm:pr-14 py-3 sm:py-4 bg-bg-secondary/30 backdrop-blur-lg border-2 border-border-primary/40 focus:border-border-primary/70 focus:ring-2 focus:ring-border-primary/30 text-sm sm:text-base placeholder-text-tertiary text-text-primary"
-                    style={{
-                      borderRadius: '12px',
-                      transition: 'all 0.3s ease-in-out',
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)'
-                    }}
-                    placeholder={t.searchPlaceholder}
-                  />
-                  <button className="absolute inset-y-0 right-0 pr-4 sm:pr-5 flex items-center focus:outline-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                  </button>
-                </div>
-            </div>
-          
-        </div>
-        
-       
-      </section>
+
+            </section>
       
        
         </div>
@@ -1427,47 +1520,36 @@ useEffect(() => {
     <div className="w-full bg-transparent rounded-xl overflow-hidden">
       <div className="w-full p-6 bg-bg-secondary rounded-t-lg">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-text-primary">{t.browseUsedVehicles}</h2>
-        
-        {/* Tabs - MOBILE: Show all 5 tabs in grid, DESKTOP: original */}
+
+        {/* Tabs */}
         <div className="w-full pb-1">
           {/* Mobile: Single line tabs */}
           <div className="md:hidden flex space-x-1 overflow-x-auto pb-1 no-scrollbar">
             {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
               <button
                 key={tab}
-                className={`px-2 py-2 text-[10px] xs:text-xs font-medium whitespace-nowrap ${
-                  activeTab === tab
+                className={`px-2 py-2 text-[10px] xs:text-xs whitespace-nowrap ${activeTab === tab
                     ? 'text-emov-purple border-b-2 border-emov-purple'
                     : 'text-text-secondary hover:text-text-primary'
-                }`}
-                onClick={() => setActiveTab(tab)}
+                  }`}
+                onClick={() => handleTabChange(tab)}
               >
                 {tab}
               </button>
             ))}
           </div>
-          <style jsx>{`
-            .no-scrollbar::-webkit-scrollbar {
-              display: none;
-            }
-            .no-scrollbar {
-              -ms-overflow-style: none;
-              scrollbar-width: none;
-            }
-          `}</style>
-          
+
           {/* Desktop: Original tab layout */}
           <div className="hidden md:block overflow-x-auto pb-1">
-            <div style={{ fontSize: '20px' }} className="flex space-x-1 border-b border-border-primary w-max min-w-full">
+            <div style={{ fontSize: '20px' }} className="flex space-x-1 border-b border-gray-600 w-max min-w-full">
               {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
                 <button
                   key={tab}
-                  className={`px-4 py-3 text-sm sm:text-base font-medium whitespace-nowrap relative ${
-                    activeTab === tab
+                  className={`px-4 py-3 text-sm sm:text-base whitespace-nowrap relative ${activeTab === tab
                       ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
                       : 'text-text-secondary hover:text-text-primary'
-                  }`}
-                  onClick={() => setActiveTab(tab)}
+                    }`}
+                  onClick={() => handleTabChange(tab)}
                 >
                   {tab}
                 </button>
@@ -1476,27 +1558,25 @@ useEffect(() => {
           </div>
         </div>
       </div>
-      
+
       {/* Tab Content */}
       <div className="relative w-full pb-6 px-6 bg-bg-secondary rounded-lg">
         <div className="relative w-full overflow-hidden">
-          {/* Arrows - ORIGINAL POSITION */}
+          {/* Arrows */}
           <button
             onClick={() => scrollLeft(activeTab)}
-            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-border-secondary text-text-primary hover:bg-bg-tertiary transition-colors ${
-              !canScrollLeft(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
-            }`}
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors ${!canScrollLeft(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
+              }`}
             style={{ padding: '0.5rem' }}
             disabled={!canScrollLeft(activeTab)}
           >
-            <FaChevronRight style={{ color: '#7B3DFF'}} className="w-3 h-3 sm:w-5 sm:h-5 transform rotate-180" />
+            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-5 sm:h-5 transform rotate-180" />
           </button>
 
           <button
             onClick={() => scrollRight(activeTab)}
-            className={`absolute right-0 md:right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-border-secondary text-text-primary hover:bg-bg-tertiary transition-colors ${
-              !canScrollRight(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
-            }`}
+            className={`absolute right-0 md:right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors ${!canScrollRight(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
+              }`}
             style={{ padding: '0.5rem' }}
             disabled={!canScrollRight(activeTab)}
           >
@@ -1504,7 +1584,7 @@ useEffect(() => {
           </button>
 
           {/* Carousel Track */}
-          <div 
+          <div
             ref={slideRef}
             className="flex transition-transform duration-300 ease-in-out w-full"
             style={{ transform: `translateX(-${currentSlides[activeTab] * 100}%)` }}
@@ -1512,7 +1592,7 @@ useEffect(() => {
             {(() => {
               const transformedData = transformApiData();
               let currentTabData = [];
-              
+
               const tabDataMap = {
                 'Category': 'categories',
                 'Model': 'models',
@@ -1520,23 +1600,18 @@ useEffect(() => {
                 'Body Type': 'bodytypes',
                 'Budget': 'budgets'
               };
-              
+
               const normalizedTab = activeTab.replace(/\s+/g, ' ');
               let dataKey = tabDataMap[normalizedTab];
-              
+
               if (!dataKey) {
                 const lowerTab = normalizedTab.toLowerCase().replace(/\s+/g, '');
-                dataKey = Object.entries(tabDataMap).find(([key]) => 
+                dataKey = Object.entries(tabDataMap).find(([key]) =>
                   key.toLowerCase().replace(/\s+/g, '') === lowerTab
                 )?.[1];
               }
-              currentTabData = Array.isArray(transformedData[dataKey]) ? 
+              currentTabData = Array.isArray(transformedData[dataKey]) ?
                 transformedData[dataKey] : [];
-
-              console.log(`Current tab (${activeTab}) data:`, currentTabData.length, currentTabData);
-              console.log(`Items per page:`, itemsPerPage);
-              console.log(`Total slides:`, Math.ceil(currentTabData.length / itemsPerPage));
-              console.log(`Current slide:`, currentSlides[activeTab]);
 
               if (currentTabData.length === 0) {
                 return (
@@ -1548,103 +1623,111 @@ useEffect(() => {
                 );
               }
 
-              // MOBILE: 8 items per slide (4 columns × 2 rows), DESKTOP: original
-              const itemsPerSlideMobile = 8;
-              const totalSlides = Math.ceil(currentTabData.length / 
-                (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage));
+              // Determine if current tab has images
+              const hasImages = ['Category', 'Brand'].includes(activeTab);
               
+              // MOBILE: Adjust items per slide based on tab type
+              const itemsPerSlideMobile = hasImages ? 8 : 12;
+              const totalSlides = Math.ceil(currentTabData.length /
+                (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage));
+
               const slides = [];
 
               for (let i = 0; i < totalSlides; i++) {
                 const slideItems = currentTabData.slice(
-                  i * (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage), 
+                  i * (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage),
                   (i + 1) * (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage)
                 );
 
                 slides.push(
                   <div key={`slide-${i}`} className="flex-shrink-0 w-full" style={{ width: '100%' }}>
-                    {/* MOBILE: 4 columns × 2 rows, DESKTOP: original grid */}
-                    <div className="grid grid-cols-4 gap-2 md:grid-cols-2 md:sm:grid-cols-3 lg:grid-cols-5 md:gap-4 w-full px-2 sm:px-4">
+                    {/* MOBILE: Adjust grid based on tab type */}
+                    <div className={`grid gap-2 md:gap-4 w-full px-2 sm:px-4 ${
+                      window.innerWidth < 768 
+                        ? (hasImages ? 'grid-cols-4' : 'grid-cols-6')
+                        : 'grid-cols-2 md:sm:grid-cols-3 lg:grid-cols-5'
+                    }`}>
                       {slideItems.map((item, index) => {
                         const displayName = item.displayName || item.name || item.CategoryName || 'Unnamed Category';
-                        const itemCount = typeof item.count === 'number' ? item.count : 0;
-                        
+
                         // MOBILE card layout
                         const mobileCard = () => (
-                          <div className="relative flex flex-col items-center p-1 h-full w-full">
-                            {item.image || item.icon ? (
-                              <div className="relative w-full flex justify-center" style={{ height: '30px' }}>
+                          <div className="flex flex-col items-center justify-center p-2 h-full w-full">
+                            {hasImages && (item.image || item.icon) ? (
+                              <div className="flex items-center justify-center mb-2" style={{ height: '30px', width: '30px' }}>
                                 {item.icon ? (
-                                  <div className="flex items-center justify-center bg-bg-primary rounded-full w-5 h-5 border border-border-primary">
-                                    {React.cloneElement(item.icon, { 
-                                      size: 10,
-                                      style: { 
-                                        color: 'var(--text-secondary)' 
-                                      }
+                                  <div className="flex items-center justify-center w-6 h-6 bg-bg-primary rounded-full border border-gray-600">
+                                    {React.cloneElement(item.icon, {
+                                      size: 12,
+                                      style: { color: '#878787' }
                                     })}
                                   </div>
                                 ) : (
-                                  <div className="w-full h-full flex items-center justify-center">
-                                    <img 
-                                      src={item.image} 
-                                      alt={displayName}
-                                      className="max-w-full max-h-full object-contain"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        if (e.target.nextSibling) {
-                                          e.target.nextSibling.style.display = 'flex';
-                                        }
-                                      }}
-                                    />
-                                  </div>
+                                  <img
+                                    src={item.image}
+                                    alt={displayName}
+                                    className="w-full h-full object-contain"
+                                    style={{
+                                      filter: activeTab === 'Category' 
+                                        ? 'brightness(0) saturate(100%) invert(30%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(80%) contrast(85%)'
+                                        : 'none',
+                                      opacity: activeTab === 'Category' ? 0.8 : 1
+                                    }}
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                    }}
+                                  />
                                 )}
                               </div>
                             ) : null}
-                            <div className="text-center w-full mt-0.5">
-                              <div className="text-[10px] xs:text-xs font-medium text-text-primary line-clamp-2 leading-tight">
+                            <div className="text-center w-full">
+                              <div className={`text-text-primary line-clamp-2 leading-tight ${
+                                window.innerWidth < 768 
+                                  ? (hasImages ? 'text-[10px] xs:text-xs' : 'text-[9px] xs:text-[10px]')
+                                  : 'text-base'
+                              }`}>
                                 {displayName}
                               </div>
                             </div>
                           </div>
                         );
 
-                        // DESKTOP card layout (original)
+                        // DESKTOP card layout - FIXED ICON POSITIONING
                         const desktopCard = () => {
-                          // Check if current tab should have smaller layout (no images)
-                          const isSmallTab = ['Budget', 'Model', 'Body Type'].includes(activeTab);
-                          
                           return (
-                            <div className="relative flex flex-col items-center p-3 h-full w-full">
-                              {(!isSmallTab && (item.image || item.icon)) ? (
-                                <div className="relative w-full" style={{ height: '71px' }}>
+                            <div className="flex flex-col items-center justify-center p-4 h-full w-full">
+                              {hasImages && (item.image || item.icon) ? (
+                                <div className="flex items-center justify-center mb-4" style={{ height: '60px', width: '60px' }}>
                                   {item.icon ? (
-                                    <div 
-                                      className="flex items-center justify-center bg-bg-primary rounded-full"
-                                      style={{
-                                        position: 'absolute',
-                                        left: '-20px',
-                                        top: '-10px',
-                                        width: '40px',
-                                        height: '40px',
-                                        zIndex: 20,
-                                        border: '1px solid #e9f0feff'
-                                      }}
-                                    >
-                                      {React.cloneElement(item.icon, { size: 20, style: { color: '#878787' } })}
+                                    <div className="flex items-center justify-center w-12 h-12 bg-bg-primary rounded-full border border-gray-600">
+                                      {React.cloneElement(item.icon, { 
+                                        size: 24, 
+                                        style: { color: '#878787' } 
+                                      })}
                                     </div>
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center p-2">
-                                      <img 
-                                        src={item.image} 
-                                        alt={displayName}
-                                        className="max-w-full max-h-full object-contain"
-                                      />
-                                    </div>
+                                    <img
+                                      src={item.image}
+                                      alt={displayName}
+                                      className="w-full h-full object-contain"
+                                      style={{
+                                        filter: activeTab === 'Category' 
+                                          ? 'brightness(0) saturate(100%) invert(30%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(80%) contrast(85%)'
+                                          : 'none',
+                                        opacity: activeTab === 'Category' ? 0.8 : 1
+                                      }}
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                      }}
+                                    />
                                   )}
                                 </div>
                               ) : null}
+                              
                               <div className="text-center w-full">
-                                <div className={`text-base font-medium text-text-primary line-clamp-2 ${isSmallTab ? 'mt-4' : 'mt-4'}`}>
+                                <div className={`text-text-primary line-clamp-2 ${
+                                  hasImages ? '' : 'flex items-center justify-center h-12'
+                                }`}>
                                   {displayName}
                                 </div>
                               </div>
@@ -1653,18 +1736,23 @@ useEffect(() => {
                         };
 
                         return (
-                          <div 
+                          <div
                             key={`${item.id || index}-${activeTab}`}
-                            className={`relative flex flex-col rounded-lg cursor-pointer ${
-                              isDark 
-                                ? 'bg-bg-card border border-border-primary' 
-                                : 'bg-bg-primary border border-border-primary'
+                            className={`flex flex-col rounded-lg cursor-pointer ${
+                              isDark
+                                ? 'bg-bg-card border border-gray-600'
+                                : 'bg-bg-primary border border-gray-600'
                             }`}
                             style={{
-                              width: window.innerWidth < 768 ? '100%' : '180px',
-                              height: window.innerWidth < 768 ? '70px' : (['Budget', 'Model', 'Body Type'].includes(activeTab) ? '70px' : '158px'),
+                              width: window.innerWidth < 768 
+                                ? '100%' 
+                                : (hasImages ? '180px' : '160px'),
+                              height: window.innerWidth < 768 
+                                ? (hasImages ? '80px' : '55px')
+                                : (hasImages ? '140px' : '80px'),
+                              minHeight: window.innerWidth >= 768 ? '80px' : 'auto'
                             }}
-                          >
+onClick={() => safeNavigateToFilteredAds(activeTab, item)}                          >
                             {window.innerWidth < 768 ? mobileCard() : desktopCard()}
                           </div>
                         );
@@ -1677,6 +1765,44 @@ useEffect(() => {
               return slides;
             })()}
           </div>
+
+         {/* CAROUSEL INDICATORS */}
+<div className="flex justify-center items-center space-x-2 mt-4">
+  {(() => {
+    const transformedData = transformApiData();
+    let currentTabData = [];
+    
+    const tabDataMap = {
+      'Category': 'categories',
+      'Model': 'models', 
+      'Brand': 'brands',
+      'Body Type': 'bodytypes',
+      'Budget': 'budgets'
+    };
+    
+    const dataKey = tabDataMap[activeTab];
+    currentTabData = Array.isArray(transformedData[dataKey]) ? transformedData[dataKey] : [];
+    
+    const totalSlides = Math.ceil(currentTabData.length / itemsPerPage);
+    
+    if (totalSlides > 1) {
+      return Array.from({ length: totalSlides }, (_, index) => (
+        <button
+          key={index}
+onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}     
+   className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            currentSlides[activeTab] === index 
+              ? 'bg-[#0DFF9A] w-6' 
+              : 'bg-gray-500 hover:bg-gray-600'
+          }`}
+          aria-label={`Go to slide ${index + 1}`}
+          
+        />
+      ));
+    }
+    return null;
+  })()}
+</div>
         </div>
       </div>
     </div>

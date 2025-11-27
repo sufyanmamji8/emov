@@ -282,11 +282,65 @@ const apiService = {
       }
     },
     
-    // Get all ads
-    getAll: async () => {
+    // Get all ads (with pagination support)
+    getAll: async (page = 1, limit = 100) => {
       try {
-        const response = await api.get('/ads');
-        return response.data;
+        console.log(`[API] 🚀 Fetching ads (page ${page}, limit ${limit})`);
+
+        // Always start from page 1 to be able to aggregate all pages
+        const firstResponse = await api.get(`/ads?page=1&limit=${limit}`);
+        const baseData = firstResponse.data || {};
+        let allAds = Array.isArray(baseData.data) ? [...baseData.data] : [];
+
+        const pagination = baseData.pagination;
+
+        // If there are multiple pages, fetch and merge them all
+        if (pagination && pagination.totalPages && pagination.totalPages > 1) {
+          const totalPages = pagination.totalPages;
+          console.log(`[API] 📊 Multiple pages detected: ${totalPages} total pages`);
+
+          const pagePromises = [];
+          for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
+            pagePromises.push(
+              api
+                .get(`/ads?page=${currentPage}&limit=${limit}`)
+                .then((res) => {
+                  const pageData = res.data || {};
+                  const ads = Array.isArray(pageData.data) ? pageData.data : [];
+                  console.log(`[API] ✅ Fetched page ${currentPage}: ${ads.length} ads`);
+                  return ads;
+                })
+                .catch((err) => {
+                  console.warn(`[API] ⚠️ Failed to fetch page ${currentPage}:`, err.message);
+                  return [];
+                })
+            );
+          }
+
+          const remainingPages = await Promise.all(pagePromises);
+          remainingPages.forEach((pageAds) => {
+            allAds = allAds.concat(pageAds);
+          });
+
+          console.log(`[API] 🎉 Combined ads from all pages: ${allAds.length} total`);
+
+          // Return same shape as original API but with merged data
+          return {
+            ...baseData,
+            data: allAds,
+            pagination: {
+              ...(pagination || {}),
+              total: allAds.length,
+              page: 1,
+              perPage: allAds.length,
+              totalPages: 1,
+            },
+          };
+        }
+
+        // Single-page case: just return the base data as-is
+        console.log(`[API] ✅ Single-page ads response: ${allAds.length} ads`);
+        return baseData;
       } catch (error) {
         console.error('[API] Get all ads failed:', error);
         throw error;
@@ -322,19 +376,24 @@ const apiService = {
           }
         }
 
-        // Fallback: Fetch all ads and filter (only if direct endpoint fails)
+        // Fallback: Fetch all ads (pagination-aware) and filter
         console.log(`[API] Falling back to fetching all ads`);
-        const response = await api.get('/ads');
-        const allAds = response.data?.data || response.data || [];
+        const allAdsResponse = await apiService.ads.getAll(1, 100);
+        const allAds = allAdsResponse?.data || [];
         console.log(`[API] Fetched ${allAds.length} total ads`);
-        
-        const ad = allAds.find(ad => (ad.AdID || ad.id) == id);
-        
+
+        const targetIdStr = String(id).trim();
+
+        const ad = allAds.find(ad => {
+          const possibleIds = [ad.AdID, ad.id, ad.adId, ad.adID].filter(Boolean);
+          return possibleIds.some(pid => String(pid) === targetIdStr);
+        });
+
         if (ad) {
           console.log(`[API] Found ad ${id} in full ads list`);
           return { data: ad };
         }
-        
+
         // Return a consistent error response
         console.warn(`[API] Ad ${id} not found in any data source`);
         const error = new Error('Ad not found');

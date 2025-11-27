@@ -63,46 +63,66 @@ const AdDetail = () => {
 
   useEffect(() => {
     const loadAdData = async () => {
-      if (!adId) {
-        setError('No ad ID provided');
-        setLoading(false);
-        return;
-      }
-
       try {
-        setLoading(true);
-        setError(null);
-        console.log('Fetching ad details for ID:', adId);
-        
-        const response = await apiService.ads.getById(adId);
-        const adData = response?.data || response;
-        
-        if (adData) {
-          console.log('Full ad data:', adData);
-          console.log('VehicleBodyTypeID:', adData.VehicleBodyTypeID);
-          console.log('All available fields:', Object.keys(adData));
-          setAd(adData);
-        } else {
-          throw new Error('Ad data is empty');
+        console.log('🔄 Loading ad data for ID:', adId);
+
+        // ✅ METHOD 0: If we navigated here with ad data in state, use it as an initial value
+        const stateAd = location.state?.adData;
+        if (stateAd) {
+          console.log('✅ Using ad data from navigation state as initial value');
+          setAd(stateAd);
+          // Do NOT return here: we still fetch from API to enrich with full seller info
         }
-      } catch (err) {
-        console.error('Error loading ad details:', err);
-        
-        // Handle different error cases
-        if (err.message === 'Ad not found' || err.status === 404) {
-          setError('This ad is no longer available or has been removed.');
-        } else if (err.response?.status === 401) {
-          setError('Please log in to view this ad');
-        } else {
-          setError('Failed to load ad details. Please try again later.');
+
+        // ✅ METHOD 1: First try direct API call
+        try {
+          console.log('🔍 Trying direct API endpoint...');
+          const directResponse = await apiService.ads.getById(adId);
+          console.log('✅ Direct API call successful');
+          setAd(directResponse.data);
+          setLoading(false);
+          return;
+        } catch (directError) {
+          console.log('❌ Direct API failed, trying getAll method...');
         }
-      } finally {
+
+        // ✅ METHOD 2: Fetch ALL ads and find the specific one
+        console.log('🔍 Fetching ALL ads to find ID:', adId);
+        const allAdsResponse = await apiService.ads.getAll(1, 1000);
+        const allAds = allAdsResponse?.data || [];
+
+        console.log('📊 Total ads available:', allAds.length);
+        console.log('🆔 All available Ad IDs:', allAds.map(ad => ad.AdID || ad.id));
+
+        const targetIdStr = String(adId).trim();
+
+        // ✅ Find the specific ad (robust string/number comparison and multiple ID fields)
+        const foundAd = allAds.find(ad => {
+          const possibleIds = [ad.AdID, ad.id, ad.adId, ad.adID].filter(Boolean);
+          return possibleIds.some(pid => String(pid) === targetIdStr);
+        });
+
+        if (foundAd) {
+          console.log('✅ Ad found in getAll response');
+          setAd(foundAd);
+        } else {
+          console.log('❌ Ad not found in any page');
+          setError(`Ad ID ${adId} not found. Available IDs: ${allAds
+            .slice(0, 10)
+            .map(ad => ad.AdID || ad.id)
+            .join(', ')}${allAds.length > 10 ? '...' : ''}`);
+        }
+
+        setLoading(false);
+      } catch (error) {
+        console.error('❌ Error loading ad details:', error);
+        setError('Ad not found or may have been removed');
         setLoading(false);
       }
     };
 
     loadAdData();
-  }, [adId]);
+  }, [adId, location.state]);
 
   const handleGoBack = () => {
     navigate(-1);
@@ -261,13 +281,71 @@ const AdDetail = () => {
   // Debug: Log the full ad data to inspect available fields
   console.log('Ad data:', ad);
   
-  // Extract seller information
+  // Extract seller information (support multiple possible field names)
+  const sellerSource = ad?.seller || ad?.user || ad?.User || ad?.owner || {};
+
+  const sellerName =
+    ad?.SellerName ||
+    ad?.sellerName ||
+    sellerSource?.name ||
+    sellerSource?.Name ||
+    ad?.UserName ||
+    ad?.username ||
+    ad?.Name ||
+    ad?.name ||
+    'N/A';
+
+  const sellerEmail =
+    ad?.SellerEmail ||
+    ad?.emailAddress ||
+    ad?.Email ||
+    sellerSource?.email ||
+    sellerSource?.Email ||
+    ad?.UserEmail ||
+    'N/A';
+
+  // Build seller image URL from possible fields
+  const rawSellerImage =
+    ad?.SellerImage ||
+    ad?.UserProfile ||
+    ad?.UserImage ||
+    sellerSource?.image ||
+    sellerSource?.avatar ||
+    sellerSource?.profileImage ||
+    '';
+
+  const sellerImage = rawSellerImage
+    ? (rawSellerImage.startsWith('http')
+        ? rawSellerImage
+        : `https://api.emov.com.pk/image/${rawSellerImage}`)
+    : '/default-avatar.png';
+
+  const sellerPhone =
+    ad?.SellerPhone ||
+    ad?.SellerMobile ||
+    ad?.mobileNo ||
+    sellerSource?.phone ||
+    sellerSource?.Phone ||
+    sellerSource?.mobile ||
+    'N/A';
+
+  const sellerJoinedRaw =
+    sellerSource?.createdAt ||
+    sellerSource?.CreatedAt ||
+    ad?.CreatedAt ||
+    ad?.created_at ||
+    null;
+
+  const sellerJoinedDate = sellerJoinedRaw
+    ? new Date(sellerJoinedRaw).toLocaleDateString()
+    : 'N/A';
+
   const sellerInfo = {
-    name: ad?.sellerName || ad?.seller?.name || ad?.SellerName || 'N/A',
-    email: ad?.emailAddress || ad?.seller?.email || ad?.SellerEmail || 'N/A',
-    image: ad?.UserProfile || ad?.seller?.image || ad?.SellerImage || '/default-avatar.png',
-    phone: ad?.mobileNo || ad?.seller?.phone || ad?.SellerPhone || 'N/A',
-    joinedDate: ad?.CreatedAt ? new Date(ad.CreatedAt).toLocaleDateString() : 'N/A'
+    name: sellerName,
+    email: sellerEmail,
+    image: sellerImage,
+    phone: sellerPhone,
+    joinedDate: sellerJoinedDate,
   };
 
   const detailCards = [
