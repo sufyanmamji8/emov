@@ -1,5 +1,5 @@
 const chatService = {
-  // Upload image file - FIXED: Return the full response
+  // Upload image file - FIXED: Return the full response with better URL handling
   async uploadImage(file) {
     try {
       console.log('📤 Uploading image file:', file.name, file.type, file.size);
@@ -26,20 +26,46 @@ const chatService = {
       const data = await response.json();
       console.log('✅ Image upload successful - full response:', data);
       
-      // Format the URL to the correct format: https://api.emov.com.pk/image/filename
-      let imageUrl = data.url || data.original || '';
+      // First, try to get the URL from the response
+      let imageUrl = data.url || data.original || data.image_url || '';
+      
+      if (!imageUrl && data.data) {
+        // If we have a data object, try to extract URL from it
+        imageUrl = data.data.url || data.data.original || data.data.image_url || '';
+      }
+      
+      // If we still don't have a URL, try to construct it from the filename
+      if (!imageUrl && data.filename) {
+        imageUrl = data.filename;
+      }
+      
+      // If we have a URL, format it properly
       if (imageUrl) {
-        // Remove any '/uploads/' segment from the URL
-        imageUrl = imageUrl.replace('/uploads/', '/');
-        // Extract just the filename from the URL
-        const filename = imageUrl.split('/').pop();
-        // Construct the correct URL format
+        // If it's already a full URL, return it as is
+        if (imageUrl.startsWith('http')) {
+          console.log('🌐 Using full image URL:', imageUrl);
+          return imageUrl;
+        }
+        
+        // Otherwise, format it to the correct path
+        // Remove any leading/trailing slashes and any 'uploads/' prefix
+        let filename = imageUrl.replace(/^\/+|\/+$/g, '');
+        filename = filename.replace(/^uploads\//, '');
+        
+        // Construct the full URL
         const formattedUrl = `https://api.emov.com.pk/image/${filename}`;
         console.log('🖼️ Formatted image URL:', formattedUrl);
         return formattedUrl;
       }
       
-      // Fallback to original data if we can't format the URL
+      // If we still don't have a URL, try to use the first available string in the response
+      if (!imageUrl && typeof data === 'string') {
+        console.log('ℹ️ Using string response as image URL:', data);
+        return data.startsWith('http') ? data : `https://api.emov.com.pk/image/${data}`;
+      }
+      
+      // As a last resort, return the raw data
+      console.warn('⚠️ Could not determine image URL from response, returning raw data');
       return data;
 
     } catch (error) {

@@ -306,8 +306,9 @@ export default function Ads() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    window.location.href = '/dashboard';
   };
 
   const handleInputChange = (e) => {

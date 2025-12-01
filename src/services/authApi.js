@@ -65,7 +65,7 @@ api.interceptors.response.use(
 // Add token to requests if available
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -263,6 +263,58 @@ const authApi = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Password reset failed' };
+    }
+  },
+
+  // Upload image file, returns transformed imageUrl
+  uploadImage: async (formData) => {
+    try {
+      const response = await api.post('/v2/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to upload image' };
+    }
+  },
+
+  // Update profile picture reference for the user
+  updateProfilePic: async ({ userId, imageUrl }) => {
+    try {
+      const response = await api.post('/v2/updateProfilePic', { userId, imageUrl });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to update profile picture' };
+    }
+  },
+
+  // Update profile details API
+  updateProfileDetails: async (profileData) => {
+    try {
+      const response = await api.post('/v2/updateProfileDetails', profileData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to update profile details' };
+    }
+  },
+
+  // Change password API (authenticated user)
+  changePassword: async ({ oldPassword, newPassword, confirmPassword, email }) => {
+    try {
+      const payload = {
+        oldPassword,
+        newPassword,
+        confirmPassword,
+      };
+      if (email) {
+        payload.email = email;
+      }
+      const response = await api.post('/v2/change-password', payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to change password' };
     }
   }
 };

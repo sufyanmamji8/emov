@@ -32,6 +32,16 @@ const Profile = () => {
   });
   const [passwordLoading, setPasswordLoading] = useState(false);
 
+  // Simple toast notification state
+  const [toast, setToast] = useState({ message: '', type: 'success', visible: false });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type, visible: true });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   const displayUser = useMemo(() => ({
     name: user.name || user.fullName || user.username || 'User',
     email: user.email || user.Email || '',
@@ -52,17 +62,49 @@ const Profile = () => {
     setFieldValue('');
   };
 
-  const saveField = () => {
+  const saveField = async () => {
     if (!editingField) return;
     const updated = { ...user, [editingField]: fieldValue };
-    setUser(updated);
+
     try {
-      localStorage.setItem('user', JSON.stringify(updated));
-    } catch {
-      // ignore storage errors
+      const payload = {};
+      if (editingField === 'name') {
+        payload.name = fieldValue;
+      } else if (editingField === 'gender') {
+        payload.gender = fieldValue;
+      } else if (editingField === 'mobileNo') {
+        payload.mobileNo = fieldValue;
+      } else if (editingField === 'secondaryMobileNo') {
+        payload.secondaryMobileNo = fieldValue;
+      } else if (editingField === 'dateOfBirth') {
+        payload.dob = fieldValue;
+      } else {
+        payload[editingField] = fieldValue;
+      }
+
+      const response = await authApi.updateProfileDetails(payload);
+
+      const updatedFields = response?.updatedFields || {};
+      const mergedUser = { ...user, ...updatedFields };
+      setUser(mergedUser);
+      try {
+        localStorage.setItem('user', JSON.stringify(mergedUser));
+      } catch {
+        // ignore storage errors
+      }
+      showToast('Profile details updated successfully');
+    } catch (error) {
+      // If API fails, still update local state and storage so UI stays consistent
+      setUser(updated);
+      try {
+        localStorage.setItem('user', JSON.stringify(updated));
+      } catch {
+        // ignore storage errors
+      }
+    } finally {
+      setEditingField(null);
+      setFieldValue('');
     }
-    setEditingField(null);
-    setFieldValue('');
   };
 
   const getAvatarLetter = () => {
@@ -76,6 +118,59 @@ const Profile = () => {
     if (!src) return '';
     if (src.startsWith('http')) return src;
     return `https://api.emov.com.pk/image/${src.replace(/^\/+/, '')}`;
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      setAvatarError(false);
+
+      // Step 1: upload image to get transformed filename (url)
+      const uploadResponse = await authApi.uploadImage(formData);
+      // API returns: { status, original, url, resized }
+      const fileName = uploadResponse?.url || '';
+
+      if (!fileName) {
+        throw new Error('Image URL missing from upload response');
+      }
+
+      // Determine userId from current user object
+      const userId =
+        user.userId ||
+        user.UserId ||
+        user.userID ||
+        user.UserID ||
+        user.id ||
+        user.Id ||
+        null;
+
+      // Step 2: update profile picture reference on the server with filename and userId
+      await authApi.updateProfilePic({ userId, imageUrl: fileName });
+
+      // Store filename; UI will construct full URL via getAvatarSrc
+      const updatedUser = {
+        ...user,
+        picture: fileName,
+        imageUrl: fileName,
+        UserProfile: fileName,
+      };
+
+      setUser(updatedUser);
+      try {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+      } catch {
+        // ignore storage errors
+      }
+      showToast('Profile picture updated successfully');
+    } catch (error) {
+      // If upload fails, keep old avatar and show fallback letter
+      setAvatarError(true);
+    }
   };
 
   const handlePasswordInputChange = (e) => {
@@ -152,16 +247,19 @@ const Profile = () => {
 
     try {
       setPasswordLoading(true);
-      // Step 1: validate old password by attempting login
-      await authApi.login(displayUser.email, passwordForm.oldPassword);
 
-      // Step 2: change password
-      await authApi.resetPassword(displayUser.email, passwordForm.newPassword, passwordForm.confirmPassword);
+      // Change password using authenticated endpoint
+      await authApi.changePassword({
+        oldPassword: passwordForm.oldPassword,
+        newPassword: passwordForm.newPassword,
+        confirmPassword: passwordForm.confirmPassword,
+        email: displayUser.email,
+      });
 
       setShowPasswordModal(false);
       setPasswordForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
       setPasswordErrors({ oldPassword: '', newPassword: '', confirmPassword: '', general: '' });
-      alert('Password changed successfully');
+      showToast('Password changed successfully');
     } catch (error) {
       const message = error?.message || '';
       if (message.toLowerCase().includes('invalid') || message.toLowerCase().includes('password')) {
@@ -190,7 +288,16 @@ const Profile = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8 relative">
+      {/* Toast Notification */}
+      {toast.visible && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="px-4 py-2 rounded-lg shadow-lg bg-emerald-500 text-white text-sm font-medium">
+            {toast.message}
+          </div>
+        </div>
+      )}
+
       <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">My Profile</h1>
@@ -218,10 +325,23 @@ const Profile = () => {
             {(!getAvatarSrc() || avatarError) && (
               <span>{getAvatarLetter()}</span>
             )}
+            <input
+              id="profile-avatar-input"
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarChange}
+            />
           </div>
           <div>
             <p className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">{displayUser.name}</p>
             <p className="text-sm text-gray-600 dark:text-gray-300">{displayUser.email || 'No email available'}</p>
+            <label
+              htmlFor="profile-avatar-input"
+              className="mt-2 inline-flex items-center px-3 py-1 text-xs font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
+            >
+              Change photo
+            </label>
           </div>
         </div>
 

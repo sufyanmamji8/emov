@@ -42,8 +42,9 @@ const MyAds = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    window.location.href = '/dashboard';
   };
 
   // Helper function to construct image URLs

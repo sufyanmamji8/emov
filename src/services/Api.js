@@ -745,11 +745,11 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error('Refresh token error:', error);
-        // If refresh fails, clear the token and redirect to login
+        // If refresh fails, clear the token and redirect to dashboard
         if (error.response?.status === 401) {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
-          window.location.replace('/login');
+          window.location.replace('/dashboard');
         }
         throw error;
       }
@@ -759,22 +759,22 @@ const apiService = {
 
 // Utility function to handle 401 errors
 export const handleUnauthorized = () => {
-  console.log('[API] Handling unauthorized access - redirecting to login');
+  console.log('[API] Handling unauthorized access - redirecting to dashboard');
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   sessionStorage.removeItem('token');
-  window.location.href = '/login';
+  window.location.href = '/dashboard';
 };
 
 // Global error handler for 401 errors and CORS errors
 window.addEventListener('unhandledrejection', (event) => {
   // Check for 401 errors
   if (event.reason && event.reason.response && event.reason.response.status === 401) {
-    console.log('[API] Caught 401 error in global handler, redirecting to login');
+    console.log('[API] Caught 401 error in global handler, redirecting to dashboard');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');
-    window.location.href = '/login';
+    window.location.href = '/dashboard';
   }
   // Check for CORS errors on protected endpoints
   else if (event.reason && event.reason.code === 'ERR_NETWORK' && 
@@ -782,11 +782,11 @@ window.addEventListener('unhandledrejection', (event) => {
            event.reason.config && event.reason.config.url) {
     const url = event.reason.config.url;
     if (url.includes('/vehiclesfilter') || url.includes('/ads') || url.includes('/ads')) {
-      console.log('[API] Caught CORS error on protected endpoint in global handler, redirecting to login');
+      console.log('[API] Caught CORS error on protected endpoint in global handler, redirecting to dashboard');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       sessionStorage.removeItem('token');
-      window.location.href = '/login';
+      window.location.href = '/dashboard';
     }
   }
 });

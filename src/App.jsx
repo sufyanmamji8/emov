@@ -100,9 +100,11 @@ function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     setIsAuthenticated(false);
+    window.location.href = '/dashboard';
   };
 
   return (

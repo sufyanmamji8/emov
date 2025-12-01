@@ -73,6 +73,43 @@ const formatTimeAgo = (dateString) => {
   });
 };
 
+// Fixed: Correct image URL handling used across chats (avatars and message images)
+const getImageUrl = (imagePath, isAvatar = false) => {
+  console.log('🖼️ Processing image URL:', imagePath, 'isAvatar:', isAvatar);
+  
+  // Handle null/undefined/empty cases
+  if (!imagePath || ['N/A', 'null', 'undefined', ''].includes(String(imagePath))) {
+    console.log('⚠️ No valid image path provided, using default avatar');
+    return isAvatar ? '/default-avatar.png' : null;
+  }
+
+  // Convert to string and trim
+  let url = String(imagePath).trim();
+  
+  // Check if it's already a full URL
+  if (url.startsWith('http')) {
+    // Convert /writable/uploads/ to /image/ for consistency
+    if (url.includes('/writable/uploads/')) {
+      const convertedUrl = url.replace('/writable/uploads/', '/image/');
+      console.log('🔄 Converted URL:', convertedUrl);
+      return convertedUrl;
+    }
+    return url;
+  }
+  
+  // Handle avatar images (like profile photos)
+  if (isAvatar) {
+    const avatarUrl = `https://api.emov.com.pk/image/${url}`;
+    console.log('👤 Avatar URL:', avatarUrl);
+    return avatarUrl;
+  }
+  
+  // For regular images, use the standard format
+  const imageUrl = `https://api.emov.com.pk/image/${url}`;
+  console.log('🌅 Regular image URL:', imageUrl);
+  return imageUrl;
+};
+
 // Fixed: Avatar component with proper centering
 const Avatar = ({ user, size = 'md' }) => {
   const sizeClasses = {
@@ -194,7 +231,7 @@ export default function Chats() {
   };
 
   // Add these upload functions
-  // Update handleSendImage to convert the URL
+  // Handle image upload and return the final URL from the upload API
   const handleSendImage = async () => {
     if (!selectedImageFile) {
       throw new Error('No image file selected');
@@ -202,41 +239,15 @@ export default function Chats() {
 
     try {
       console.log('📤 Uploading image file...');
-      const response = await chatService.uploadImage(selectedImageFile);
-      console.log('✅ Image upload response:', response);
-      
-      // Extract the image URL from the response
-      let imageUrl = '';
-      
-      // Handle different response formats
-      if (response.url) {
-        // If the response has a direct URL
-        imageUrl = response.url;
-      } else if (response.original) {
-        // If the response has an original field
-        imageUrl = response.original;
-      } else if (response.data?.url) {
-        // If the response is nested in a data object
-        imageUrl = response.data.url;
-      } else if (response) {
-        // If the response is the URL directly
-        imageUrl = response;
+      // chatService.uploadImage already formats and returns the final URL
+      const imageUrl = await chatService.uploadImage(selectedImageFile);
+      console.log('✅ Image uploaded, final URL:', imageUrl);
+
+      if (!imageUrl) {
+        throw new Error('Image upload was successful but no URL was returned');
       }
-      
-      // Remove any '/uploads/' segment from the URL if present
-      if (imageUrl) {
-        imageUrl = imageUrl.replace('/uploads/', '/');
-        
-        // If it's not a full URL, prepend the base URL
-        if (!imageUrl.startsWith('http')) {
-          imageUrl = `https://api.emov.com.pk/image/${imageUrl}`;
-        }
-        
-        console.log('✅ Image URL after formatting:', imageUrl);
-        return imageUrl;
-      }
-      
-      throw new Error('Could not determine image URL from server response');
+
+      return imageUrl;
     } catch (error) {
       console.error('❌ Image upload failed:', error);
       throw error;
@@ -257,68 +268,6 @@ export default function Chats() {
       console.error('❌ Audio upload failed:', error);
       throw error;
     }
-  };
-
-  // Fixed: Proper image URL handling for upload API responses
- // Fixed: Better image URL handling that preserves full URLs from API
-// Fixed: Correct image URL handling
-// Fixed: Use correct image URL path
-const getImageUrl = (imagePath, isAvatar = false) => {
-  console.log('🖼️ Processing image URL:', imagePath, 'isAvatar:', isAvatar);
-  
-  // Handle null/undefined/empty cases
-  if (!imagePath || ['N/A', 'null', 'undefined', ''].includes(String(imagePath))) {
-    console.log('⚠️ No valid image path provided, using default avatar');
-    return isAvatar ? '/default-avatar.png' : null;
-  }
-
-  // Convert to string and trim
-  let url = String(imagePath).trim();
-  
-  // Check if it's already a full URL
-  if (url.startsWith('http')) {
-    // Convert /writable/uploads/ to /image/ for consistency
-    if (url.includes('/writable/uploads/')) {
-      const convertedUrl = url.replace('/writable/uploads/', '/image/');
-      console.log('🔄 Converted URL:', convertedUrl);
-      return convertedUrl;
-    }
-    return url;
-  }
-  
-  // Handle avatar images (like profile photos)
-  if (isAvatar) {
-    // For avatars, we use the direct path without /uploads/
-    const avatarUrl = `https://api.emov.com.pk/image/${url}`;
-    console.log('👤 Avatar URL:', avatarUrl);
-    return avatarUrl;
-  }
-  
-  // For regular images, use the standard format
-  const imageUrl = `https://api.emov.com.pk/image/${url}`;
-  console.log('🌅 Regular image URL:', imageUrl);
-  return imageUrl;
-};
-
-  // Add this function for audio URLs
-  const getAudioUrl = (audioPath) => {
-    if (!audioPath || audioPath === 'N/A' || audioPath === 'null' || audioPath === 'undefined') {
-      console.log('❌ Invalid audio path:', audioPath);
-      return null;
-    }
-    
-    // If it's already a full URL, use it as is
-    if (audioPath.startsWith('http')) {
-      return audioPath;
-    }
-    
-    // If it's from the upload API response, construct the full URL
-    if (audioPath.includes('writable/uploads')) {
-      return `https://api.emov.com.pk/${audioPath}`;
-    }
-    
-    // Otherwise, assume it's a filename and prepend the uploads path
-    return `https://api.emov.com.pk/writable/uploads/${audioPath}`;
   };
 
   // Handle message options click
@@ -507,22 +456,20 @@ useEffect(() => {
     if (selectedImage && selectedImageFile) {
       console.log('🖼️ Starting image upload and send process');
       try {
-        console.log('📤 Uploading image file...');
         const imageUrl = await handleSendImage();
-        
+
         if (imageUrl) {
           console.log('✅ Image uploaded successfully, URL:', imageUrl);
-          
-          // Extract just the image ID from the URL
-          const imageId = imageUrl.split('/').pop();
-          console.log(`📤 Sending image message with ID: ${imageId}`);
-          await sendMessage(imageId, 'image');
-          
+
+          // Send the full image URL so it can be rendered directly
+          console.log(`📤 Sending image message with URL: ${imageUrl}`);
+          await sendMessage(imageUrl, 'image');
+
           // Clear the image selection and input
           setSelectedImage(null);
           setSelectedImageFile(null);
           setNewMessage('');
-          
+
           console.log('✅ Image message sent successfully');
           return;
         } else {
@@ -534,16 +481,16 @@ useEffect(() => {
           stack: error.stack,
           response: error.response?.data
         });
-        
+
         // Reset the image selection on error
         setSelectedImage(null);
         setSelectedImageFile(null);
-        
+
         // Show a more specific error message if available
         const errorMessage = error.response?.data?.message || 
                            error.message || 
                            'Failed to send image. Please try again.';
-        
+
         alert(errorMessage);
         return;
       }
@@ -792,15 +739,20 @@ useEffect(() => {
             formattedUrl = imageUrl;
           }
         } 
-        // If we just have an image ID
+        // If backend stored just the filename (ID without any slash)
         else if (!imageUrl.includes('/') && !imageUrl.includes('.')) {
           formattedUrl = `https://api.emov.com.pk/image/${imageUrl}`;
         }
-        // If it's already a full URL
+        // If it's a full URL on the root domain like https://api.emov.com.pk/1764....png
+        else if (imageUrl.startsWith('https://api.emov.com.pk/') && !imageUrl.includes('/image/')) {
+          const filename = imageUrl.split('/').pop();
+          formattedUrl = `https://api.emov.com.pk/image/${filename}`;
+        }
+        // If it's already a full URL (other domains or already-correct URLs)
         else if (imageUrl.startsWith('http')) {
           formattedUrl = imageUrl;
         }
-        // For any other case, construct the URL
+        // For any other case, treat it as a relative path and construct the URL
         else {
           const cleanPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
           formattedUrl = `https://api.emov.com.pk/image/${cleanPath}`;
@@ -927,8 +879,9 @@ useEffect(() => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
-    window.location.href = '/login';
+    window.location.href = '/dashboard';
   };
 
   return (

@@ -335,7 +335,6 @@ function Dashboard() {
       // If refresh fails, log the user out
       handleLogout();
     }
-    return null;
   };
 
   // Handle logout
@@ -346,10 +345,11 @@ function Dashboard() {
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {
-      // Clear local storage and redirect
+      // Clear auth data and go back to dashboard (public)
       localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      window.location.href = '/dashboard';
     }
   };
 
@@ -528,8 +528,12 @@ function Dashboard() {
     const fetchFilterData = async () => {
       try {        
         const token = localStorage.getItem('token');
+
+        // If no token, treat Dashboard as public: use fallback data instead of redirecting
         if (!token) {
-          handleUnauthorizedAccess();
+          setApiData(fallbackData);
+          const vehicles = generateVehiclesFromFilterData(fallbackData);
+          setVehiclesData(vehicles);
           return;
         }
 
@@ -544,14 +548,17 @@ function Dashboard() {
           throw new Error('No data received from the server');
         }
       } catch (err) {
-        if (err.response?.status === 401) {
-          handleUnauthorizedAccess();
-        } else if (process.env.NODE_ENV === 'development') {
+        if (process.env.NODE_ENV === 'development') {
           console.error('Error fetching filter data:', {
             message: err.message,
             status: err.response?.status
           });
         }
+
+        // On error (including 401 when token exists), fall back to offline data instead of redirecting
+        setApiData(fallbackData);
+        const vehicles = generateVehiclesFromFilterData(fallbackData);
+        setVehiclesData(vehicles);
       }
     };
 
@@ -1406,10 +1413,10 @@ useEffect(() => {
                 {/* Hero Text */}
                 <div className="text-left mt-8 md:mt-5 px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
                   <div className="mt-12 w-full text-center max-w-6xl mx-auto">
-                    <h1 className="text-text-primary font-semibold text-xl sm:text-3xl md:text-5xl font-normal mb-2 sm:mb-4 leading-tight">
+                    <h1 className="text-text-primary font-semibold text-lg sm:text-3xl md:text-4xl font-normal mb-2 sm:mb-4 leading-tight">
                       {t.findVehicles}
                     </h1>
-                    <h1 className="text-lg sm:text-3xl md:text-5xl font-normal mb-4 sm:mb-6 leading-tight text-text-tertiary">
+                    <h1 className="text-md sm:text-3xl md:text-4xl font-normal mb-4 sm:mb-6 leading-tight text-text-tertiary">
                       {t.tagline}
                     </h1>
                   </div>
@@ -2166,7 +2173,7 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
                             }}
                             onError={(e) => {
                               e.target.onerror = null;
-                              e.target.src = '/placeholder-car.png';
+                              e.target.src = '';
                             }}
                           />
                         </div>
