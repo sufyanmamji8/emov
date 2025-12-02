@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChatProvider } from './contexts/ChatContext';
 import Login from './pages/Login';
@@ -18,6 +19,7 @@ import MyAds from './pages/MyAds';
 import FilteredVehicles from './pages/FilteredVehicles';
 import Profile from './pages/Profile';
 
+import 'react-toastify/dist/ReactToastify.css';
 import './index.css'; 
 
 // Create a wrapper component to handle theme
@@ -115,6 +117,21 @@ function App() {
           loading={loading}
           handleLogin={handleLogin}
           handleLogout={handleLogout}
+        />
+        <ToastContainer 
+          position="top-center"
+          autoClose={3000}
+          hideProgressBar
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss={false}
+          draggable={false}
+          pauseOnHover={false}
+          className="toast-container"
+          toastClassName="custom-toast"
+          bodyClassName="toast-body"
+          progressClassName="toast-progress"
         />
       </ChatProvider>
     </ThemeProvider>

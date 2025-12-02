@@ -16,6 +16,20 @@ const AdDetail = () => {
 
   // Fetch filter data to get body type names
   useEffect(() => {
+    const fromMyAds = location.state?.from === 'my-ads';
+
+    if (fromMyAds) {
+      try {
+        const storedBodyTypes = JSON.parse(localStorage.getItem('vehicleBodyTypes') || '[]');
+        if (Array.isArray(storedBodyTypes) && storedBodyTypes.length > 0) {
+          setFilterData({ body_type: storedBodyTypes });
+        }
+      } catch (e) {
+        console.error('Error loading body types from localStorage:', e);
+      }
+      return;
+    }
+
     const fetchFilterData = async () => {
       try {
         const response = await apiService.vehicles.getFilters();
@@ -25,7 +39,7 @@ const AdDetail = () => {
       }
     };
     fetchFilterData();
-  }, []);
+  }, [location.state]);
 
   const getBodyTypeName = (bodyTypeId) => {
     if (!bodyTypeId && bodyTypeId !== 0) return 'N/A';
@@ -161,7 +175,15 @@ const AdDetail = () => {
       });
     } catch (error) {
       console.error('Error starting chat:', error);
-      alert(`Failed to start chat: ${error.message}`);
+      toast.error(`Failed to start chat: ${error.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
     }
   };
 
@@ -736,7 +758,15 @@ const AdDetail = () => {
       
     } catch (error) {
       console.error('Error starting chat:', error);
-      alert(`Failed to start chat: ${error.message}`);
+      toast.error(`Failed to start chat: ${error.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
     }
   }}
   className="w-full bg-emov-purple text-white py-4 rounded-lg font-semibold hover:bg-emov-purple/90 transition-all duration-200 shadow-theme flex items-center justify-center space-x-2"

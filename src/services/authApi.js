@@ -266,6 +266,32 @@ const authApi = {
     }
   },
 
+  // Change password API (authenticated user)
+  changePassword: async ({ oldPassword, newPassword, confirmPassword, email }) => {
+    try {
+      const payload = {
+        oldPassword: oldPassword.trim(),
+        newPassword: newPassword.trim(),
+        confirmPassword: confirmPassword.trim(),
+        email: email.trim()
+      };
+      const response = await api.post('/v2/change-password', payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to change password' };
+    }
+  },
+
+  // Delete account API
+  deleteAccount: async () => {
+    try {
+      const response = await api.delete('/v2/delete-account');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Failed to delete account' };
+    }
+  },
+
   // Upload image file, returns transformed imageUrl
   uploadImage: async (formData) => {
     try {

@@ -9,6 +9,22 @@ const getPakistanTime = () => {
   return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Karachi' }));
 };
 
+const toPakistanTime = (dateString) => {
+  if (!dateString) {
+    return getPakistanTime();
+  }
+
+  const parsed = new Date(dateString);
+  if (isNaN(parsed.getTime())) {
+    return getPakistanTime();
+  }
+
+  const karachiString = parsed.toLocaleString('en-US', {
+    timeZone: 'Asia/Karachi'
+  });
+  return new Date(karachiString);
+};
+
 export const ChatProvider = ({ children }) => {
   const [chats, setChats] = useState([]);
   const [currentChat, setCurrentChat] = useState(null);
@@ -106,7 +122,7 @@ export const ChatProvider = ({ children }) => {
       
       // Determine message content and type
       const messageType = conv.last_message_type || 'text';
-      const messageContent = conv.last_message || '';
+      let messageContent = conv.last_message || '';
       const isFromCurrentUser = parseInt(conv.last_message_sender_id) === currentUserNum;
       
       let lastMessageContent = messageContent;
@@ -118,6 +134,9 @@ export const ChatProvider = ({ children }) => {
         lastMessageContent = isFromCurrentUser ? 'You sent an audio' : 'Sent an audio';
       } else if (messageType === 'file') {
         lastMessageContent = isFromCurrentUser ? 'You sent a file' : 'Sent a file';
+      } else if (messageType === 'text') {
+        // Only modify if it's from current user, otherwise show the actual message
+        lastMessageContent = isFromCurrentUser ? `You: ${messageContent}` : messageContent;
       }
 
       // Create or update chat for this user
@@ -459,7 +478,8 @@ const sendMessage = async (content, messageType = 'text') => {
     
     // Use server's timestamp if available, otherwise use our Pakistan time
     const serverTime = response.createdAt || getPakistanTime().toISOString();
-    
+    const normalizedServerTime = toPakistanTime(serverTime).toISOString();
+
     const newMessage = {
       _id: response.message_id || response.id || tempId,
       message_id: response.message_id || response.id,
@@ -470,7 +490,7 @@ const sendMessage = async (content, messageType = 'text') => {
         name: currentUser.name,
         avatar: currentUser.avatar
       },
-      createdAt: serverTime,
+      createdAt: normalizedServerTime,
       status: 'sent',
       read: false,
       message_type: messageType
@@ -497,6 +517,8 @@ const sendMessage = async (content, messageType = 'text') => {
             lastMessageContent = 'You sent an audio';
           } else if (messageType === 'file') {
             lastMessageContent = 'You sent a file';
+          } else if (messageType === 'text') {
+            lastMessageContent = 'You sent a message';
           }
           
           return {
@@ -506,9 +528,9 @@ const sendMessage = async (content, messageType = 'text') => {
               message_type: messageType,
               sender: 'me',
               sender_id: currentUser.id,
-              createdAt: serverTime
+              createdAt: normalizedServerTime
             },
-            updatedAt: serverTime,
+            updatedAt: normalizedServerTime,
             unreadCount: 0
           };
         }
@@ -526,6 +548,8 @@ const sendMessage = async (content, messageType = 'text') => {
         lastMessageContent = 'You sent an audio';
       } else if (messageType === 'file') {
         lastMessageContent = 'You sent a file';
+      } else if (messageType === 'text') {
+        lastMessageContent = 'You sent a message';
       }
       
       return {
@@ -597,9 +621,9 @@ const sendMessage = async (content, messageType = 'text') => {
     }
   }, [loadMessages, markMessagesAsRead]);
 
-  // Load chats when user ID changes
+  // Load chats when user ID changes (disabled here; chat screens load explicitly)
   useEffect(() => {
-    if (currentUserId && !hasLoaded) {
+    if (false && currentUserId && !hasLoaded) {
       console.log('🔄 Initial chat load triggered');
       loadChats();
     }

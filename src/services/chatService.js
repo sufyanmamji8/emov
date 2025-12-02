@@ -47,15 +47,13 @@ const chatService = {
           return imageUrl;
         }
         
-        // Otherwise, format it to the correct path
         // Remove any leading/trailing slashes and any 'uploads/' prefix
         let filename = imageUrl.replace(/^\/+|\/+$/g, '');
         filename = filename.replace(/^uploads\//, '');
         
-        // Construct the full URL
-        const formattedUrl = `https://api.emov.com.pk/image/${filename}`;
-        console.log('🖼️ Formatted image URL:', formattedUrl);
-        return formattedUrl;
+        // Return just the filename, not the full URL
+        console.log('🖼️ Image filename:', filename);
+        return filename;
       }
       
       // If we still don't have a URL, try to use the first available string in the response

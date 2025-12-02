@@ -797,17 +797,33 @@ useEffect(() => {
         return categoryItem;
       }),
       
-      budgets: (apiData.budget || []).map((item, index) => ({
-        id: item.BudgetID || `budget-${index + 1}`,
-        name: getLocalizedName(item, 'budget'),
-        min: item.MinAmount,
-        max: item.MaxAmount,
-        count: Math.floor(Math.random() * 80) + 10,
-        color: colorsList[(index + 2) % colorsList.length],
-        displayName: getLocalizedName(item, 'budget'),
-        originalData: item,
-        type: 'budget'
-      })),
+      budgets: (apiData.budget || []).map((item, index) => {
+        const minVal =
+          item.MinAmount ??
+          item.min ??
+          item.minAmount ??
+          null;
+        const maxVal =
+          item.MaxAmount ??
+          item.max ??
+          item.maxAmount ??
+          null;
+
+        return {
+          id: item.BudgetID || `budget-${index + 1}`,
+          name: getLocalizedName(item, 'budget'),
+          // Expose both camelCase and original-style keys for compatibility
+          min: minVal,
+          max: maxVal,
+          MinAmount: minVal,
+          MaxAmount: maxVal,
+          count: Math.floor(Math.random() * 80) + 10,
+          color: colorsList[(index + 2) % colorsList.length],
+          displayName: getLocalizedName(item, 'budget'),
+          originalData: item,
+          type: 'budget'
+        };
+      }),
       
       // Get unique brands by BrandName to avoid duplicates and exclude 'Various' brand
       brands: (apiData.brand || [])
@@ -854,7 +870,6 @@ useEffect(() => {
       bodytypes: (() => {
         // Check both possible property names for body types
         const bodyTypesData = apiData.bodyType || apiData.bodytypes || [];
-        console.log('Body Types from API:', bodyTypesData.length, bodyTypesData);
         
         return bodyTypesData.map((item, index) => ({
           id: item.BodyTypeID || item.id || `body-${index + 1}`,

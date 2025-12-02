@@ -22,18 +22,6 @@ const toPakistanTime = (dateString) => {
 };
 
 
-// Format time for message timestamps (e.g., '2:30 PM')
-const formatMessageTime = (dateString) => {
-  if (!dateString) return '';
-  
-  const date = toPakistanTime(dateString);
-  return date.toLocaleTimeString('en-PK', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
-};
-
 // Utility function for time formatting
 const formatTimeAgo = (dateString) => {
   if (!dateString) return 'Just now';
@@ -110,6 +98,41 @@ const getImageUrl = (imagePath, isAvatar = false) => {
   return imageUrl;
 };
 
+// Fixed: Normalize audio URLs for playback
+const getAudioUrl = (audioPath) => {
+  console.log('🎧 Processing audio URL:', audioPath);
+
+  if (!audioPath || ['N/A', 'null', 'undefined', ''].includes(String(audioPath))) {
+    console.log('⚠️ No valid audio path provided');
+    return '';
+  }
+
+  let url = String(audioPath).trim();
+
+  // Already a full URL
+  if (url.startsWith('http')) {
+    return url;
+  }
+
+  // Remove leading slashes
+  url = url.replace(/^\/+/, '');
+
+  // If it already starts with audio/, prefix with domain
+  if (url.startsWith('audio/')) {
+    return `https://api.emov.com.pk/${url}`;
+  }
+
+  // If it looks like an uploads path, strip the uploads/ prefix
+  if (url.startsWith('uploads/')) {
+    url = url.replace(/^uploads\//, '');
+  }
+
+  // Default: treat as filename under /audio
+  const finalUrl = `https://api.emov.com.pk/audio/${url}`;
+  console.log('🎧 Final audio URL:', finalUrl);
+  return finalUrl;
+};
+
 // Fixed: Avatar component with proper centering
 const Avatar = ({ user, size = 'md' }) => {
   const sizeClasses = {
@@ -161,7 +184,8 @@ export default function Chats() {
     loadChats,
     unreadCount,
     markMessagesAsRead,
-     deleteMessage,
+    deleteMessage,
+    deleteConversation: deleteConversationFromContext,
     loading,
     currentUserId,
     error
@@ -209,17 +233,14 @@ export default function Chats() {
 
     try {
       setIsDeletingConversation(true);
-      await chatService.deleteConversation(conversationToDelete.conversation_id || conversationToDelete.id);
-      
-      // Remove the conversation from the list
-      setChats(prevChats => prevChats.filter(chat => chat.conversation_id !== conversationToDelete.conversation_id && chat.id !== conversationToDelete.id));
-      
-      // If the deleted conversation is the current chat, clear it
-      if (currentChat && (currentChat.conversation_id === conversationToDelete.conversation_id || currentChat.id === conversationToDelete.id)) {
-        setCurrentChat(null);
-        setMessages([]);
-      }
-      
+
+      const chatId =
+        conversationToDelete._id ||
+        conversationToDelete.conversation_id ||
+        conversationToDelete.id;
+
+      await deleteConversationFromContext(chatId);
+
       // Close the modal and reset state
       setIsDeleteConversationModalOpen(false);
       setConversationToDelete(null);
@@ -299,7 +320,15 @@ export default function Chats() {
       
     } catch (error) {
       console.error('❌ Error deleting message:', error);
-      alert('Failed to delete message. Please try again.');
+      toast.error('Failed to delete message. Please try again.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
     } finally {
       setDeleteLoading(false);
     }
@@ -491,7 +520,15 @@ useEffect(() => {
                            error.message || 
                            'Failed to send image. Please try again.';
 
-        alert(errorMessage);
+        toast.error(errorMessage, {
+         position: "top-right",
+         autoClose: 5000,
+         hideProgressBar: false,
+         closeOnClick: true,
+         pauseOnHover: true,
+         draggable: true,
+         progress: undefined,
+       });
         return;
       }
     }
@@ -520,7 +557,15 @@ useEffect(() => {
         }
       } catch (error) {
         console.error('❌ Audio upload failed:', error);
-        alert('Failed to upload audio. Please try again.');
+        toast.error('Failed to upload audio. Please try again.', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
         return;
       }
     }
@@ -535,7 +580,15 @@ useEffect(() => {
     
   } catch (error) {
     console.error('❌ Error sending message:', error);
-    alert('Failed to send message. Please try again.');
+    toast.error('Failed to send message. Please try again.', {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
   } finally {
     setSendingMessage(false);
   }
@@ -554,7 +607,15 @@ useEffect(() => {
         setSelectedImageFile(file);
         console.log('📸 Image selected:', file.name);
       } else {
-        alert('Please select a valid image file');
+        toast.warning('Please select a valid image file', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
         // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -576,7 +637,15 @@ useEffect(() => {
         setSelectedAudioFile(file);
         console.log('🎵 Audio selected:', file.name);
       } else {
-        alert('Please select a valid audio file');
+        toast.warning('Please select a valid audio file', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
         // Reset file input
         if (audioInputRef.current) {
           audioInputRef.current.value = '';
@@ -609,17 +678,17 @@ useEffect(() => {
     clearAudioSelection();
   };
   
-  // Fixed: Better time formatting for messages
+  // Fixed: Better time formatting for messages (Pakistan time)
   const formatMessageTime = (dateString) => {
     if (!dateString) return '';
     try {
-      const date = new Date(dateString);
-      const now = new Date();
+      const date = toPakistanTime(dateString);
+      const now = toPakistanTime();
       const diffInHours = (now - date) / (1000 * 60 * 60);
       
-      // If message is from today, show time only
+      // If message is from today, show local time in 12-hour clock
       if (date.toDateString() === now.toDateString()) {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        return date.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit', hour12: true });
       }
       // If message is from yesterday, show "Yesterday"
       else if (diffInHours < 48) {
@@ -627,11 +696,11 @@ useEffect(() => {
       }
       // If message is from this week, show day name
       else if (diffInHours < 168) {
-        return date.toLocaleDateString([], { weekday: 'short' });
+        return date.toLocaleDateString('en-PK', { weekday: 'short' });
       }
       // Otherwise show date
       else {
-        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return date.toLocaleDateString('en-PK', { month: 'short', day: 'numeric' });
       }
     } catch (error) {
       console.error('Error formatting message time:', error);
@@ -642,7 +711,7 @@ useEffect(() => {
   // Fixed: Get other user info with better avatar handling
   const getOtherUser = (chat) => {
     if (!chat.otherUser) {
-      console.warn('❌ No otherUser found in chat:', chat);
+      console.warn(' No otherUser found in chat:', chat);
       return {
         name: 'Seller',
         avatar: '/default-avatar.png',
@@ -811,14 +880,73 @@ useEffect(() => {
       const finalAudioUrl = getAudioUrl(audioUrl);
       
       return (
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-gray-500 dark:text-gray-400">🎵 Audio</div>
-          <audio controls className="w-full max-w-xs">
-            <source src={finalAudioUrl} type="audio/mpeg" />
-            <source src={finalAudioUrl} type="audio/wav" />
-            <source src={finalAudioUrl} type="audio/ogg" />
-            Your browser does not support the audio element.
-          </audio>
+        <div className="flex items-center space-x-3 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              const audio = e.currentTarget.nextElementSibling;
+              if (audio.paused) {
+                audio.play();
+                e.currentTarget.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+              } else {
+                audio.pause();
+                e.currentTarget.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+              }
+            }}
+            className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          </button>
+          
+          <audio 
+            src={finalAudioUrl} 
+            onEnded={(e) => {
+              const playButton = e.target.previousElementSibling;
+              playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+            }}
+            onTimeUpdate={(e) => {
+              const progressBar = e.target.nextElementSibling;
+              const progress = (e.target.currentTime / e.target.duration) * 100;
+              progressBar.style.width = `${progress}%`;
+            }}
+            className="hidden"
+          />
+          
+          <div className="flex-1 min-w-0">
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+              Audio Message
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {Math.floor(new Date(message?.createdAt || Date.now()).getMinutes()).toString().padStart(2, '0')}:
+                {Math.floor(new Date(message?.createdAt || Date.now()).getSeconds()).toString().padStart(2, '0')}
+              </span>
+              <span className="text-gray-400">•</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {message?.sender === 'me' ? 'Sent' : 'Received'}
+              </span>
+            </div>
+            <div className="mt-1 h-1 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+              <div className="h-full bg-blue-500 rounded-full progress-bar" style={{ width: '0%' }}></div>
+            </div>
+          </div>
+          
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {message?.status === 'sending' ? (
+              <span className="text-gray-400">Sending...</span>
+            ) : message?.status === 'sent' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            ) : message?.status === 'read' ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 12 14 8 10"></polyline>
+                <polyline points="16 6 12 10 8 6"></polyline>
+              </svg>
+            ) : null}
+          </div>
         </div>
       );
     } else {
@@ -1106,16 +1234,7 @@ useEffect(() => {
                 </div>
               </div>
               <div className="flex space-x-1">
-                <button className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                  </svg>
-                </button>
-                <button className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </button>
+                {/* Call and video call buttons have been removed */}
               </div>
             </div>
             

@@ -26,10 +26,30 @@ export const useFilterNavigation = () => {
         filterId = filterItem.BodyTypeID || filterItem.id;
         filterName = encodeURIComponent(filterItem.BodyTypeName || filterItem.displayName || filterItem.name);
         break;
-      case 'Budget':
-        filterId = `${filterItem.MinAmount}-${filterItem.MaxAmount}`;
-        filterName = encodeURIComponent(filterItem.RangeLabel || filterItem.displayName || filterItem.name);
+      case 'Budget': {
+        const min =
+          filterItem.MinAmount ??
+          filterItem.min ??
+          filterItem.minAmount;
+        const max =
+          filterItem.MaxAmount ??
+          filterItem.max ??
+          filterItem.maxAmount;
+
+        if (min != null && max != null) {
+          filterId = `${min}-${max}`;
+        } else if (filterItem.id || filterItem.BudgetID) {
+          filterId = filterItem.id || filterItem.BudgetID;
+        } else {
+          console.warn('Budget filter item missing min/max and id:', filterItem);
+          return;
+        }
+
+        filterName = encodeURIComponent(
+          filterItem.RangeLabel || filterItem.displayName || filterItem.name || ''
+        );
         break;
+      }
       default:
         return;
     }

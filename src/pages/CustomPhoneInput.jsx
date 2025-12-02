@@ -34,6 +34,47 @@ const getPlaceholder = (countryCode, defaultCountry = 'PK') => {
   }
 };
 
+// Maximum national digits per country (excluding country calling code)
+const getMaxDigitsForCountry = (countryCode) => {
+  const map = {
+    PK: 10, // 3XXXXXXXXX
+    US: 10,
+    GB: 11,
+    IN: 10,
+    AE: 9,
+    SA: 9,
+  };
+  return map[countryCode] || 15; // default 8-15 in validation
+};
+
+// Prevent typing more digits than allowed for the selected country
+const enforceMaxLength = (phone, countryCode) => {
+  if (!phone) return phone;
+
+  const code = countryCode || 'PK';
+
+  try {
+    const callingCode = getCountryCallingCode(code);
+    const digits = phone.replace(/\D/g, '');
+
+    const stripCode = (value) =>
+      value.startsWith(callingCode) ? value.slice(callingCode.length) : value;
+
+    const national = stripCode(digits);
+    const maxNational = getMaxDigitsForCountry(code);
+
+    if (national.length <= maxNational) {
+      return phone;
+    }
+
+    // Truncate national digits to the allowed maximum
+    const limitedNational = national.slice(0, maxNational);
+    return `+${callingCode}${limitedNational}`;
+  } catch (e) {
+    return phone;
+  }
+};
+
 const CustomPhoneInput = ({
   name,
   value = '',
@@ -59,8 +100,9 @@ const CustomPhoneInput = ({
   }, [value, currentCountry]);
 
   const handleChange = (phone) => {
+    const limitedPhone = enforceMaxLength(phone, currentCountry);
     if (onChange) {
-      onChange(phone);
+      onChange(limitedPhone);
     }
   };
 

@@ -14,15 +14,27 @@ const EnterOtp = () => {
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
-  // Get email from location state or redirect back
-  const userEmail = location.state?.email;
+  // Get email from location state or URL params
+  const [userEmail, setUserEmail] = useState('');
   
-  // Redirect back if no email is provided
   useEffect(() => {
-    if (!userEmail) {
-      navigate('/forgot-password');
+    // First try to get email from location state
+    const emailFromState = location.state?.email;
+    
+    // If not in state, try to get from URL params
+    const searchParams = new URLSearchParams(location.search);
+    const emailFromParams = searchParams.get('email');
+    
+    // Use email from state, then params, or empty string
+    const email = emailFromState || emailFromParams || '';
+    
+    if (email) {
+      setUserEmail(email);
+    } else {
+      // Only redirect if we can't get email from any source
+      navigate('/forgot-password', { replace: true });
     }
-  }, [userEmail, navigate]);
+  }, [location, navigate]);
 
   useEffect(() => {
     // Focus first input on mount

@@ -102,7 +102,7 @@ const MyAds = () => {
   }, []);
 
   const handleAdClick = (ad) => {
-    navigate(`/ad/${ad.AdID}`, { state: { adData: ad } });
+    navigate(`/ad/${ad.AdID}`, { state: { adData: ad, from: 'my-ads' } });
   };
 
   const handleDelete = (e, ad) => {
@@ -116,26 +116,37 @@ const MyAds = () => {
       
       // Call the delete API
       await apiService.ads.delete(deleteModal.ad.AdID);
-      
-      // Remove the ad from the local state
-      setAds(prevAds => prevAds.filter(a => a.AdID !== deleteModal.ad.AdID));
-      
-      // Update pagination
-      setPagination(prev => ({
-        ...prev,
-        total: prev.total - 1,
-        totalPages: Math.ceil((prev.total - 1) / prev.perPage)
-      }));
-      
+
       // Close modal
       setDeleteModal({ isOpen: false, ad: null });
-      
+
+      // After deletion, always reload the first page of ads
+      // This ensures that if the last ad on a later page is deleted,
+      // the user is taken back to a valid page instead of seeing an empty list
+      await fetchMyAds(1);
+
       // Show success message
-      alert('Ad deleted successfully!');
+      toast.success('Ad deleted successfully!', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
       
     } catch (error) {
       console.error('Failed to delete ad:', error);
-      alert('Failed to delete ad. Please try again.');
+      toast.error('Failed to delete ad. Please try again.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
       setDeleteModal({ isOpen: false, ad: null });
     }
   };
@@ -321,7 +332,7 @@ const MyAds = () => {
                   {/* Content */}
                   <div className="p-4">
                     <h3 className="text-lg font-semibold text-text-primary mb-2 truncate">
-                      {ad.BrandName} {ad.ModelName}
+                      {ad.VehicleName || `${ad.BrandName || ''} ${ad.ModelName || ''}`.trim()}
                     </h3>
                     <p className="text-emov-purple font-bold text-xl mb-3">
                       PKR {formatPrice(ad.VehiclePrice)}

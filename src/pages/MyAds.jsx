@@ -928,7 +928,15 @@ const handleSubmit = async () => {
       console.log('🎉 Ad created successfully!');
       
       // Show success message
-      alert('Ad created successfully!');
+      toast.success('Ad created successfully!', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
       
       // Reset form
       setFormData({
@@ -994,7 +1002,15 @@ const handleSubmit = async () => {
     }
     
     setError(errorMessage);
-    alert(`Error: ${errorMessage}`);
+    toast.error(`Error: ${errorMessage}`, {
+      position: "top-right",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      progress: undefined,
+    });
   } finally {
     setSubmitting(false);
   }

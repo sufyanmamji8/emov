@@ -135,8 +135,20 @@ const ChangePassword = () => {
       
       if (response.message && response.message.includes('success')) {
         // Show success message and redirect to login
-        alert('Password reset successfully! Please login with your new password.');
-        navigate('/login');
+        toast.success('Password reset successfully! Please login with your new password.', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+        
+        // Redirect to login after a short delay
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       } else {
         setError(response.message || 'Failed to reset password. Please try again.');
       }
