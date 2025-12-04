@@ -62,6 +62,15 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  // Custom sign out handler that prevents default navigation
+  const handleSignOut = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleLogout();
+    setShowProfileDropdown(false);
+    setIsMobileMenuOpen(false);
+  };
+
   const handleNavLinkClick = () => {
     if (isMobile) {
       setIsMobileMenuOpen(false);
@@ -220,10 +229,10 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   <span>Show all details</span>
                 </a>
                 <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
+                  onClick={handleSignOut}
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md text-left"
                 >
-                  <FaSignOutAlt className="w-4 h-4" />
+                  <FaSignOutAlt className="w-4 h-4 flex-shrink-0" />
                   <span>Sign out</span>
                 </button>
               </div>

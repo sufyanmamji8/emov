@@ -13,6 +13,14 @@ const gradientLeft = 'gradientleft.png';
 // Encode the space in the filename
 const gradientRight = 'gradientrightbottom.png';
 
+// Color constants
+const colors = {
+  green: '#10B981', // emerald-500
+  purple: '#8B5CF6', // violet-500
+  blue: '#3B82F6',  // blue-500
+  red: '#EF4444'    // red-500
+};
+
 // Debug: Log image paths and check if they're accessible
 console.log('Gradient Left Path:', gradientLeft);
 console.log('Gradient Right Path:', gradientRight);
@@ -55,6 +63,7 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
 );
 
 function Dashboard() {
+      const { isDark, toggleTheme } = useTheme();
       const { navigateToFilteredAds } = useFilterNavigation(); 
 
       // Ensure navigateToFilteredAds exists; provide safe fallback
@@ -143,6 +152,36 @@ function Dashboard() {
       ...prev,
       [tab]: 0,
     }));
+  };
+
+  // Handle user logout
+  const handleLogout = async () => {
+    try {
+      // Clear auth data first to prevent any race conditions
+      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      localStorage.removeItem('refreshToken');
+      sessionStorage.removeItem('token');
+      
+      // Update the user profile state
+      setUserProfile(null);
+      
+      // Make the logout API call (if needed)
+      try {
+        await apiService.auth.logout();
+      } catch (error) {
+        console.error('Logout API error:', error);
+        // Continue with navigation even if logout API fails
+      }
+      
+      // Navigate to home page
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still navigate to home even if there's an error
+      navigate('/', { replace: true });
+    }
   };
 
   // State for Recently Added vehicles from API
@@ -294,90 +333,11 @@ function Dashboard() {
       return currentSlides[tab] < maxSlide;
     }
   };
-  
-  // Use the theme hook
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === 'dark';
 
-  const scrollContainerRefs = {
-    Category: useRef(null),
-    Budget: useRef(null),
-    Brand: useRef(null),
-    Model: useRef(null),
-    BodyType: useRef(null)
-  };
+  const [apiError, setApiError] = useState(null);
 
-  // Your exact color scheme
-  const colors = {
-    purple: '#935eef',
-    green: '#00FFA9',
-    gradient: 'linear-gradient(135deg, #2bd6a8 0%, #bda8e9 100%)'
-  };
-
-  // Carousel navigation functions are defined at the top of the component
-  // These replace the old scroll functions
-
-  // Handle unauthorized access
-  const handleUnauthorizedAccess = () => {
-    handleUnauthorized();
-  };
-
-  // Handle token refresh
-  const refreshToken = async () => {
-    try {
-      const response = await apiService.auth.refreshToken();
-      if (response && response.token) {
-        localStorage.setItem('token', response.token);
-        return response.token;
-      }
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      // If refresh fails, log the user out
-      handleLogout();
-    }
-  };
-
-  // Handle logout
-  const handleLogout = async () => {
-    try {
-      // Call logout API if available
-      await apiService.auth.logout();
-    } catch (error) {
-      console.error('Error during logout:', error);
-    } finally {
-      // Clear auth data and go back to dashboard (public)
-      localStorage.removeItem('token');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
-      window.location.href = '/dashboard';
-    }
-  };
-
-  // Fetch filter data from API
-  // Fallback data in case API is not available
+  // Fallback data for when API is not available
   const fallbackData = {
-    category: [
-      {
-        VehicleTypeID: '1',
-        CategoryName: 'Truck',
-        CategoryNameUrdu: 'ٹرک',
-        CategoryNameFrench: 'Camion',
-        CategoryImage: 'truck.png'
-      },
-      {
-        VehicleTypeID: '2',
-        CategoryName: 'Tractor',
-        CategoryNameUrdu: 'ٹریکٹر',
-        CategoryNameFrench: 'Tracteur',
-        CategoryImage: 'tractor.png'
-      },
-      // Add more fallback categories as needed
-    ],
-    budget: [
-      { BudgetID: '1', MinAmount: '5000', MaxAmount: '10000', RangeLabel: '$5,000 - $10,000' },
-      { BudgetID: '2', MinAmount: '10000', MaxAmount: '20000', RangeLabel: '$10,000 - $20,000' },
-      // Add more budget ranges as needed
-    ],
     bodyType: [
       { 
         BodyTypeID: '1', 
@@ -441,8 +401,6 @@ function Dashboard() {
       }
     ]
   };
-
-  const [apiError, setApiError] = useState(null);
 
   const fetchFilterData = useCallback(async () => {
     // Skip if we already have data
@@ -1437,72 +1395,62 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Search Bar */}
-  <div className="w-full px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40">
+{/* FINAL – Exactly like your screenshot, no focus border, no shadow, original filter icon */}
+<div className="w-full px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40">
   <div className="relative">
-    {/* Glass background layer */}
-    <div 
-      className="absolute inset-0 rounded-xl"
-      style={{
-        background: 'rgba(255, 255, 255, 0.25)',
-        backdropFilter: 'blur(12px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
-        border: '1px solid rgba(255, 255, 255, 0.3)'
-      }}
-    />
-    
-    {/* Glass reflection effect */}
-    <div 
-      className="absolute inset-0 rounded-xl pointer-events-none"
-      style={{
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%, rgba(255,255,255,0.2) 100%)',
-        mixBlendMode: 'overlay',
-        opacity: '0.6'
-      }}
-    />
 
-    <div className="absolute inset-y-0 left-0 pl-4 sm:pl-5 flex items-center pointer-events-none z-10">
-      <svg 
-        xmlns="http://www.w3.org/2000/svg" 
-        className="h-6 w-6 text-gray-800" 
-        fill="none" 
-        viewBox="0 0 24 24" 
-        stroke="currentColor"
-        style={{
-          minWidth: '24px',
-          minHeight: '24px'
-        }}
-      >
-        <path 
-          strokeLinecap="round" 
-          strokeLinejoin="round" 
-          strokeWidth={2} 
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
-        />
-      </svg>
-    </div>
-    
-    <input
-      type="text"
-      className="relative w-full pl-12 sm:pl-14 pr-12 sm:pr-14 py-4 sm:py-5 bg-transparent border-none focus:outline-none focus:ring-0 text-gray-800 placeholder-gray-600 text-base sm:text-lg font-medium z-10"
+    {/* Main Glass Container – Matches your mobile reference exactly */}
+    <div 
+      className="relative w-full h-14 sm:h-16 rounded-2xl overflow-hidden border border-white/30 flex items-center"
       style={{
-        borderRadius: '12px',
+        background: 'linear-gradient(135deg, rgba(240, 255, 250, 0.85) 0%, rgba(245, 240, 255, 0.75) 100%)',
+        backdropFilter: 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
       }}
-      placeholder={t.searchPlaceholder}
-    />
-    
-    <div className="absolute inset-y-0 right-0 pr-4 sm:pr-5 flex items-center z-10">
-      <button 
-        className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 bg-white/50 hover:bg-white/70 backdrop-blur-sm border border-white/40 rounded-lg transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-white/30"
+    >
+
+      {/* Ultra-subtle top shine (light refraction) */}
+      <div 
+        className="absolute inset-0 opacity-50 pointer-events-none"
         style={{
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)'
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, transparent 60%)',
         }}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+      />
+
+      {/* Search Icon – Left */}
+      <div className="absolute left-5 z-10">
+        <svg 
+          className="w-6 h-6 text-gray-700" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-      </button>
+      </div>
+
+      {/* Input Field */}
+      <input
+        type="text"
+        placeholder={t.searchPlaceholder || "Search for vehicles..."}
+        className="w-full h-full pl-16 pr-20 bg-transparent text-gray-800 placeholder-gray-600 text-base sm:text-lg font-medium focus:outline-none z-10"
+      />
+
+      {/* Filter / Dropdown Icon – Right (matches your mobile app exactly) */}
+      <div className="absolute right-5 z-10">
+        <svg 
+          className="w-6 h-6 text-gray-700" 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+          strokeWidth={3}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1520,7 +1468,7 @@ useEffect(() => {
        
       
       {/* Banner Section */}
-      <section className="w-full bg-bg-primary py-0 sm:py-0">
+      {/* <section className="w-full bg-bg-primary py-0 sm:py-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="w-full rounded-xl overflow-hidden ">
             <img 
@@ -1532,7 +1480,7 @@ useEffect(() => {
             />
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Main Content */}
       <main className="w-full relative z-10">

@@ -46,11 +46,11 @@ const AppContent = ({ children, isAuthenticated, loading, handleLogin, handleLog
           <Route path="/login" element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />} />
           <Route path="/signup" element={!isAuthenticated ? <Signup /> : <Navigate to="/dashboard" />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/verify-otp" element={<EnterOTP />} />
+          <Route path="/enter-otp" element={<EnterOTP />} />
           <Route path="/change-password" element={<ChangePassword />} />
           <Route 
             path="/dashboard" 
-            element={<Dashboard />} 
+            element={<Dashboard handleLogout={handleLogout} />} 
           />
           <Route 
             path="/profile" 
@@ -106,7 +106,7 @@ function App() {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     setIsAuthenticated(false);
-    window.location.href = '/dashboard';
+    // Removed forced redirect - let the routing handle it
   };
 
   return (

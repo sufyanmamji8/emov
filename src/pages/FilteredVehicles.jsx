@@ -72,10 +72,13 @@ const FilteredVehicles = () => {
       console.error('Error fetching ads:', error);
       
       if (error.response && error.response.status === 401) {
-        console.log('401 Unauthorized - Redirecting to login');
+        console.log('401 Unauthorized - Clearing auth data');
         localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        navigate('/login');
+        localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('token');
+        // Don't redirect automatically - let the components handle it
         return;
       }
       

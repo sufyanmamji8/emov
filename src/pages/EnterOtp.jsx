@@ -171,60 +171,75 @@ const EnterOtp = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-bg-primary">
-      {/* Left side - Brand Section */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 items-center justify-center p-8 relative overflow-hidden" 
-        style={{ maxHeight: '100vh', background: 'var(--emov-gradient)' }}
-      >
-        {/* Animated background elements */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-emov-purple rounded-full animate-pulse"></div>
-          <div className="absolute bottom-1/3 right-1/4 w-24 h-24 bg-emov-green rounded-full animate-bounce"></div>
-          <div className="absolute top-1/3 right-1/3 w-20 h-20 bg-emov-purple rounded-full animate-ping"></div>
+    <div className="min-h-screen flex flex-col md:flex-row bg-white">
+      {/* Left Section - Decorative Section */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-white overflow-hidden">
+        {/* Gradient at top-left */}
+        <div className="absolute top-0 left-0 w-80 h-80">
+          <img 
+            src="/topleftauth.png" 
+            alt="Gradient Left" 
+            className="w-full h-full object-contain"
+          />
         </div>
         
-        <div className="max-w-md text-white text-center relative z-10">
+        {/* Gradient at bottom-right */}
+        <div className="absolute bottom-0 right-0 w-80 h-80">
           <img 
-            src="/emovlogo.png" 
-            alt="Emov Logo" 
-            className="w-48 mx-auto mb-8"
+            src="/bottomrightauth.png" 
+            alt="Gradient Right Bottom" 
+            className="w-full h-full object-contain"
           />
-          <h1 className="text-4xl font-bold mb-4">Welcome Back!</h1>
-          <p className="text-lg opacity-90">Enter the OTP sent to your email to verify your account.</p>
         </div>
-      </div>
-
-      {/* Right side - OTP Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-bg-primary relative">
-        {/* Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-bg-secondary transition-colors"
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-        >
-          {theme === 'dark' ? (
-            <FaSun className="w-5 h-5 text-yellow-300" />
-          ) : (
-            <FaMoon className="w-5 h-5 text-text-secondary" />
-          )}
-        </button>
-
-        <div className="w-full max-w-md mx-auto flex flex-col items-center">
-          {/* OTP Image */}
-          <div className="w-24 h-24 mb-6 flex justify-center items-center">
+        
+        {/* Centered content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
+          <div className="w-36 h-36">
             <img 
-              src="/otp.png" 
-              alt="OTP Verification" 
+              src="/emovlogo.png" 
+              alt="Emov Logo" 
               className="w-full h-full object-contain"
             />
           </div>
-          
-          <h1 className="text-2xl font-bold text-text-primary mb-2">Enter Verification Code</h1>
-          <p className="text-text-secondary mb-8 text-center">
-            We've sent a 6-digit code to <span className="font-medium">{userEmail}</span>
-          </p>
-          
+          <div className="w-32">
+            <img 
+              src="/emovfont.png" 
+              alt="Emov" 
+              className="w-full h-auto"
+            />
+          </div>
+          <h2 className="text-gray-600 text-sm font-medium">Buy and Sell Vehicles</h2>
+        </div>
+      </div>
+
+      {/* Right Section - OTP Form */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center relative overflow-hidden">
+        {/* Top Section with both logos */}
+        <div className="w-full h-96 flex flex-col items-center justify-center relative bg-cover bg-center" style={{ backgroundImage: 'url(/authpattern.png)' }}>
+          {/* Small emovfont.png at the top */}
+          <div className="absolute top-16">
+            <img 
+              src="/emovlogowhite.png" 
+              alt="Emov" 
+              className="h-8 object-contain"
+            />
+          </div>
+          {/* Main otpemov.png in the center */}
+          <div className="absolute -mt-8 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+            <img 
+              src="/otp.png" 
+              alt="Emov" 
+              className="h-24 object-contain"
+            />
+          </div>
+        </div>
+        
+        {/* OTP Card */}
+        <div className="w-full max-w-xl bg-white rounded-3xl -mt-56 p-8 z-10 shadow-lg border border-gray-100 shadow-gray-400/30">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold mt-2 text-gray-900 mb-1">Enter OTP</h1>
+            <p className="text-gray-600">We've sent a 6-digit code to {userEmail || 'your email'}</p>
+          </div>
           <form onSubmit={handleSubmit} className="w-full space-y-6">
             {/* OTP Input Fields */}
             <div className="space-y-2">

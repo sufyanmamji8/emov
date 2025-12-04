@@ -44,7 +44,10 @@ const MyAds = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
-    window.location.href = '/dashboard';
+    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('token');
+    // Navigate to home page instead of dashboard
+    window.location.href = '/';
   };
 
   // Helper function to construct image URLs
@@ -264,25 +267,7 @@ const MyAds = () => {
             handleLogout={handleLogout}
           />
         </div>
-      {/* Header */}
-      {/* <div className="bg-bg-secondary border-b border-border-primary sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <button
-                onClick={() => navigate(-1)}
-                className="mr-4 p-2 rounded-lg hover:bg-bg-tertiary transition-colors"
-              >
-                <FaArrowLeft className="w-5 h-5 text-text-primary" />
-              </button>
-              <h1 className="text-xl font-semibold text-text-primary">My Ads</h1>
-            </div>
-            <div className="text-sm text-text-secondary">
-              {pagination.total} {pagination.total === 1 ? 'Ad' : 'Ads'}
-            </div>
-          </div>
-        </div>
-      </div> */}
+    
 
       {/* Main Content */}
       <div className="flex justify-end mb-6  px-4 sm:px-6 lg:px-8 mt-10 w-full">

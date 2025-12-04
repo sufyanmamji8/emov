@@ -1009,7 +1009,10 @@ useEffect(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
-    window.location.href = '/dashboard';
+    localStorage.removeItem('refreshToken');
+    sessionStorage.removeItem('token');
+    // Navigate to home page instead of dashboard
+    window.location.href = '/';
   };
 
   return (

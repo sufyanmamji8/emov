@@ -88,13 +88,11 @@ api.interceptors.response.use(
       if (!isLoginRequest) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        // Use a small timeout to allow the error to be processed
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 100);
+        // Don't redirect automatically - let the components handle it
+        console.log('[authApi] 401 error handled, no automatic redirect');
       }
     }
-    return Promise.reject(error);
+    throw error;
   }
 );
 

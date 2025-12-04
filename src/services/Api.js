@@ -99,55 +99,61 @@ api.interceptors.response.use(
     
     // Handle 401 Unauthorized errors
     if (error.response?.status === 401) {
-      console.warn('[API] 401 Unauthorized - User may need to re-authenticate');
+      const isLogoutAction = originalRequest?.url?.includes('/auth/logout');
       
-      // Immediate redirect for certain endpoints that don't support token refresh
-      if (originalRequest.url?.includes('/vehiclesfilter') || 
-          originalRequest.url?.includes('/ads')) {
-        console.log('[API] 401 on protected endpoint, redirecting to login immediately');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        sessionStorage.removeItem('token');
-        // Force redirect
-        window.location.href = '/login';
+      // Don't try to refresh token if this is a logout action
+      if (isLogoutAction) {
+        console.log('[API] Logout action detected, skipping token refresh');
         return Promise.reject(error);
       }
       
-      // Try to refresh token if this isn't a refresh request
-      if (originalRequest.url !== '/auth/refresh-token' && !originalRequest._retry) {
-        originalRequest._retry = true;
-        try {
-          console.log('[API] Attempting to refresh token...');
-          const newToken = await apiService.auth.refreshToken();
-          if (newToken && newToken.token) {
-            console.log('[API] Token refreshed successfully');
-            localStorage.setItem('token', newToken.token);
-            originalRequest.headers.Authorization = `Bearer ${newToken.token}`;
-            return api(originalRequest);
-          } else if (newToken && newToken.access_token) {
-            console.log('[API] Token refreshed successfully');
-            localStorage.setItem('token', newToken.access_token);
-            originalRequest.headers.Authorization = `Bearer ${newToken.access_token}`;
-            return api(originalRequest);
-          }
-        } catch (refreshError) {
-          console.error('[API] Token refresh failed:', refreshError);
-          // If refresh fails, clear auth and redirect to login
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          sessionStorage.removeItem('token');
-          console.log('[API] Redirecting to login...');
-          window.location.replace('/login');
-          return Promise.reject(refreshError);
-        }
+      // Check if this is a refresh token request to prevent infinite loops
+      if (originalRequest.url.includes('/auth/refresh')) {
+        console.log('[API] Refresh token failed, logging out...');
+        // Clear auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        
+        // Don't redirect - let the components handle it
+        return Promise.reject(error);
       }
 
-      // If we get here, either it was a refresh request or refresh failed
-      console.log('[API] Authentication required, redirecting to login...');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('token');
-      window.location.replace('/login');
+      // If this is a retry after a failed refresh, reject
+      if (originalRequest._retry) {
+        return Promise.reject(error);
+      }
+
+      // Set the retry flag
+      originalRequest._retry = true;
+
+      try {
+        // Try to refresh the token
+        const response = await api.post('/auth/refresh');
+        const { token, accessToken } = response.data;
+        
+        // Store the new tokens
+        localStorage.setItem('token', token);
+        localStorage.setItem('accessToken', accessToken);
+        
+        // Update the Authorization header
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        
+        // Retry the original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.error('[API] Token refresh failed:', refreshError);
+        
+        // Clear auth data
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        
+        // Don't redirect - let the components handle it
+        return Promise.reject(refreshError);
+      }
     }
     
     // Handle CORS errors that might be 401s
@@ -156,11 +162,11 @@ api.interceptors.response.use(
       // Check if this is likely an auth error based on the URL
       if (originalRequest.url?.includes('/vehiclesfilter') || 
           originalRequest.url?.includes('/ads')) {
-        console.log('[API] CORS error on protected endpoint, redirecting to login');
+        console.log('[API] CORS error on protected endpoint');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         sessionStorage.removeItem('token');
-        window.location.href = '/login';
+        // Don't redirect - let the components handle it
         return Promise.reject(error);
       }
     }
@@ -745,11 +751,13 @@ const apiService = {
         return response.data;
       } catch (error) {
         console.error('Refresh token error:', error);
-        // If refresh fails, clear the token and redirect to dashboard
+        // If refresh fails, clear the token
         if (error.response?.status === 401) {
           localStorage.removeItem('token');
+          localStorage.removeItem('accessToken');
           localStorage.removeItem('user');
-          window.location.replace('/dashboard');
+          sessionStorage.removeItem('token');
+          // Don't redirect - let the components handle it
         }
         throw error;
       }
@@ -758,23 +766,33 @@ const apiService = {
 };
 
 // Utility function to handle 401 errors
-export const handleUnauthorized = () => {
-  console.log('[API] Handling unauthorized access - redirecting to dashboard');
+export const handleUnauthorized = (options = {}) => {
+  const { preventRedirect = false } = options;
+  console.log('[API] Handling unauthorized access', { preventRedirect });
+  
+  // Clear auth data
   localStorage.removeItem('token');
+  localStorage.removeItem('accessToken');
   localStorage.removeItem('user');
   sessionStorage.removeItem('token');
-  window.location.href = '/dashboard';
+  
+  // Never redirect automatically - let the components handle it
+  console.log('[API] Auth data cleared, no automatic redirect');
 };
 
 // Global error handler for 401 errors and CORS errors
 window.addEventListener('unhandledrejection', (event) => {
   // Check for 401 errors
   if (event.reason && event.reason.response && event.reason.response.status === 401) {
-    console.log('[API] Caught 401 error in global handler, redirecting to dashboard');
+    console.log('[API] Unhandled 401 error, logging out...');
+    // Clear auth data
     localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
     sessionStorage.removeItem('token');
-    window.location.href = '/dashboard';
+    
+    // Don't redirect automatically - let the components handle it
+    console.log('[API] Auth data cleared from global handler, no automatic redirect');
   }
   // Check for CORS errors on protected endpoints
   else if (event.reason && event.reason.code === 'ERR_NETWORK' && 
@@ -782,11 +800,12 @@ window.addEventListener('unhandledrejection', (event) => {
            event.reason.config && event.reason.config.url) {
     const url = event.reason.config.url;
     if (url.includes('/vehiclesfilter') || url.includes('/ads') || url.includes('/ads')) {
-      console.log('[API] Caught CORS error on protected endpoint in global handler, redirecting to dashboard');
+      console.log('[API] CORS error on protected endpoint');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       sessionStorage.removeItem('token');
-      window.location.href = '/dashboard';
+      // Don't redirect - let the components handle it
+      console.log('[API] Auth data cleared from CORS error, no automatic redirect');
     }
   }
 });

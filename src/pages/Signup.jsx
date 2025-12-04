@@ -178,52 +178,74 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-bg-primary">
-      {/* Left side - Brand Section */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 items-center justify-center p-8 relative overflow-hidden" 
-        style={{ background: 'var(--emov-gradient)' }}
-      >
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-emov-purple rounded-full animate-pulse"></div>
-          <div className="absolute bottom-1/3 right-1/4 w-24 h-24 bg-emov-green rounded-full animate-bounce"></div>
-          <div className="absolute top-1/3 right-1/3 w-20 h-20 bg-emov-purple rounded-full animate-ping"></div>
+      {/* Left Section - Decorative Section */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-white overflow-hidden">
+        {/* Gradient at top-left */}
+        <div className="absolute top-0 left-0 w-80 h-80">
+          <img 
+            src="/topleftauth.png" 
+            alt="Gradient Left" 
+            className="w-full h-full object-contain"
+          />
         </div>
         
-        <div className="max-w-md text-text-primary text-center relative z-10 flex flex-col items-center">
+        {/* Gradient at bottom-right */}
+        <div className="absolute bottom-0 right-0 w-80 h-80">
           <img 
-            src="/emovlogo.png" 
-            alt="Emov Logo" 
-            className="w-32 h-32 mb-4 animate-fade-in"
+            src="/bottomrightauth.png" 
+            alt="Gradient Right Bottom" 
+            className="w-full h-full object-contain"
           />
-          <div className="mb-3 animate-fade-in w-40">
+        </div>
+        
+        {/* Centered content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
+          <div className="w-36 h-36">
+            <img 
+              src="/emovlogo.png" 
+              alt="Emov Logo" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="w-32">
             <img 
               src="/emovfont.png" 
               alt="Emov" 
               className="w-full h-auto"
             />
           </div>
-          <p className="text-xl font-light mb-4 animate-slide-up text-gray-700">Buy & Sell Vehicles</p>
+          <h2 className="text-gray-600 text-sm font-medium">Buy and Sell Vehicles</h2>
         </div>
       </div>
 
-      {/* Right side - Signup Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 md:p-8 bg-bg-primary">
-        <div className="w-full max-w-md">
-          {/* Image above Create Account heading */}
-          <div className="w-full flex justify-center mb-4">
-            <div className="w-20 h-20">
-              <img 
-                src="/loginemov.png" 
-                alt="Emov" 
-                className="w-full h-full object-contain"
-              />
-            </div>
+      {/* Right Section - Signup Form */}
+      <div className="w-full lg:w-1/2 flex flex-col items-center relative overflow-hidden">
+        {/* Top Section with both logos */}
+        <div className="w-full h-96 flex flex-col items-center justify-center relative bg-cover bg-center" style={{ backgroundImage: 'url(/authpattern.png)' }}>
+          {/* Small emovfont.png at the top */}
+          <div className="absolute top-16">
+            <img 
+              src="/emovlogowhite.png" 
+              alt="Emov" 
+              className="h-8 object-contain"
+            />
           </div>
-
-          {/* Header */}
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-text-primary mb-2">Create Account</h2>
-            <p className="text-text-secondary text-sm">Join us and start your journey</p>
+          {/* Main signupemov.png in the center */}
+          <div className="absolute -mt-8 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+            <img 
+              src="/signupemov.png" 
+              alt="Emov" 
+              className="h-24 object-contain"
+            />
+          </div>
+        </div>
+        
+        {/* Signup Card */}
+        <div className="w-full max-w-xl bg-white rounded-3xl -mt-56 p-8 z-10 shadow-lg border border-gray-100 shadow-gray-400/30">
+          {/* Welcome Text */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold mt-2 text-gray-900 mb-1">Create Account</h1>
+            <p className="text-gray-600">Join us to start your journey</p>
           </div>
 
           {/* Error Message */}

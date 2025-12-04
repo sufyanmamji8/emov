@@ -63,146 +63,142 @@ const ForgotPassword = () => {
 
   return (
     <div className={`min-h-screen flex flex-col md:flex-row ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
-      {/* Left side - Brand Section with Gradient */}
-      <div 
-        className="hidden lg:flex lg:w-1/2 items-center justify-center p-8 relative overflow-hidden" 
-        style={{ maxHeight: '100vh', background: 'var(--emov-gradient)' }}
-      >
-        {/* Animated background elements */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-emov-purple rounded-full animate-pulse"></div>
-          <div className="absolute bottom-1/3 right-1/4 w-24 h-24 bg-emov-green rounded-full animate-bounce"></div>
-          <div className="absolute top-1/3 right-1/3 w-20 h-20 bg-emov-purple rounded-full animate-ping"></div>
+       {/* Left Section - Decorative Section */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-white overflow-hidden">
+        {/* Gradient at top-left */}
+        <div className="absolute top-0 left-0 w-80 h-80">
+          <img 
+            src="/topleftauth.png" 
+            alt="Gradient Left" 
+            className="w-full h-full object-contain"
+          />
         </div>
         
-        <div className="max-w-md text-gray-800 text-center relative z-10 flex flex-col items-center">
+        {/* Gradient at bottom-right */}
+        <div className="absolute bottom-0 right-0 w-80 h-80">
           <img 
-            src="/emovlogo.png" 
-            alt="Emov Logo" 
-            className="w-40 h-40 mb-6 animate-fade-in"
+            src="/bottomrightauth.png" 
+            alt="Gradient Right Bottom" 
+            className="w-full h-full object-contain"
           />
-          <div className="mb-4 animate-fade-in w-48">
+        </div>
+        
+        {/* Centered content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
+          <div className="w-36 h-36">
+            <img 
+              src="/emovlogo.png" 
+              alt="Emov Logo" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="w-32">
             <img 
               src="/emovfont.png" 
               alt="Emov" 
               className="w-full h-auto"
             />
           </div>
-          <p className="text-2xl font-light mb-6 animate-slide-up text-text-secondary">Don't worry, we'll help you recover</p>
-          <div className="w-24 h-1 bg-emov-purple mx-auto animate-expand"></div>
+          <h2 className="text-gray-600 text-sm font-medium">Buy and Sell Vehicles</h2>
         </div>
       </div>
-
-      {/* Right side - Forgot Password Form */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-8 bg-bg-primary">
-        {/* Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          className="absolute top-4 right-4 p-2 rounded-full hover:bg-bg-secondary transition-colors"
-          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-        >
-          {theme === 'dark' ? (
-            <FaSun className="w-5 h-5 text-yellow-300" />
-          ) : (
-            <FaMoon className="w-5 h-5 text-text-secondary" />
-          )}
-        </button>
-
-        {/* Emov Logo at the very top */}
-        <div className="w-36 mb-5">
-          <img 
-            src="/emovfont.png" 
-            alt="Emov" 
-            className="w-full h-auto"
-          />
-        </div>
-        
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-text-primary mb-2">Forgot Password</h1>
-          <p className="text-text-secondary mb-8">Enter your email address and we'll send you a verification code to reset your password.</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="w-full space-y-4">
-          {/* Error Message */}
-          {error && (
-            <div className="w-full p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg animate-slide-up">
-              <p className="text-red-600 dark:text-red-400 text-sm text-center">{error}</p>
-            </div>
-          )}
-
-          {/* Success Message */}
-          {success && (
-            <div className="w-full p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg animate-slide-up">
-              <p className="text-green-600 dark:text-green-400 text-sm text-center">{success}</p>
-            </div>
-          )}
-
-          {/* Email Field */}
-          <div className="animate-slide-up" style={{animationDelay: '0.1s'}}>
-            <label htmlFor="email" className="block text-sm font-medium text-text-primary dark:text-gray-200 mb-1">Email</label>
-            <input 
-              type="email" 
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-border-primary rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-emov-purple bg-bg-secondary text-text-primary"
-              placeholder="Enter your email"
-              required
-              disabled={loading}
+      {/* Right Section - Forgot Password Form */}
+     {/* Right Section - Forgot Password Form */}
+<div className="w-full lg:w-1/2 flex flex-col items-center relative overflow-hidden">
+  {/* Top Section with both logos */}
+  <div className="w-full h-96 flex flex-col items-center justify-center relative bg-cover bg-center" style={{ backgroundImage: 'url(/authpattern.png)' }}>
+          {/* Small emovfont.png at the top */}
+          <div className="absolute top-16">
+            <img 
+              src="/emovlogowhite.png" 
+              alt="Emov" 
+              className="h-8 object-contain"
             />
           </div>
+          {/* Main forgetpass.png in the center */}
+          <div className="absolute -mt-8 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+            <img 
+              src="/forgetpass.png" 
+              alt="Emov" 
+              className="h-24 object-contain"
+            />
+          </div>
+        </div>
+        
+        {/* Forgot Password Card */}
+        <div className="w-full max-w-xl bg-white rounded-3xl -mt-56 p-8 z-10 shadow-lg border border-gray-100 shadow-gray-400/30">
+    {/* Welcome Text */}
+    <div className="text-center mb-8">
+      <h1 className="text-2xl font-bold mt-2 text-gray-900 mb-1">Forgot Password</h1>
+      <p className="text-gray-600">Enter your email to reset your password</p>
+    </div>
 
-          {/* Divider */}
-          <div className="border-t border-gray-200 my-6 animate-fade-in"></div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="w-full py-3 px-4 mt-6 text-white text-lg font-medium rounded-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg active:scale-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
-            style={{
-              background: 'var(--emov-gradient)',
-              border: 'none',
-              backgroundSize: '200% auto',
-              minHeight: '48px'
-            }}
-            disabled={loading}
-            onMouseOut={(e) => {
-              e.target.style.backgroundPosition = 'left center';
-              e.target.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-            }}
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Sending...
-              </>
-            ) : (
-              'Send OTP'
-            )}
-          </button>
-
-          {/* Remember Password Link */}
-          <p className="mt-4 text-center text-sm text-text-secondary dark:text-gray-300">
-            I remember my password{' '}
-            <Link 
-              to="/login" 
-              className="font-semibold hover:underline transition-colors duration-300 bg-clip-text text-transparent"
-              style={{
-                backgroundImage: 'var(--emov-gradient)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              Sign in
-            </Link>
-          </p>
-        </form>
+    {/* Error Message */}
+    {error && (
+      <div className="w-full mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <p className="text-red-600 text-sm text-center">{error}</p>
       </div>
+    )}
+
+    {/* Success Message */}
+    {success && (
+      <div className="w-full mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+        <p className="text-green-600 text-sm text-center">{success}</p>
+      </div>
+    )}
+
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
+      {/* Email Field */}
+      <div>
+        <label className="block text-sm font-normal text-gray-700 mb-1">Email</label>
+        <input 
+          type="email" 
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+          className="w-full px-4 py-3 text-sm text-gray-900 border border-gray-200 rounded-lg focus:ring-2 focus:ring-emov-purple focus:border-transparent focus:outline-none bg-gray-100"
+          placeholder="Enter your email"
+          required
+          disabled={loading}
+        />
+      </div>
+
+      {/* Submit Button */}
+      <button
+        type="submit"
+        className="w-full py-3 px-4 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center"
+        style={{ 
+          background: 'var(--emov-green)',
+          boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+        }}
+        disabled={loading}
+      >
+        {loading ? (
+          <>
+            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Sending...
+          </>
+        ) : 'Send OTP'}
+      </button>
+    </form>
+
+    {/* Back to Login Link */}
+    <div className="mt-4 text-center">
+      <p className="text-sm text-gray-600">
+        Remember your password?{' '}
+        <Link 
+          to="/login" 
+          className="font-medium text-emov-purple hover:underline"
+        >
+          Sign in
+        </Link>
+      </p>
+    </div>
+  </div>
+</div>
     </div>
   );
 };
