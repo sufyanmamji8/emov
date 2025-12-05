@@ -1,7 +1,7 @@
 // src/pages/FilteredVehicles.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import apiService, { api } from '../services/Api';
 
 const FilteredVehicles = () => {
   const { filterType, filterId } = useParams();
@@ -47,17 +47,10 @@ const FilteredVehicles = () => {
 
       console.log('API Params:', apiParams);
 
-      const token = localStorage.getItem('token');
+      console.log('[FilteredVehicles] Fetching ads with params:', apiParams);
       
-      const response = await axios.get(`https://api.emov.com.pk/v2/ads`, {
-        params: apiParams,
-        headers: token ? {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        } : {
-          'Content-Type': 'application/json'
-        }
-      });
+      // Use the api instance which handles X-PLATFORM: WEB header for unauthorized requests
+      const response = await api.get('/ads', { params: apiParams });
 
       console.log('API Response:', response.data);
       

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import { useNavigate, useLocation } from 'react-router-dom';
-import authApi from '../services/AuthApi';
+import authApi from '../services/authApi';
 
 const EnterOtp = () => {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);

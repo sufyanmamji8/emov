@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaCaretDown, FaSun, FaMoon, FaPaperPlane, FaImage, FaTimes, FaSearch, FaMicrophone } from 'react-icons/fa';
+import { FaCaretDown, FaSun, FaMoon, FaPaperPlane, FaImage, FaTimes, FaSearch, FaMicrophone, FaStop, FaCircle } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
 import { useTheme } from '../context/ThemeContext';
 import { useChat } from '../contexts/ChatContext';
 import chatService from '../services/chatService'; 
 import { FaTrash, FaUserSlash } from 'react-icons/fa';
+import Header from '../components/Layout/Header';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import axios from 'axios';
-
-
-
 
 // Convert date to Pakistan time (UTC+5)
 const toPakistanTime = (dateString) => {
@@ -21,44 +22,54 @@ const toPakistanTime = (dateString) => {
   return new Date(date.getTime() + offset * 60 * 1000);
 };
 
-
 // Utility function for time formatting
 const formatTimeAgo = (dateString) => {
   if (!dateString) return 'Just now';
   
-  const date = toPakistanTime(dateString);
-  const now = toPakistanTime();
-  const seconds = Math.floor((now - date) / 1000);
-  
-  const intervals = {
-    year: 31536000,
-    month: 2592000,
-    week: 604800,
-    day: 86400,
-    hour: 3600,
-    minute: 60
-  };
+  try {
+    const date = toPakistanTime(dateString);
+    const now = toPakistanTime();
+    
+    // For messages that are being sent (future dates)
+    if (date > now) {
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+    
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) {
+      const minutes = Math.floor(seconds / 60);
+      return `${minutes}m`;
+    }
+    if (seconds < 86400) {
+      const hours = Math.floor(seconds / 3600);
+      return `${hours}h`;
+    }
+    if (seconds < 604800) {
+      const days = Math.floor(seconds / 86400);
+      return `${days}d`;
+    }
+    
+    // For older dates, return a formatted date in Pakistan time
+    return date.toLocaleDateString('en-PK', {
+      month: 'short',
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return '';
+  }
+};
 
-  if (seconds < 60) return 'Just now';
-  if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m ago`;
-  }
-  if (seconds < 86400) {
-    const hours = Math.floor(seconds / 3600);
-    return `${hours}h ago`;
-  }
-  if (seconds < 604800) {
-    const days = Math.floor(seconds / 86400);
-    return `${days}d ago`;
-  }
-  
-  // For older dates, return a formatted date in Pakistan time
-  return date.toLocaleDateString('en-PK', {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-  });
+// Format time in MM:SS format
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
 
 // Fixed: Correct image URL handling used across chats (avatars and message images)
@@ -133,40 +144,47 @@ const getAudioUrl = (audioPath) => {
   return finalUrl;
 };
 
-// Fixed: Avatar component with proper centering
+// Fixed: Avatar component with proper centering and image fallback
 const Avatar = ({ user, size = 'md' }) => {
   const sizeClasses = {
-    sm: 'w-8 h-8 text-sm',
-    md: 'w-10 h-10 text-base',
-    lg: 'w-12 h-12 text-lg'
+    sm: 'w-8 h-8 min-w-[2rem]',
+    md: 'w-10 h-10 min-w-[2.5rem]',
+    lg: 'w-12 h-12 min-w-[3rem]',
+    xl: 'w-16 h-16 min-w-[4rem]'
+  };
+
+  const textSizes = {
+    sm: 'text-xs',
+    md: 'text-sm',
+    lg: 'text-base',
+    xl: 'text-xl'
   };
 
   const [imageError, setImageError] = useState(false);
-  
-  // Check if we should show image or fallback
-  const showImage = user.avatar && user.avatar !== '/default-avatar.png' && !imageError;
+  const avatarUrl = getImageUrl(user?.avatar || user?.picture, true);
+  const name = user?.name || 'U';
+  const firstLetter = name.charAt(0).toUpperCase();
+
+  // Reset error state when avatarUrl changes
+  useEffect(() => {
+    setImageError(false);
+  }, [avatarUrl]);
 
   return (
-    <div className="relative flex-shrink-0">
-      {showImage ? (
-        <img
-          src={user.avatar}
-          alt={user.name}
-          className={`${sizeClasses[size]} rounded-full object-cover border-2 border-emerald-200`}
-          onError={() => {
-            console.log('❌ Avatar image failed to load:', user.avatar);
-            setImageError(true);
-          }}
-          onLoad={() => {
-            console.log('✅ Avatar image loaded successfully:', user.avatar);
-            setImageError(false);
-          }}
-        />
+    <div className={`relative flex-shrink-0 ${sizeClasses[size]}`}>
+      {avatarUrl && !imageError ? (
+        <div className="relative w-full h-full rounded-full overflow-hidden">
+          <img
+            src={avatarUrl}
+            alt={name}
+            className="w-full h-full object-cover"
+            onError={() => setImageError(true)}
+            style={{ minWidth: sizeClasses[size].match(/min-w-\[([^\]]+)\]/)?.[1] || '100%' }}
+          />
+        </div>
       ) : (
-        <div 
-          className={`${sizeClasses[size]} flex items-center justify-center rounded-full bg-emerald-100 border-2 border-emerald-200 font-bold text-emerald-600`}
-        >
-          {user.firstLetter}
+        <div className="w-full h-full rounded-full bg-gradient-to-br from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 flex items-center justify-center text-white font-medium">
+          {firstLetter}
         </div>
       )}
     </div>
@@ -206,6 +224,12 @@ export default function Chats() {
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [selectedAudio, setSelectedAudio] = useState(null);
   const [selectedAudioFile, setSelectedAudioFile] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [showRecordingUI, setShowRecordingUI] = useState(false);
+  const recordingInterval = useRef(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const messagesEndRef = useRef(null);
@@ -399,14 +423,42 @@ const renderImageContent = (imageUrl) => {
 
   // Debug effect to see what's in the chats
 useEffect(() => {
+  console.log('📋 Chat List Debug - Total Chats:', chats.length);
+  
   if (chats.length > 0) {
-    console.log('📋 Current chats state:', chats.map(chat => ({
+    console.log('🔍 Detailed Chat Data:', JSON.stringify(chats, null, 2));
+    
+    // Log the first chat's structure for debugging
+    const firstChat = chats[0];
+    console.log('🔍 First Chat Structure:', {
+      id: firstChat._id,
+      lastMessage: firstChat.lastMessage || 'No lastMessage',
+      otherUser: firstChat.otherUser || 'No otherUser',
+      messages: firstChat.messages ? `Array(${firstChat.messages.length})` : 'No messages array',
+      allKeys: Object.keys(firstChat).filter(key => !['messages', 'lastMessage'].includes(key)),
+      hasLastMessage: !!firstChat.lastMessage,
+      lastMessageKeys: firstChat.lastMessage ? Object.keys(firstChat.lastMessage) : 'No lastMessage',
+      lastMessageContent: firstChat.lastMessage?.content || 'No content',
+      lastMessageType: firstChat.lastMessage?.message_type || 'No type'
+    });
+    
+    // Log all chat IDs and their last message content
+    console.log('📝 All Chats Summary:', chats.map(chat => ({
       id: chat._id,
-      lastMessage: chat.lastMessage,
-      otherUser: chat.otherUser.name
+      otherUser: chat.otherUser?.name || 'Unknown',
+      lastMessage: chat.lastMessage ? {
+        content: chat.lastMessage.content || 'No content',
+        type: chat.lastMessage.message_type || 'unknown',
+        sender: chat.lastMessage.sender_id === currentUser?.id ? 'me' : 'other',
+        timestamp: chat.lastMessage.createdAt || 'No timestamp'
+      } : 'No last message',
+      unreadCount: chat.unreadCount || 0,
+      hasMessages: Array.isArray(chat.messages) ? chat.messages.length > 0 : false
     })));
+  } else {
+    console.log('ℹ️ No chats available in the state');
   }
-}, [chats]);
+}, [chats, currentUser]);
 
   // Set active chat from URL state when component mounts
   useEffect(() => {
@@ -635,7 +687,7 @@ useEffect(() => {
         
         setSelectedAudio(URL.createObjectURL(file));
         setSelectedAudioFile(file);
-        console.log('🎵 Audio selected:', file.name);
+        console.log(' Audio selected:', file.name);
       } else {
         toast.warning('Please select a valid audio file', {
           position: "top-right",
@@ -654,6 +706,89 @@ useEffect(() => {
     }
   };
 
+  // Start audio recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      const audioChunks = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setSelectedAudio(audioUrl);
+        setSelectedAudioFile(new File([audioBlob], 'recording.wav', { type: 'audio/wav' }));
+        setAudioChunks([]);
+        setRecordingTime(0);
+      };
+
+      mediaRecorder.start();
+      setMediaRecorder(mediaRecorder);
+      setAudioChunks(audioChunks);
+      setIsRecording(true);
+      setShowRecordingUI(true);
+
+      // Start recording timer
+      recordingInterval.current = setInterval(() => {
+        setRecordingTime(prev => {
+          if (prev >= 60) { // 60 seconds max recording time
+            stopRecording();
+            return 0;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      toast.error('Could not access microphone. Please check permissions.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    }
+  };
+
+  // Stop audio recording
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    setIsRecording(false);
+    setShowRecordingUI(false);
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+      recordingInterval.current = null;
+    }
+  };
+
+  // Cancel recording
+  const cancelRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    setIsRecording(false);
+    setShowRecordingUI(false);
+    setSelectedAudio(null);
+    setSelectedAudioFile(null);
+    setRecordingTime(0);
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+      recordingInterval.current = null;
+    }
+  };
+
   // Clear image selection
   const clearImageSelection = () => {
     setSelectedImage(null);
@@ -667,8 +802,10 @@ useEffect(() => {
   const clearAudioSelection = () => {
     setSelectedAudio(null);
     setSelectedAudioFile(null);
-    if (audioInputRef.current) {
-      audioInputRef.current.value = '';
+    setRecordingTime(0);
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+      recordingInterval.current = null;
     }
   };
 
@@ -677,36 +814,99 @@ useEffect(() => {
     clearImageSelection();
     clearAudioSelection();
   };
-  
+
+  // Cleanup recording when component unmounts
+  useEffect(() => {
+    return () => {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      }
+      if (recordingInterval.current) {
+        clearInterval(recordingInterval.current);
+      }
+    };
+  }, [mediaRecorder]);
+
   // Fixed: Better time formatting for messages (Pakistan time)
-  const formatMessageTime = (dateString) => {
-    if (!dateString) return '';
-    try {
-      const date = toPakistanTime(dateString);
-      const now = toPakistanTime();
-      const diffInHours = (now - date) / (1000 * 60 * 60);
-      
-      // If message is from today, show local time in 12-hour clock
-      if (date.toDateString() === now.toDateString()) {
-        return date.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit', hour12: true });
-      }
-      // If message is from yesterday, show "Yesterday"
-      else if (diffInHours < 48) {
-        return 'Yesterday';
-      }
-      // If message is from this week, show day name
-      else if (diffInHours < 168) {
-        return date.toLocaleDateString('en-PK', { weekday: 'short' });
-      }
-      // Otherwise show date
-      else {
-        return date.toLocaleDateString('en-PK', { month: 'short', day: 'numeric' });
-      }
-    } catch (error) {
-      console.error('Error formatting message time:', error);
-      return '';
+ // In Chats.jsx - replace the entire formatMessageTime function
+const formatMessageTime = (dateString) => {
+  if (!dateString) return '';
+  try {
+    const date = toPakistanTime(dateString);
+    const now = toPakistanTime();
+    
+    // Check if it's a temporary message (still sending)
+    if (dateString.includes('temp-') || dateString.includes('sending')) {
+      return 'Sending...';
     }
-  };
+    
+    const diffInMilliseconds = now - date;
+    const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+    
+    // Messages within the last minute
+    if (diffInMinutes < 1) {
+      return 'Just now';
+    }
+    
+    // Messages within the last hour
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    }
+    
+    // Messages within the last 24 hours
+    if (diffInHours < 24) {
+      // Show time in 12-hour format with AM/PM
+      const timeStr = date.toLocaleTimeString('en-PK', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      }).replace(' ', '');
+      return timeStr.toLowerCase();
+    }
+    
+    // Messages within the last 7 days
+    if (diffInDays < 7) {
+      if (diffInDays === 1) return 'Yesterday';
+      return `${diffInDays}d ago`;
+    }
+    
+    // Older messages - show date
+    const currentYear = now.getFullYear();
+    const messageYear = date.getFullYear();
+    
+    if (messageYear === currentYear) {
+      // Same year: Show month and day
+      return date.toLocaleDateString('en-PK', { 
+        month: 'short', 
+        day: 'numeric'
+      });
+    } else {
+      // Different year: Show month, day, and year
+      return date.toLocaleDateString('en-PK', { 
+        month: 'short', 
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error formatting message time:', error, dateString);
+    
+    // If it looks like an ISO string, try to extract time
+    if (typeof dateString === 'string' && dateString.includes('T')) {
+      try {
+        const timePart = dateString.split('T')[1]?.substring(0, 5);
+        if (timePart) return timePart;
+      } catch (e) {
+        // Ignore
+      }
+    }
+    
+    return '';
+  }
+};
 
   // Fixed: Get other user info with better avatar handling
   const getOtherUser = (chat) => {
@@ -837,7 +1037,7 @@ useEffect(() => {
             <div className="relative w-full max-w-xs h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
               <img
                 src={formattedUrl}
-                alt="Sent image"
+                alt="Shared content"
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   console.error('❌ Error loading image:', formattedUrl);
@@ -915,15 +1115,7 @@ useEffect(() => {
           />
           
           <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
-              Audio Message
-            </div>
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {Math.floor(new Date(message?.createdAt || Date.now()).getMinutes()).toString().padStart(2, '0')}:
-                {Math.floor(new Date(message?.createdAt || Date.now()).getSeconds()).toString().padStart(2, '0')}
-              </span>
-              <span className="text-gray-400">•</span>
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {message?.sender === 'me' ? 'Sent' : 'Received'}
               </span>
@@ -1018,52 +1210,12 @@ useEffect(() => {
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
       {/* Top Bar */}
-      <div className="flex-shrink-0 w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-16 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="flex items-center space-x-2">
-          <svg className="h-6 w-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Download App</span>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="relative">
-              <select 
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="bg-transparent text-gray-700 dark:text-gray-300 pr-6 py-2 text-sm focus:outline-none border-0 appearance-none"
-              >
-                <option value="english">English</option>
-                <option value="urdu">Urdu</option>
-              </select>
-              <FaCaretDown className="absolute right-0 top-1/2 transform -translate-y-1/2 text-gray-400 w-3 h-3" />
-            </div>
-            
-            <button 
-              onClick={toggleTheme}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-            >
-              {theme === 'dark' ? <FaSun className="w-5 h-5" /> : <FaMoon className="w-5 h-5" />}
-            </button>
-          </div>
-  
-          <div className="flex items-center space-x-3">
-            <button
-              className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-emerald-600 transition-colors"
-              onClick={() => navigate('/login')}
-            >
-              Sign In
-            </button>
-            <button
-              className="bg-emerald-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-emerald-600 transition-colors"
-              onClick={() => navigate('/signup')}
-            >
-              Sign Up
-            </button>
-          </div>
-        </div>
-      </div>
+   
+<Header 
+  userProfile={userProfile} 
+  handleLogout={handleLogout}
+  onSearch={false}
+/>
 
       {/* Navbar */}
       <div className="flex-shrink-0 relative">
@@ -1185,17 +1337,57 @@ useEffect(() => {
                           </div>
                         </div>
 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-  {chat.lastMessage ? (
-    chat.lastMessage.message_type === 'image' ? (
-      chat.lastMessage.sender === 'me' || chat.lastMessage.sender_id === currentUser?.id ? 
-        'You sent a photo' : 'Sent a photo'
-    ) : chat.lastMessage.message_type === 'audio' ? (
-      chat.lastMessage.sender === 'me' || chat.lastMessage.sender_id === currentUser?.id ? 
-        'You sent an audio' : 'Sent an audio'
-    ) : (
-      chat.lastMessage.content || 'No messages yet'
-    )
-  ) : 'No messages yet'}
+  {(() => {
+    try {
+      // Get the last message from various possible locations in the chat object
+      const lastMessage = chat.lastMessage || chat.last_message || 
+                         (Array.isArray(chat.messages) && chat.messages.length > 0 ? 
+                           chat.messages[chat.messages.length - 1] : null) ||
+                         (chat.latest_message) ||
+                         {};
+      
+      // If no message content found at all
+      if (!lastMessage || (!lastMessage.content && !lastMessage.message && !lastMessage.message_type)) {
+        return 'Start a conversation';
+      }
+      
+      // Determine message type and content
+      const messageType = lastMessage.message_type || 
+                         (lastMessage.content?.includes('image') ? 'image' : 
+                          lastMessage.content?.includes('audio') ? 'audio' : 'text');
+      
+      // Check if the message is from the current user
+      const isCurrentUser = lastMessage.sender === 'me' || 
+                           lastMessage.sender_id === currentUser?.id ||
+                           lastMessage.sender_id === currentUser?._id ||
+                           (lastMessage.senderInfo && lastMessage.senderInfo.id === currentUser?.id);
+      
+      // Format message based on type
+      let displayText = '';
+      
+      switch(messageType) {
+        case 'image':
+          displayText = isCurrentUser ? 'You: Sent a photo' : 'Photo received';
+          break;
+        case 'audio':
+          displayText = isCurrentUser ? 'You: Sent an audio' : 'Audio message';
+          break;
+        default:
+          const content = lastMessage.content || lastMessage.message || '';
+          displayText = content.length > 35 ? content.substring(0, 35) + '...' : content;
+          
+          if (isCurrentUser && !content.startsWith('You: ')) {
+            displayText = `You: ${displayText}`;
+          }
+      }
+      
+      return displayText;
+      
+    } catch (error) {
+      console.error('Error rendering last message:', error);
+      return '...';
+    }
+  })()}
 </p>
                       </div>
                       {isUnread && (
@@ -1228,11 +1420,9 @@ useEffect(() => {
                   <h2 className="font-semibold text-gray-900 dark:text-white">
                     {getOtherUser(currentChat).name}
                   </h2>
-                  {currentChat.adTitle && (
-                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
-                      {currentChat.adTitle}
-                    </p>
-                  )}
+                  <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                    Seller
+                  </p>
                   {/* <p className="text-xs text-gray-500 dark:text-gray-400">Online</p> */}
                 </div>
               </div>
@@ -1255,7 +1445,7 @@ useEffect(() => {
                   <svg className="w-20 h-20 mb-4 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <p className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">No messages yet</p>
+                  <h2 className="text-2xl font-bold text-gray-600 dark:text-gray-400 mb-2">No messages yet</h2>
                   <p className="text-sm text-gray-500 dark:text-gray-500 text-center max-w-xs">
                     Send a message to start the conversation with {getOtherUser(currentChat).name}
                   </p>
@@ -1296,12 +1486,12 @@ useEffect(() => {
                             <div
                               className={`p-4 rounded-2xl ${
                                 isCurrentUser
-                                  ? 'bg-emerald-500 text-white rounded-br-none'
+                                  ? 'bg-[var(--emov-purple)] text-white rounded-br-none'
                                   : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none border border-gray-200 dark:border-gray-600'
                               } shadow-sm`}
                             >
                               {renderMessageContent(message, isCurrentUser)}
-                              <div className={`text-xs mt-2 ${isCurrentUser ? 'text-emerald-100' : 'text-gray-500 dark:text-gray-400'} text-right`}>
+                              <div className={`text-xs mt-2 ${isCurrentUser ? 'text-purple-100' : 'text-gray-500 dark:text-gray-400'} text-right`}>
                                 {formatMessageTime(message.createdAt)}
                                 {message.status === 'sending' && ' • Sending...'}
                                 {message.status === 'sent' && ' • Sent'}
@@ -1359,7 +1549,7 @@ useEffect(() => {
               {selectedAudio && (
                 <div className="relative mb-3 max-w-xs bg-gray-100 dark:bg-gray-700 p-3 rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <FaMicrophone className="text-emerald-500" />
+                    <FaMicrophone className="text-[var(--emov-purple)]" />
                     <span className="text-sm text-gray-600 dark:text-gray-300">Audio selected</span>
                   </div>
                   <button
@@ -1389,22 +1579,46 @@ useEffect(() => {
                   />
                 </button>
 
-                {/* Audio upload button */}
-                <button
-                  type="button"
-                  onClick={() => audioInputRef.current?.click()}
-                  className="flex-shrink-0 p-3 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                  disabled={sendingMessage}
-                >
-                  <FaMicrophone className="w-5 h-5" />
-                  <input
-                    type="file"
-                    ref={audioInputRef}
-                    onChange={handleAudioSelect}
-                    accept="audio/*"
-                    className="hidden"
-                  />
-                </button>
+                {/* Audio recording button */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={isRecording ? stopRecording : startRecording}
+                    className={`flex-shrink-0 p-3 rounded-full transition-colors ${isRecording 
+                      ? 'text-red-500 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50' 
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    disabled={sendingMessage}
+                  >
+                    {isRecording ? <FaStop className="w-5 h-5" /> : <FaMicrophone className="w-5 h-5" />}
+                  </button>
+                  
+                  {/* Recording indicator */}
+                  {showRecordingUI && (
+                    <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center space-x-2 shadow-lg">
+                      <FaCircle className="animate-pulse" />
+                      <span>Recording... {formatTime(recordingTime)}</span>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          cancelRecording();
+                        }}
+                        className="ml-2 text-white hover:text-gray-200"
+                        title="Cancel recording"
+                      >
+                        <FaTimes className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Audio file input (hidden) */}
+                <input
+                  type="file"
+                  ref={audioInputRef}
+                  onChange={handleAudioSelect}
+                  accept="audio/*"
+                  className="hidden"
+                />
 
                 <div className="flex-1 relative">
                   <input
@@ -1412,7 +1626,7 @@ useEffect(() => {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Type a message..."
-                    className="w-full p-4 pr-12 rounded-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full p-4 pr-12 rounded-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[var(--emov-purple)] focus:border-transparent"
                     disabled={sendingMessage}
                   />
                   <button
@@ -1420,7 +1634,7 @@ useEffect(() => {
                     disabled={(!newMessage.trim() && !selectedImage && !selectedAudio) || sendingMessage}
                     className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors ${
                       (newMessage.trim() || selectedImage || selectedAudio) && !sendingMessage
-                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        ? 'bg-[var(--emov-purple)] text-white hover:bg-purple-600'
                         : 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
                     }`}
                   >

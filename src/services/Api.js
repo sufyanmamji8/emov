@@ -38,7 +38,23 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
       console.log('[API] Added Authorization header to request');
     } else {
-      console.warn('[API] No authentication token found - this will likely cause a 401 error');
+      console.warn('[API] No authentication token found');
+      
+      // Add X-PLATFORM header for unauthorized requests to specific endpoints
+      const isVehicleFilterRequest = config.url?.includes('vehiclesfilter');
+      const isVehicleModelsRequest = config.url?.includes('/vehicles/models');
+      const isFeaturedVehiclesRequest = config.url?.includes('/vehicles/featured');
+      const isAdsRequest = config.url?.includes('/ads') && !config.url?.includes('/my-ads');
+      
+      if (isVehicleFilterRequest || isVehicleModelsRequest || isFeaturedVehiclesRequest || isAdsRequest) {
+        config.headers['X-PLATFORM'] = 'WEB';
+        let endpointType = 'ads';
+        if (isVehicleFilterRequest) endpointType = 'vehicle filter';
+        else if (isVehicleModelsRequest) endpointType = 'vehicle models';
+        else if (isFeaturedVehiclesRequest) endpointType = 'featured vehicles';
+        
+        console.log(`[API] Added X-PLATFORM: WEB header for ${endpointType} request`);
+      }
     }
 
     // Handle FormData - let browser set Content-Type with boundary
@@ -120,6 +136,34 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // Check if this is an unauthorized request to vehicle endpoints or ads endpoints
+      // These endpoints should work without authentication when X-PLATFORM: WEB is sent
+      const isVehicleFilterRequest = originalRequest?.url?.includes('vehiclesfilter');
+      const isVehicleModelsRequest = originalRequest?.url?.includes('/vehicles/models');
+      const isFeaturedVehiclesRequest = originalRequest?.url?.includes('/vehicles/featured');
+      const isAdsRequest = originalRequest?.url?.includes('/ads') && !originalRequest?.url?.includes('/my-ads');
+      const hasPlatformHeader = originalRequest?.headers?.['X-PLATFORM'] === 'WEB';
+      
+      if (isVehicleFilterRequest || isVehicleModelsRequest || isFeaturedVehiclesRequest || isAdsRequest) {
+        if (hasPlatformHeader) {
+          let endpointType = 'ads';
+          if (isVehicleFilterRequest) endpointType = 'vehicle filter';
+          else if (isVehicleModelsRequest) endpointType = 'vehicle models';
+          else if (isFeaturedVehiclesRequest) endpointType = 'featured vehicles';
+          
+          console.log(`[API] 401 error on ${endpointType} endpoint with X-PLATFORM header - API might require additional configuration`);
+          // Don't clear auth data for these endpoints when X-PLATFORM header is present
+          return Promise.reject(error);
+        } else {
+          let endpointType = 'ads';
+          if (isVehicleFilterRequest) endpointType = 'vehicle filter';
+          else if (isVehicleModelsRequest) endpointType = 'vehicle models';
+          else if (isFeaturedVehiclesRequest) endpointType = 'featured vehicles';
+          
+          console.log(`[API] 401 error on ${endpointType} endpoint without X-PLATFORM header`);
+        }
+      }
+
       // If this is a retry after a failed refresh, reject
       if (originalRequest._retry) {
         return Promise.reject(error);
@@ -160,15 +204,31 @@ api.interceptors.response.use(
     if (error.code === 'ERR_NETWORK' && error.message.includes('CORS')) {
       console.warn('[API] CORS error detected - this might be a 401 error');
       // Check if this is likely an auth error based on the URL
-      if (originalRequest.url?.includes('/vehiclesfilter') || 
-          originalRequest.url?.includes('/ads')) {
-        console.log('[API] CORS error on protected endpoint');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        sessionStorage.removeItem('token');
-        // Don't redirect - let the components handle it
-        return Promise.reject(error);
+      const isVehicleFilterRequest = originalRequest?.url?.includes('vehiclesfilter');
+      const isVehicleModelsRequest = originalRequest?.url?.includes('/vehicles/models');
+      const isFeaturedVehiclesRequest = originalRequest?.url?.includes('/vehicles/featured');
+      const isAdsRequest = originalRequest?.url?.includes('/ads') && !originalRequest?.url?.includes('/my-ads');
+      const hasPlatformHeader = originalRequest?.headers?.['X-PLATFORM'] === 'WEB';
+      
+      if (isVehicleFilterRequest || isVehicleModelsRequest || isFeaturedVehiclesRequest || isAdsRequest) {
+        if (hasPlatformHeader) {
+          let endpointType = 'ads';
+          if (isVehicleFilterRequest) endpointType = 'vehicle filter';
+          else if (isVehicleModelsRequest) endpointType = 'vehicle models';
+          else if (isFeaturedVehiclesRequest) endpointType = 'featured vehicles';
+          
+          console.log(`[API] CORS error on ${endpointType} endpoint with X-PLATFORM header - don't clear auth data`);
+          // Don't clear auth data for these endpoints when X-PLATFORM header is present
+          return Promise.reject(error);
+        } else {
+          console.log('[API] CORS error on protected endpoint without X-PLATFORM header');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
+        }
       }
+      // Don't redirect - let the components handle it
+      return Promise.reject(error);
     }
 
     // Use server error message if available
@@ -810,4 +870,5 @@ window.addEventListener('unhandledrejection', (event) => {
   }
 });
 
+export { api };
 export default apiService;

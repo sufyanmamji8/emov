@@ -487,17 +487,17 @@ function Dashboard() {
       try {        
         const token = localStorage.getItem('token');
 
-        // If no token, treat Dashboard as public: use fallback data instead of redirecting
-        if (!token) {
-          setApiData(fallbackData);
-          const vehicles = generateVehiclesFromFilterData(fallbackData);
-          setVehiclesData(vehicles);
-          return;
-        }
+        // Try to fetch from API even without token (X-PLATFORM header will be added automatically)
+        console.log('[Dashboard] Fetching filter data, token available:', !!token);
 
         const response = await apiService.vehicles.getFilters();
         
-        if (response.data) {
+        if (response && response.data) {
+          console.log('[Dashboard] Successfully fetched filter data from API');
+          console.log('[Dashboard] API Response structure:', response);
+          console.log('[Dashboard] API Data structure:', response.data);
+          console.log('[Dashboard] Available keys in response.data:', Object.keys(response.data || {}));
+          
           // The API response has the data directly in response.data
           setApiData(response.data);
           const vehicles = generateVehiclesFromFilterData(response.data);

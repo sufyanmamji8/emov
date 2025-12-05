@@ -56,10 +56,10 @@ const AppContent = ({ children, isAuthenticated, loading, handleLogin, handleLog
             path="/profile" 
             element={isAuthenticated ? <Profile /> : <Navigate to="/login" state={{ from: '/profile' }} />} 
           />
-          <Route path="/vehicles" element={isAuthenticated ? <Vehicles /> : <Navigate to="/login" />} />
+          <Route path="/vehicles" element={<Vehicles />} />
 
           {/* FIXED ROUTES - Single route with parameters */}
-          <Route path="/vehicles/:filterType/:filterId" element={isAuthenticated ? <FilteredVehicles /> : <Navigate to="/login" />} />
+          <Route path="/vehicles/:filterType/:filterId" element={<FilteredVehicles />} />
           
           <Route path="/featured-vehicles" element={isAuthenticated ? <FeaturedVehicles /> : <Navigate to="/login" />} />
           <Route path="/service" element={isAuthenticated ? <Service /> : <Navigate to="/login" />} />
