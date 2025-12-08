@@ -709,7 +709,9 @@ useEffect(() => {
   // Start audio recording
   const startRecording = async () => {
     try {
+      console.log('[Audio] Starting recording...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[Audio] Microphone access granted');
       const mediaRecorder = new MediaRecorder(stream);
       const audioChunks = [];
 
@@ -728,14 +730,18 @@ useEffect(() => {
         setRecordingTime(0);
       };
 
+      console.log('[Audio] MediaRecorder created, starting...');
       mediaRecorder.start();
+      console.log('[Audio] MediaRecorder started');
       setMediaRecorder(mediaRecorder);
       setAudioChunks(audioChunks);
       setIsRecording(true);
       setShowRecordingUI(true);
+      console.log('[Audio] States set, starting timer...');
 
       // Start recording timer
       recordingInterval.current = setInterval(() => {
+        console.log('[Audio] Timer tick - current time:', recordingTime);
         setRecordingTime(prev => {
           if (prev >= 60) { // 60 seconds max recording time
             stopRecording();

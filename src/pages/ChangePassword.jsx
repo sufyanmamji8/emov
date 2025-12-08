@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { FaSun, FaMoon, FaEye, FaEyeSlash, FaCheck } from 'react-icons/fa';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import authApi from '../services/AuthApi';
+import authApi from '../services/authApi';
 
 const ChangePassword = () => {
   const [formData, setFormData] = useState({

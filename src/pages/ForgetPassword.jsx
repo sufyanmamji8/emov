@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { FaSun, FaMoon } from 'react-icons/fa';
 import { Link, useNavigate } from 'react-router-dom';
-import authApi from '../services/AuthApi';
+import authApi from '../services/authApi';
 
 const ForgotPassword = () => {
   const [formData, setFormData] = useState({

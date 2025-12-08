@@ -85,11 +85,17 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       // Only handle 401 for non-login requests to prevent infinite redirects
       const isLoginRequest = error.config?.url?.includes('/login');
-      if (!isLoginRequest) {
+      const isSignupRequest = error.config?.url?.includes('/signup');
+      if (!isLoginRequest && !isSignupRequest) {
+        // Clear all auth data
+        localStorage.removeItem('token');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        // Don't redirect automatically - let the components handle it
-        console.log('[authApi] 401 error handled, no automatic redirect');
+        sessionStorage.removeItem('token');
+        
+        // Redirect to dashboard
+        console.log('[authApi] Token expired, redirecting to dashboard');
+        window.location.href = '/';
       }
     }
     throw error;
@@ -265,10 +271,10 @@ const authApi = {
   },
 
   // Change password API (authenticated user)
-  changePassword: async ({ oldPassword, newPassword, confirmPassword, email }) => {
+  changePassword: async ({ currentPassword, newPassword, confirmPassword, email }) => {
     try {
       const payload = {
-        oldPassword: oldPassword.trim(),
+        currentPassword: currentPassword.trim(),
         newPassword: newPassword.trim(),
         confirmPassword: confirmPassword.trim(),
         email: email.trim()
@@ -281,9 +287,9 @@ const authApi = {
   },
 
   // Delete account API
-  deleteAccount: async () => {
+  deleteAccount: async ({ password }) => {
     try {
-      const response = await api.delete('/v2/delete-account');
+      const response = await api.delete('/v2/delete-account', { data: { password } });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to delete account' };
@@ -321,24 +327,6 @@ const authApi = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Failed to update profile details' };
-    }
-  },
-
-  // Change password API (authenticated user)
-  changePassword: async ({ oldPassword, newPassword, confirmPassword, email }) => {
-    try {
-      const payload = {
-        oldPassword,
-        newPassword,
-        confirmPassword,
-      };
-      if (email) {
-        payload.email = email;
-      }
-      const response = await api.post('/v2/change-password', payload);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { message: 'Failed to change password' };
     }
   }
 };
