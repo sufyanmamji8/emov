@@ -7,9 +7,6 @@ import { useChat } from '../contexts/ChatContext';
 import chatService from '../services/chatService'; 
 import { FaTrash, FaUserSlash } from 'react-icons/fa';
 import Header from '../components/Layout/Header';
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
 import axios from 'axios';
 
 // Convert date to Pakistan time (UTC+5)
@@ -17,8 +14,9 @@ const toPakistanTime = (dateString) => {
   if (!dateString) return new Date();
   
   const date = new Date(dateString);
-  // Convert to Pakistan time (UTC+5)
-  const offset = date.getTimezoneOffset() + 300; // 300 minutes = 5 hours
+  // For messages sent by current user, add 5 hours to compensate for server being 5 hours behind
+  // This ensures the message shows the correct Pakistan time when sent
+  const offset = 300; // 300 minutes = 5 hours
   return new Date(date.getTime() + offset * 60 * 1000);
 };
 

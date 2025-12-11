@@ -386,7 +386,7 @@ const Signup = () => {
               disabled={loading}
               className="w-full px-4 py-2.5 rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-emov-purple focus:ring-opacity-50 flex items-center justify-center text-white"
               style={{ 
-                background: 'var(--emov-gradient)',
+                background: 'var(--emov-green)',
                 border: 'none'
               }}
             >

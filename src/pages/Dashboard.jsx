@@ -8,6 +8,49 @@ import Navbar from '../components/Layout/Navbar'; // Import the Navbar component
 import { useFilterNavigation } from '../hooks/useFilterNavigation';
 
 
+// Add this component BEFORE your main Dashboard component
+const SearchResultItem = ({ ad, isDark, handleAdClick }) => {
+  const [imageLoading, setImageLoading] = React.useState(true);
+  
+  return (
+    <button
+      onClick={() => handleAdClick(ad)}
+      className={`w-full text-left p-3 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'} rounded-lg transition-colors`}
+    >
+      <div className="flex items-center space-x-3">
+        <div className="relative w-12 h-12">
+          {imageLoading && (
+            <div className={`absolute inset-0 flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-lg`}>
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-emov-purple"></div>
+            </div>
+          )}
+          <img
+            src={ad.Images?.[0] ? `https://api.emov.com.pk/image/${ad.Images[0]}` : '/mockvehicle.png'}
+            alt={ad.VehicleName}
+            className={`w-12 h-12 object-cover rounded-lg ${imageLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+            onLoad={() => setImageLoading(false)}
+            onError={(e) => {
+              e.target.src = '/mockvehicle.png';
+              setImageLoading(false);
+            }}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'} truncate`}>
+            {ad.VehicleName}
+          </p>
+          <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} truncate`}>
+            {ad.BrandName} {ad.ModelName} • {ad.VehicleType}
+          </p>
+          <p className="text-xs text-emov-purple font-semibold">
+            {ad.VehiclePrice ? `Rs ${parseFloat(ad.VehiclePrice).toLocaleString()}` : 'Price not available'}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+};
+
 // Gradient image paths from public folder
 const gradientLeft = 'gradientleft.png';
 // Encode the space in the filename
@@ -16,14 +59,14 @@ const gradientRight = 'gradientrightbottom.png';
 // Color constants
 const colors = {
   green: '#10B981', // emerald-500
-  purple: '#8B5CF6', // violet-500
-  blue: '#3B82F6',  // blue-500
+  purple: '#7A288A', // violet-500
+  blue: '#2196F3',  // blue-500
   red: '#EF4444'    // red-500
 };
 
 // Debug: Log image paths and check if they're accessible
-console.log('Gradient Left Path:', gradientLeft);
-console.log('Gradient Right Path:', gradientRight);
+
+
 
 // Check if images are accessible
 const checkImage = (url) => {
@@ -61,6 +104,12 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
     </button>
   </>
 );
+
+
+
+
+
+
 
 function Dashboard() {
       const { isDark, toggleTheme } = useTheme();
@@ -125,6 +174,23 @@ function Dashboard() {
     return null;
   });
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  
+  // Search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [recentSearches, setRecentSearches] = useState(() => {
+    try {
+      const saved = localStorage.getItem('recentSearches');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Image loading states for search results
+  const [imageLoadingStates, setImageLoadingStates] = useState({});
   
   // Carousel state and functions
   const [currentSlides, setCurrentSlides] = useState({
@@ -213,7 +279,109 @@ function Dashboard() {
     return () => window.removeEventListener('resize', updateItemsPerRow);
   }, []);
   const slideRef = useRef(null);
-  
+
+  // Search functions
+  const handleSearch = async (query) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // Search in all ads data
+      const allAds = [...recentlyAddedVehicles];
+      
+      const filtered = allAds.filter(ad => {
+        const searchLower = query.toLowerCase();
+        // Search by category (VehicleType), model name (VehicleName), and seller's comment
+        // Use actual field names from the API response
+        return (
+          (ad.VehicleType && ad.VehicleType.toLowerCase().includes(searchLower)) ||
+          (ad.VehicleName && ad.VehicleName.toLowerCase().includes(searchLower)) ||
+          (ad.Description && ad.Description.toLowerCase().includes(searchLower)) ||
+          (ad.BrandName && ad.BrandName.toLowerCase().includes(searchLower)) ||
+          (ad.ModelName && ad.ModelName.toLowerCase().includes(searchLower)) ||
+          (ad.BrandID && ad.BrandID.toString().includes(searchLower)) ||
+          (ad.ModelID && ad.ModelID.toString().includes(searchLower)) ||
+          (ad.VehicleTypeID && ad.VehicleTypeID.toString().includes(searchLower)) ||
+          (ad.BodyTypeID && ad.BodyTypeID.toString().includes(searchLower))
+        );
+      });
+
+      setSearchResults(filtered);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const addToRecentSearches = (query) => {
+    if (!query.trim()) return;
+    
+    const newSearches = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5);
+    setRecentSearches(newSearches);
+    try {
+      localStorage.setItem('recentSearches', JSON.stringify(newSearches));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem('recentSearches');
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const handleSearchSubmit = (query) => {
+    addToRecentSearches(query);
+    handleSearch(query);
+  };
+
+  const handleAdClick = (ad) => {
+    const adId = ad.AdID || ad.id || ad.adId || ad._id;
+    if (adId) {
+      navigate(`/ad/${adId}`, { state: { adData: ad } });
+    } else {
+      console.log('Ad data:', ad);
+    }
+    setShowSearchResults(false);
+  };
+
+  // Image loading helper functions
+  const setImageLoading = (adId, isLoading) => {
+    setImageLoadingStates(prev => ({
+      ...prev,
+      [adId]: isLoading
+    }));
+  };
+
+  const isImageLoading = (adId) => {
+    return imageLoadingStates[adId] !== false;
+  };
+
+  // Add click outside handler for search results
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showSearchResults && !event.target.closest('.search-container')) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSearchResults]);
+
   // Update scrollLeft and scrollRight to work with carousel
   const scrollLeft = (tab, items = null, itemsPerRow = 4) => {
     setCurrentSlides(prevSlides => {
@@ -407,7 +575,7 @@ function Dashboard() {
     if (apiData) return;
     
     try {
-      console.log('Fetching filter data...');
+      
       const response = await apiService.vehicles.getFilters();
       if (response?.data) {
         console.log('Successfully fetched filter data');
@@ -488,15 +656,15 @@ function Dashboard() {
         const token = localStorage.getItem('token');
 
         // Try to fetch from API even without token (X-PLATFORM header will be added automatically)
-        console.log('[Dashboard] Fetching filter data, token available:', !!token);
+        
 
         const response = await apiService.vehicles.getFilters();
         
         if (response && response.data) {
-          console.log('[Dashboard] Successfully fetched filter data from API');
-          console.log('[Dashboard] API Response structure:', response);
-          console.log('[Dashboard] API Data structure:', response.data);
-          console.log('[Dashboard] Available keys in response.data:', Object.keys(response.data || {}));
+          
+          
+          
+          
           
           // The API response has the data directly in response.data
           setApiData(response.data);
@@ -530,20 +698,28 @@ useEffect(() => {
     try {
       setLoadingRecentAds(true);
       setRecentAdsError(null);
-      console.log('Fetching recent ads...');
+      
       const response = await apiService.ads.getRecentAds();
       
-      console.log('Dashboard - Full response:', response);
-      console.log('Dashboard - Response data:', response?.data);
-      console.log('Dashboard - Data array length:', response?.data?.length);
+      
+      
+      
       
       if (response && response.data && response.data.data) {
-        console.log('Transforming data...');
+        
         // Transform the API data to match the expected format
         const transformedData = response.data.data.map(ad => {
-          console.log('Processing ad:', ad);
-          console.log('Ad images:', ad.Images);
-          console.log('First image path:', ad.Images?.[0]);
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
           
           // CORRECT: Use /images/ directory instead of /uploads/
           let imageUrl = '/mockvehicle.png';
@@ -556,7 +732,7 @@ useEffect(() => {
               // CORRECT PATTERN: https://api.emov.com.pk/images/filename.jpg
               imageUrl = `https://api.emov.com.pk/image/${imageFilename}`;
             }
-            console.log('Dashboard - Constructed image URL:', imageUrl);
+            
           }
           
           return {
@@ -576,6 +752,25 @@ useEffect(() => {
             VehicleMileage: ad.VehicleMileage,
             LocationName: ad.LocationName,
             SellerComment: ad.SellerComment,
+            // Brand, Model, and Type fields - Use the actual field names from API
+            VehicleBrand: ad.BrandName,
+            VehicleModel: ad.ModelName,
+            VehicleType: ad.VehicleType,
+            VehicleTypeName: ad.VehicleType,
+            VehicleBodyTypeID: ad.VehicleBodyTypeID,
+            EngineType: ad.EngineType,
+            Transmission: ad.Transmission,
+            Color: ad.Color,
+            VehiclePower: ad.VehiclePower,
+            LoadCapacity: ad.LoadCapacity,
+            Ownership: ad.Ownership,
+            // Additional fields from API
+            BodyTypeName: ad.BodyTypeName,
+            BrandName: ad.BrandName,
+            ModelName: ad.ModelName,
+            VehicleTypeID: ad.VehicleTypeID,
+            VehicleBrandID: ad.VehicleBrandID,
+            VehicleModelID: ad.VehicleModelID,
             // Seller information (forwarded so AdDetail can display it)
             sellerName: ad.sellerName,
             emailAddress: ad.emailAddress,
@@ -589,11 +784,11 @@ useEffect(() => {
           };
         });
         
-        console.log('Successfully transformed data:', transformedData);
+        
         setRecentlyAddedVehicles(transformedData);
-        console.log('Successfully fetched and transformed recent ads:', transformedData);
+        
       } else {
-        console.log('No data in response');
+        
         setRecentAdsError('No data received from server');
       }
     } catch (err) {
@@ -1301,167 +1496,437 @@ useEffect(() => {
         {/* Wrapper for all three sections */}
        
           {/* Top Header Section */}
-          <div className="bg-bg-secondary/90 py-0 px-0 sm:px-0 lg:px-0">
-            <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-8 sm:h-10 py-6 border-b border-border-primary">
-            <div className="flex items-center space-x-2 ">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              <span className="text-sm font-medium text-text-primary">Download App</span>
+ <div className="bg-bg-secondary/90 w-full">
+  {/* Top Bar */}
+  <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
+    <div className="flex justify-between items-center h-12 sm:h-14 py-2 border-b border-border-primary">
+      {/* Download App */}
+      <div className="flex items-center space-x-2 cursor-pointer group">
+        <svg className="h-5 w-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        </svg>
+        <span className="text-sm font-medium text-text-primary group-hover:text-emov-green transition-colors">Download App</span>
+      </div>
+
+      {/* Right side controls */}
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        {/* Mobile Theme Toggle */}
+        <button 
+          onClick={toggleTheme}
+          className="md:hidden focus:outline-none p-2 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
+          style={{ borderRadius: '12px' }}
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? <FaSun className="w-4 h-4" /> : <FaMoon className="w-4 h-4" />}
+        </button>
+
+        {/* Desktop Language Selector and Theme Toggle */}
+        <div className="hidden md:flex items-center space-x-4">
+          {/* Language Selector */}
+          <div className="relative group">
+            <select 
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none cursor-pointer"
+            >
+              <option value="english">English</option>
+              <option value="urdu">Urdu</option>
+              <option value="french">French</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
+              <FaCaretDown className="text-text-secondary w-3 h-3 transition-transform group-hover:rotate-180" />
+            </div>
+          </div>
+          
+          {/* Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            className="focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
+            style={{ borderRadius: '12px' }}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
+          </button>
+        </div>
+
+        {/* Auth Buttons */}
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          {!userProfile && (
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <button
+                className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-emov-green transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+                onClick={() => navigate('/login')}
+              >
+                <span>Sign In</span>
+              </button>
+              <button
+                className="flex items-center justify-center space-x-1 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] min-w-[80px]"
+                style={{
+                  backgroundColor: 'var(--emov-green, #27c583)',
+                  boxShadow: '0 2px 10px rgba(39, 197, 131, 0.3)',
+                }}
+                onClick={() => navigate('/signup')}
+              >
+                <span>Sign Up</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Navbar Section */}
+  <div className="relative">
+    <Navbar 
+      isDark={isDark}
+      toggleTheme={toggleTheme}
+      language={language}
+      setLanguage={setLanguage}
+      userProfile={userProfile}
+      handleLogout={handleLogout}
+    />
+  </div>
+
+  {/* Hero Section */}
+  <section className="relative w-full pb-8 sm:pb-12 md:pb-16">
+    <div className="relative max-w-[2000px] mx-auto">
+      {/* Content */}
+      <div className="text-center mt-16 sm:mt-20 md:mt-6 md:mt-8 md:mt-10 px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8 md:mb-10">
+        <div className="w-full text-center max-w-4xl sm:max-w-5xl lg:max-w-6xl mx-auto">
+          <h1 className="text-text-primary font-semibold text-lg sm:text-2xl md:text-3xl lg:text-4xl font-normal mb-2 sm:mb-3 md:mb-4 leading-tight">
+            {t.findVehicles}
+          </h1>
+          <h1 className="text-sm sm:text-xl md:text-2xl lg:text-3xl font-normal mb-4 sm:mb-5 md:mb-6 leading-tight text-text-tertiary">
+            {t.tagline}
+          </h1>
+        </div>
+      </div>
+
+      {/* Mobile Search Bar */}
+      <div className={`md:hidden ${showSearchResults ? 'pb-96' : ''}`}>
+        <div className="w-full px-4 sm:px-6">
+          <div className="relative max-w-full mx-auto">
+            <div 
+              className="relative w-full h-12 sm:h-14 rounded-2xl border border-white/40 flex items-center transition-all duration-300 hover:border-white/50 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/20"
+              style={{
+                background: isDark 
+                  ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.92) 0%, rgba(20, 20, 20, 0.88) 100%)'
+                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.88) 100%)',
+                backdropFilter: 'blur(20px) saturate(200%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(200%)',
+                boxShadow: isDark
+                  ? `
+                    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+                    0 2px 4px -1px rgba(0, 0, 0, 0.2),
+                    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
+                  `
+                  : `
+                    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+                    0 2px 4px -1px rgba(0, 0, 0, 0.03),
+                    inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.05)
+                  `,
+              }}
+            >
+              <div 
+                className="absolute inset-0 opacity-30 pointer-events-none"
+                style={{
+                  background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.8) 0%, transparent 70%)',
+                }}
+              />
+
+              <div className="absolute left-4 z-10">
+                <svg 
+                  className={`w-5 h-5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              <input
+                type="text"
+                placeholder={t.searchPlaceholder || "Search for vehicles..."}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim()) {
+                    setShowSearchResults(true);
+                  }
+                }}
+                className={`w-full h-full pl-12 pr-12 bg-transparent ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-800 placeholder-gray-500'} text-sm font-medium focus:outline-none z-10`}
+              />
+
+              <div className="absolute right-4 z-10 cursor-pointer group">
+                <svg 
+                  className={`w-5 h-5 ${isDark ? 'text-gray-300' : 'text-gray-600'} transition-transform duration-200 group-hover:scale-110`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  strokeWidth={3}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+
+              <div 
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%)',
+                }}
+              />
             </div>
 
-               {/* Right side controls */}
-                    <div className="flex items-center space-x-2 sm:space-x-4">
-                      {/* Desktop Language Selector and Theme Toggle */}
-                      <div className="hidden md:flex items-center space-x-4">
-                        {/* Language Selector */}
-                        <div className="relative">
-                          <select 
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
-                            className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none"
-                          >
-                            <option value="english">English</option>
-                            <option value="urdu">Urdu</option>
-                            <option value="french">French</option>
-                          </select>
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
-                            <FaCaretDown className="text-text-secondary w-3 h-3" />
-                          </div>
-                        </div>
-                        
-                        {/* Theme Toggle Button */}
-                        <button 
-                          onClick={toggleTheme}
-                          className="focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
-                          style={{ borderRadius: '12px' }}
-                          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            {/* Mobile Search Results Dropdown */}
+            <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${isDark ? 'border-white/20' : 'border-gray-200'} ${showSearchResults ? 'block' : 'hidden'} z-50`}
+              style={{
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div 
+                className="max-h-[500px] overflow-y-auto"
+                style={{
+                  background: isDark 
+                    ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(20, 20, 20, 0.95) 100%)'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                  backdropFilter: 'blur(20px) saturate(200%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(200%)',
+                }}
+              >
+                {/* Recent Searches */}
+                {!searchQuery.trim() && recentSearches.length > 0 && (
+                  <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Recent Searches</h3>
+                      <button
+                        onClick={clearRecentSearches}
+                        className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors`}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {recentSearches.map((search, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleSearchSubmit(search)}
+                          className={`w-full text-left px-3 py-2 text-sm ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg transition-colors flex items-center space-x-2`}
                         >
-                          {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                          <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>{search}</span>
                         </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Search Results */}
+                {searchQuery.trim() && (
+                  <div className="p-4">
+                    {isSearching ? (
+                      <div className="text-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2`}>Searching...</p>
                       </div>
-            
-            <div className="flex items-center space-x-4">
-              {!userProfile && (
-                <div className="flex items-center space-x-4">
-                  <button
-                    className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none"
-                    onClick={() => navigate('/login')}
-                  >
-                    <span>Sign In</span>
-                  </button>
-                  <button
-                    className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
-                    style={{
-                      backgroundColor: 'var(--emov-green, #27c583ff)',
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
-                    onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-                    onClick={() => navigate('/signup')}
-                  >
-                    <span>Sign Up</span>
-                  </button>
+                    ) : searchResults.length > 0 ? (
+                      <div className="space-y-2">
+                        <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                          Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                        </h3>
+                        {searchResults.map((ad) => (
+                          <SearchResultItem 
+                            key={ad.AdID || ad.id || ad.adId || ad._id}
+                            ad={ad}
+                            isDark={isDark}
+                            handleAdClick={handleAdClick}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Search Bar */}
+      <div className={`hidden md:block w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-24 ${showSearchResults ? 'pb-96' : ''}`}>
+        <div className="relative max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto">
+          <div 
+            className="relative w-full h-12 sm:h-14 md:h-16 rounded-2xl border border-white/40 flex items-center transition-all duration-300 hover:border-white/50 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/20"
+            style={{
+              background: isDark 
+                ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.92) 0%, rgba(20, 20, 20, 0.88) 100%)'
+                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.88) 100%)',
+              backdropFilter: 'blur(20px) saturate(200%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(200%)',
+              boxShadow: isDark
+                ? `
+                  0 4px 6px -1px rgba(0, 0, 0, 0.3),
+                  0 2px 4px -1px rgba(0, 0, 0, 0.2),
+                  inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+                  inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
+                `
+                : `
+                  0 4px 6px -1px rgba(0, 0, 0, 0.05),
+                  0 2px 4px -1px rgba(0, 0, 0, 0.03),
+                  inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
+                  inset 0 -1px 0 0 rgba(0, 0, 0, 0.05)
+                `,
+            }}
+          >
+            <div 
+              className="absolute inset-0 opacity-30 pointer-events-none"
+              style={{
+                background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.8) 0%, transparent 70%)',
+              }}
+            />
+
+            <div className="absolute left-4 sm:left-5 md:left-6 z-10">
+              <svg 
+                className={`w-5 h-5 sm:w-6 sm:h-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                strokeWidth={2.5}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+
+            <input
+              type="text"
+              placeholder={t.searchPlaceholder || "Search for vehicles..."}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                handleSearch(e.target.value);
+              }}
+              onFocus={() => {
+                if (searchQuery.trim()) {
+                  setShowSearchResults(true);
+                }
+              }}
+              className={`w-full h-full pl-12 sm:pl-14 md:pl-16 pr-12 sm:pr-14 md:pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-800 placeholder-gray-500'} text-sm sm:text-base md:text-lg font-medium focus:outline-none z-10`}
+            />
+
+            <div className="absolute right-4 sm:right-5 md:right-6 z-10 cursor-pointer group">
+              <svg 
+                className={`w-5 h-5 sm:w-6 sm:h-6 ${isDark ? 'text-gray-300' : 'text-gray-600'} transition-transform duration-200 group-hover:scale-110`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                strokeWidth={3}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            <div 
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%)',
+              }}
+            />
+          </div>
+
+          {/* Desktop Search Results Dropdown */}
+          <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${isDark ? 'border-white/20' : 'border-gray-200'} ${showSearchResults ? 'block' : 'hidden'} z-50`}
+            style={{
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <div 
+              className="max-h-[500px] overflow-y-auto"
+              style={{
+                background: isDark 
+                  ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(20, 20, 20, 0.95) 100%)'
+                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                backdropFilter: 'blur(20px) saturate(200%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(200%)',
+              }}
+            >
+              {/* Recent Searches */}
+              {!searchQuery.trim() && recentSearches.length > 0 && (
+                <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Recent Searches</h3>
+                    <button
+                      onClick={clearRecentSearches}
+                      className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors`}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {recentSearches.map((search, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSearchSubmit(search)}
+                        className={`w-full text-left px-3 py-2 text-sm ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg transition-colors flex items-center space-x-2`}
+                      >
+                        <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{search}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Search Results */}
+              {searchQuery.trim() && (
+                <div className="p-4">
+                  {isSearching ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2`}>Searching...</p>
+                    </div>
+                  ) : searchResults.length > 0 ? (
+                    <div className="space-y-2">
+                      <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                        Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                      </h3>
+                      {searchResults.map((ad) => (
+                        <SearchResultItem 
+                          key={ad.AdID || ad.id || ad.adId || ad._id}
+                          ad={ad}
+                          isDark={isDark}
+                          handleAdClick={handleAdClick}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-4">
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           </div>
-          </div>
-
-        {/* Navbar Section */}
-        <div className="relative">
-          <Navbar 
-            isDark={isDark}
-            toggleTheme={toggleTheme}
-            language={language}
-            setLanguage={setLanguage}
-            userProfile={userProfile}
-            handleLogout={handleLogout}
-          />
         </div>
-
-        {/* Hero Section */}
-       <section className="relative w-full overflow-hidden pb-12 sm:pb-16 ">
-              <div className="relative max-w-[2000px] mx-auto">
-                {/* Content */}
-                {/* Hero Text */}
-                <div className="text-left mt-8 md:mt-5 px-4 sm:px-6 lg:px-8 mb-8 sm:mb-10">
-                  <div className="mt-12 w-full text-center max-w-6xl mx-auto">
-                    <h1 className="text-text-primary font-semibold text-lg sm:text-3xl md:text-4xl font-normal mb-2 sm:mb-4 leading-tight">
-                      {t.findVehicles}
-                    </h1>
-                    <h1 className="text-md sm:text-3xl md:text-4xl font-normal mb-4 sm:mb-6 leading-tight text-text-tertiary">
-                      {t.tagline}
-                    </h1>
-                  </div>
-                </div>
-
-{/* FINAL – Exactly like your screenshot, no focus border, no shadow, original filter icon */}
-<div className="w-full px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40">
-  <div className="relative">
-
-    {/* Main Glass Container – Matches your mobile reference exactly */}
-    <div 
-      className="relative w-full h-14 sm:h-16 rounded-2xl overflow-hidden border border-white/30 flex items-center"
-      style={{
-        background: 'linear-gradient(135deg, rgba(240, 255, 250, 0.85) 0%, rgba(245, 240, 255, 0.75) 100%)',
-        backdropFilter: 'blur(16px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.06)',
-      }}
-    >
-
-      {/* Ultra-subtle top shine (light refraction) */}
-      <div 
-        className="absolute inset-0 opacity-50 pointer-events-none"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, transparent 60%)',
-        }}
-      />
-
-      {/* Search Icon – Left */}
-      <div className="absolute left-5 z-10">
-        <svg 
-          className="w-6 h-6 text-gray-700" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-          strokeWidth={2.5}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
       </div>
-
-      {/* Input Field */}
-      <input
-        type="text"
-        placeholder={t.searchPlaceholder || "Search for vehicles..."}
-        className="w-full h-full pl-16 pr-20 bg-transparent text-gray-800 placeholder-gray-600 text-base sm:text-lg font-medium focus:outline-none z-10"
-      />
-
-      {/* Filter / Dropdown Icon – Right (matches your mobile app exactly) */}
-      <div className="absolute right-5 z-10">
-        <svg 
-          className="w-6 h-6 text-gray-700" 
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-          strokeWidth={3}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-
     </div>
-  </div>
+  </section>
 </div>
-
-              </div>
-
-
-            </section>
-      
-       
-        </div>
         </div>
          </div>
          
@@ -1485,23 +1950,26 @@ useEffect(() => {
       {/* Main Content */}
       <main className="w-full relative z-10">
         {/* Browse Used Vehicles Section with Tabs */}
-   <section className="w-full bg-bg-secondary py-12 sm:py-16">
-  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+ <section className="w-full bg-bg-secondary py-8 sm:py-12 md:py-16">
+  <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
     <div className="w-full bg-transparent rounded-xl overflow-hidden">
-      <div className="w-full p-6 bg-bg-secondary rounded-t-lg">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold mb-4 sm:mb-6 text-text-primary">{t.browseUsedVehicles}</h2>
+      <div className="w-full p-3 sm:p-4 md:p-6 bg-bg-secondary rounded-t-lg">
+        <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 md:mb-6 text-text-primary">
+          {t.browseUsedVehicles}
+        </h2>
 
         {/* Tabs */}
         <div className="w-full pb-1">
           {/* Mobile: Single line tabs */}
-          <div className="md:hidden flex space-x-1 overflow-x-auto pb-1 no-scrollbar">
+          <div className="md:hidden flex space-x-0.5 overflow-x-auto pb-1 no-scrollbar">
             {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
               <button
                 key={tab}
-                className={`px-2 py-2 text-[10px] xs:text-xs whitespace-nowrap ${activeTab === tab
+                className={`px-2.5 py-2 text-[10px] whitespace-nowrap ${
+                  activeTab === tab
                     ? 'text-emov-purple border-b-2 border-emov-purple'
                     : 'text-text-secondary hover:text-text-primary'
-                  }`}
+                }`}
                 onClick={() => handleTabChange(tab)}
               >
                 {tab}
@@ -1515,10 +1983,11 @@ useEffect(() => {
               {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
                 <button
                   key={tab}
-                  className={`px-4 py-3 text-sm sm:text-base whitespace-nowrap relative ${activeTab === tab
+                  className={`px-4 py-3 text-sm sm:text-base whitespace-nowrap relative ${
+                    activeTab === tab
                       ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
                       : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                  }`}
                   onClick={() => handleTabChange(tab)}
                 >
                   {tab}
@@ -1530,27 +1999,27 @@ useEffect(() => {
       </div>
 
       {/* Tab Content */}
-      <div className="relative w-full pb-6 px-6 bg-bg-secondary rounded-lg">
+      <div className="relative w-full pb-4 sm:pb-6 px-0 bg-bg-secondary rounded-lg">
         <div className="relative w-full overflow-hidden">
           {/* Arrows */}
           <button
             onClick={() => scrollLeft(activeTab)}
-            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors ${!canScrollLeft(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
-              }`}
-            style={{ padding: '0.5rem' }}
+            className={`absolute left-1 sm:left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors p-1.5 sm:p-2 ${
+              !canScrollLeft(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
+            }`}
             disabled={!canScrollLeft(activeTab)}
           >
-            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-5 sm:h-5 transform rotate-180" />
+            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 transform rotate-180" />
           </button>
 
           <button
             onClick={() => scrollRight(activeTab)}
-            className={`absolute right-0 md:right-5 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors ${!canScrollRight(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
-              }`}
-            style={{ padding: '0.5rem' }}
+            className={`absolute right-1 sm:right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors p-1.5 sm:p-2 ${
+              !canScrollRight(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
+            }`}
             disabled={!canScrollRight(activeTab)}
           >
-            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-5 sm:h-5" />
+            <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
           </button>
 
           {/* Carousel Track */}
@@ -1612,7 +2081,7 @@ useEffect(() => {
                 slides.push(
                   <div key={`slide-${i}`} className="flex-shrink-0 w-full" style={{ width: '100%' }}>
                     {/* MOBILE: Adjust grid based on tab type */}
-                    <div className={`grid gap-2 md:gap-4 w-full px-2 sm:px-4 ${
+                    <div className={`grid gap-2 sm:gap-3 md:gap-4 w-full px-3 sm:px-6 md:px-8 ${
                       window.innerWidth < 768 
                         ? (hasImages ? 'grid-cols-4' : 'grid-cols-6')
                         : 'grid-cols-2 md:sm:grid-cols-3 lg:grid-cols-5'
@@ -1622,9 +2091,9 @@ useEffect(() => {
 
                         // MOBILE card layout
                         const mobileCard = () => (
-                          <div className="flex flex-col items-center justify-center p-2 h-full w-full">
+                          <div className="flex flex-col items-center justify-center h-full w-full p-1.5">
                             {hasImages && (item.image || item.icon) ? (
-                              <div className="flex items-center justify-center mb-2" style={{ height: '30px', width: '30px' }}>
+                              <div className="flex items-center justify-center mb-1 flex-shrink-0" style={{ height: '24px', width: '24px' }}>
                                 {item.icon ? (
                                   <div className="flex items-center justify-center w-6 h-6 bg-bg-primary rounded-full border border-gray-600">
                                     {React.cloneElement(item.icon, {
@@ -1652,9 +2121,7 @@ useEffect(() => {
                             ) : null}
                             <div className="text-center w-full">
                               <div className={`text-text-primary line-clamp-2 leading-tight ${
-                                window.innerWidth < 768 
-                                  ? (hasImages ? 'text-[10px] xs:text-xs' : 'text-[9px] xs:text-[10px]')
-                                  : 'text-base'
+                                hasImages ? 'text-[9px]' : 'text-[8px]'
                               }`}>
                                 {displayName}
                               </div>
@@ -1662,12 +2129,12 @@ useEffect(() => {
                           </div>
                         );
 
-                        // DESKTOP card layout - FIXED ICON POSITIONING
+                        // DESKTOP card layout
                         const desktopCard = () => {
                           return (
                             <div className="flex flex-col items-center justify-center p-4 h-full w-full">
                               {hasImages && (item.image || item.icon) ? (
-                                <div className="flex items-center justify-center mb-4" style={{ height: '60px', width: '60px' }}>
+                                <div className="flex items-center justify-center mb-3 flex-shrink-0" style={{ height: '50px', width: '50px' }}>
                                   {item.icon ? (
                                     <div className="flex items-center justify-center w-12 h-12 bg-bg-primary rounded-full border border-gray-600">
                                       {React.cloneElement(item.icon, { 
@@ -1695,7 +2162,7 @@ useEffect(() => {
                               ) : null}
                               
                               <div className="text-center w-full">
-                                <div className={`text-text-primary line-clamp-2 ${
+                                <div className={`text-text-primary line-clamp-2 text-sm ${
                                   hasImages ? '' : 'flex items-center justify-center h-12'
                                 }`}>
                                   {displayName}
@@ -1712,17 +2179,18 @@ useEffect(() => {
                               isDark
                                 ? 'bg-bg-card border border-gray-600'
                                 : 'bg-bg-primary border border-gray-600'
-                            }`}
+                            } hover:border-emov-purple transition-all duration-200`}
                             style={{
                               width: window.innerWidth < 768 
                                 ? '100%' 
                                 : (hasImages ? '180px' : '160px'),
                               height: window.innerWidth < 768 
-                                ? (hasImages ? '80px' : '55px')
+                                ? (hasImages ? '75px' : '50px')
                                 : (hasImages ? '140px' : '80px'),
                               minHeight: window.innerWidth >= 768 ? '80px' : 'auto'
                             }}
-onClick={() => safeNavigateToFilteredAds(activeTab, item)}                          >
+                            onClick={() => safeNavigateToFilteredAds(activeTab, item)}
+                          >
                             {window.innerWidth < 768 ? mobileCard() : desktopCard()}
                           </div>
                         );
@@ -1736,43 +2204,42 @@ onClick={() => safeNavigateToFilteredAds(activeTab, item)}                      
             })()}
           </div>
 
-         {/* CAROUSEL INDICATORS */}
-<div className="flex justify-center items-center space-x-2 mt-4">
-  {(() => {
-    const transformedData = transformApiData();
-    let currentTabData = [];
-    
-    const tabDataMap = {
-      'Category': 'categories',
-      'Model': 'models', 
-      'Brand': 'brands',
-      'Body Type': 'bodytypes',
-      'Budget': 'budgets'
-    };
-    
-    const dataKey = tabDataMap[activeTab];
-    currentTabData = Array.isArray(transformedData[dataKey]) ? transformedData[dataKey] : [];
-    
-    const totalSlides = Math.ceil(currentTabData.length / itemsPerPage);
-    
-    if (totalSlides > 1) {
-      return Array.from({ length: totalSlides }, (_, index) => (
-        <button
-          key={index}
-onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}     
-   className={`w-2 h-2 rounded-full transition-all duration-300 ${
-            currentSlides[activeTab] === index 
-              ? 'bg-[#0DFF9A] w-6' 
-              : 'bg-gray-500 hover:bg-gray-600'
-          }`}
-          aria-label={`Go to slide ${index + 1}`}
-          
-        />
-      ));
-    }
-    return null;
-  })()}
-</div>
+          {/* CAROUSEL INDICATORS */}
+          <div className="flex justify-center items-center space-x-2 mt-3 sm:mt-4">
+            {(() => {
+              const transformedData = transformApiData();
+              let currentTabData = [];
+              
+              const tabDataMap = {
+                'Category': 'categories',
+                'Model': 'models', 
+                'Brand': 'brands',
+                'Body Type': 'bodytypes',
+                'Budget': 'budgets'
+              };
+              
+              const dataKey = tabDataMap[activeTab];
+              currentTabData = Array.isArray(transformedData[dataKey]) ? transformedData[dataKey] : [];
+              
+              const totalSlides = Math.ceil(currentTabData.length / itemsPerPage);
+              
+              if (totalSlides > 1) {
+                return Array.from({ length: totalSlides }, (_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}     
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      currentSlides[activeTab] === index 
+                        ? 'bg-[#0DFF9A] w-6' 
+                        : 'bg-gray-500 hover:bg-gray-600 w-2'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ));
+              }
+              return null;
+            })()}
+          </div>
         </div>
       </div>
     </div>
@@ -1834,30 +2301,26 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
         
         <div className="relative overflow-hidden">
           <div 
-            className="flex transition-transform duration-300"
+            className="flex transition-transform duration-300 sm:hidden"
             style={{
               transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
               width: '100%',
               transition: 'transform 0.3s ease-in-out'
             }}
           >
-          {Array(Math.ceil(recentlyAddedVehicles.length / 4)).fill().map((_, groupIndex) => (
-            <div 
-              key={groupIndex}
-              className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
-              style={{ minWidth: '100%' }}
-            >
-              {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle, vehicleIndex) => {
-                // Use the image URL that was already constructed in fetchRecentAds
-                const vehicleImageUrl = vehicle.image || '/mockvehicle.png';
-                
-                return (
+            {recentlyAddedVehicles.map((vehicle, vehicleIndex) => {
+              const vehicleImageUrl = vehicle.image || '/mockvehicle.png';
+              
+              return (
+                <div 
+                  key={`mobile-${vehicle.AdID || vehicle.id}-${vehicleIndex}`}
+                  className="w-full flex-shrink-0 px-1"
+                  style={{ minWidth: '100%' }}
+                >
                   <div 
-                    key={`${vehicle.AdID || vehicle.id}-${vehicleIndex}`} 
                     className="group bg-bg-primary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg cursor-pointer"
                     onClick={() => navigate(`/ad/${vehicle.AdID || vehicle.id}`, { state: { adData: vehicle } })}
                   >
-                    {/* Image with minimal gap like reference */}
                     <div className="p-3">
                       <div className="relative h-48 w-full rounded-lg overflow-hidden">
                         <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
@@ -1887,31 +2350,25 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
                       </div>
                     </div>
                     
-                    {/* Content area */}
                     <div className="px-3 pb-3 flex-grow flex flex-col">
-                      {/* Vehicle Title */}
                       <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-1">
                         {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(0, 3).join(' ')}
                       </h3>
                       
-                      {/* Vehicle Description */}
                       <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-0 leading-tight line-clamp-1">
                         {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(3).join(' ') || vehicle.SellerComment || ''}
                       </p>
                       
-                      {/* Price */}
                       <span className="text-base sm:text-lg font-bold text-emov-purple mb-1 sm:mb-2 block">
                         {vehicle.VehiclePrice ? `Rs ${parseInt(vehicle.VehiclePrice).toLocaleString()}` : vehicle.price}
                       </span>
                       
-                      {/* Details row - Year and Mileage */}
                       <div className="flex items-center text-xs sm:text-sm text-gray-500 mb-1">
                         <span>{vehicle.RegistrationYear || vehicle.year || '2020'}</span>
                         <span className="mx-1 sm:mx-2">|</span>
                         <span className="line-clamp-1">{vehicle.VehicleMileage || vehicle.mileage}</span>
                       </div>
                       
-                      {/* Location */}
                       <div className="flex items-center text-xs sm:text-sm text-gray-500 mt-auto">
                         <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -1921,13 +2378,98 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          ))}
+                </div>
+              );
+            })}
+          </div>
+          
+          <div 
+            className="hidden sm:flex transition-transform duration-300"
+            style={{
+              transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
+              width: '100%',
+              transition: 'transform 0.3s ease-in-out'
+            }}
+          >
+            {Array(Math.ceil(recentlyAddedVehicles.length / 4)).fill().map((_, groupIndex) => (
+              <div 
+                key={groupIndex}
+                className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+                style={{ minWidth: '100%' }}
+              >
+                {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle, vehicleIndex) => {
+                  const vehicleImageUrl = vehicle.image || '/mockvehicle.png';
+                  
+                  return (
+                    <div 
+                      key={`${vehicle.AdID || vehicle.id}-${vehicleIndex}`} 
+                      className="group bg-bg-primary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg cursor-pointer"
+                      onClick={() => navigate(`/ad/${vehicle.AdID || vehicle.id}`, { state: { adData: vehicle } })}
+                    >
+                      <div className="p-3">
+                        <div className="relative h-48 w-full rounded-lg overflow-hidden">
+                          <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
+                          <img 
+                            src={vehicleImageUrl} 
+                            alt={vehicle.VehicleName || vehicle.title}
+                            className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
+                            style={{
+                              border: '1px solid var(--border-primary)',
+                              boxSizing: 'border-box'
+                            }}
+                            loading="lazy"
+                            onError={(e) => {
+                              console.log('❌ Image failed to load:', vehicleImageUrl);
+                              e.target.onerror = null;
+                              e.target.src = '/mockvehicle.png';
+                            }}
+                            onLoad={(e) => {
+                              console.log('✅ Image loaded successfully:', vehicleImageUrl);
+                            }}
+                          />
+                          {vehicle.isNew && (
+                            <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
+                              {t.new}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="px-3 pb-3 flex-grow flex flex-col">
+                        <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-1">
+                          {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(0, 3).join(' ')}
+                        </h3>
+                        
+                        <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-0 leading-tight line-clamp-1">
+                          {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(3).join(' ') || vehicle.SellerComment || ''}
+                        </p>
+                        
+                        <span className="text-base sm:text-lg font-bold text-emov-purple mb-1 sm:mb-2 block">
+                          {vehicle.VehiclePrice ? `Rs ${parseInt(vehicle.VehiclePrice).toLocaleString()}` : vehicle.price}
+                        </span>
+                        
+                        <div className="flex items-center text-xs sm:text-sm text-gray-500 mb-1">
+                          <span>{vehicle.RegistrationYear || vehicle.year || '2020'}</span>
+                          <span className="mx-1 sm:mx-2">|</span>
+                          <span className="line-clamp-1">{vehicle.VehicleMileage || vehicle.mileage}</span>
+                        </div>
+                        
+                        <div className="flex items-center text-xs sm:text-sm text-gray-500 mt-auto">
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="line-clamp-1">{vehicle.LocationName || vehicle.location}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
     ) : (
       <div className="text-center py-10 text-text-secondary">
         <p>No recent vehicles available</p>
@@ -1937,7 +2479,7 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
 </section>
 
         {/* Featured Vehicles Section */}
-     <section className="w-full bg-bg-primary py-12 sm:py-16 relative">
+   <section className="w-full bg-bg-primary py-12 sm:py-16 relative">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div className="mb-6">
       <h2 className="text-2xl font-bold text-text-primary">{t.featuredVehicles}</h2>
@@ -1953,8 +2495,123 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
       />
       
       <div className="relative overflow-hidden">
+        {/* Mobile carousel - one card at a time */}
         <div 
-          className="flex transition-transform duration-300"
+          className="flex transition-transform duration-300 sm:hidden"
+          style={{
+            transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)`,
+            width: '100%',
+            transition: 'transform 0.3s ease-in-out'
+          }}
+        >
+          {[
+            {
+              id: 1,
+              title: 'Toyota Camry 2020',
+              price: '$24,000',
+              year: '2020',
+              mileage: '35,000 km',
+              transmission: 'Automatic',
+              fuel: 'Petrol',
+              location: 'New York',
+              isNew: true
+            },
+            {
+              id: 2,
+              title: 'Honda Civic 2021',
+              price: '$22,500',
+              year: '2021',
+              mileage: '25,000 km',
+              transmission: 'Automatic',
+              fuel: 'Hybrid',
+              location: 'Los Angeles',
+              isNew: false
+            },
+            {
+              id: 3,
+              title: 'BMW 3 Series 2019',
+              price: '$32,000',
+              year: '2019',
+              mileage: '28,000 km',
+              transmission: 'Automatic',
+              fuel: 'Diesel',
+              location: 'Miami',
+              isNew: true
+            },
+            {
+              id: 4,
+              title: 'Mercedes C-Class 2020',
+              price: '$38,500',
+              year: '2020',
+              mileage: '18,000 km',
+              transmission: 'Automatic',
+              fuel: 'Petrol',
+              location: 'Chicago',
+              isNew: false
+            }
+          ].map((vehicle) => (
+            <div 
+              key={`mobile-${vehicle.id}`}
+              className="w-full flex-shrink-0 px-1"
+              style={{ minWidth: '100%' }}
+            >
+              <div 
+                className="group bg-bg-secondary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
+              >
+                <div className="p-3">
+                  <div className="relative h-48 w-full rounded-lg overflow-hidden">
+                    <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
+                    <img 
+                      src="/mockvehicle.png" 
+                      alt={vehicle.title}
+                      className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
+                      style={{
+                        border: '1px solid var(--border-primary)',
+                        boxSizing: 'border-box'
+                      }}
+                      loading="lazy"
+                    />
+                    {vehicle.isNew && (
+                      <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
+                        {t.new}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="px-3 pb-3 flex-grow flex flex-col">
+                  <h3 className="text-base font-semibold text-text-primary mb-1 leading-tight">
+                    {vehicle.title.split(' ').slice(0, 2).join(' ')}
+                  </h3>
+                  
+                  <p className="text-sm text-gray-600 mb-1 leading-tight">
+                    {vehicle.title.split(' ').slice(2).join(' ')}
+                  </p>
+                  
+                  <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
+                  
+                  <div className="flex items-center text-sm text-gray-500 mb-1">
+                    <span>{vehicle.year}</span>
+                    <span className="mx-2">|</span>
+                    <span>{vehicle.mileage}</span>
+                  </div>
+                  
+                  <div className="flex items-center text-sm text-gray-500">
+                    <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{vehicle.location}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop carousel - 4 cards at a time */}
+        <div 
+          className="hidden sm:flex transition-transform duration-300"
           style={{
             transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)`,
             width: '100%',
@@ -2017,7 +2674,6 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
                   key={vehicle.id} 
                   className="group bg-bg-secondary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
                 >
-                  {/* Image with minimal gap like reference */}
                   <div className="p-3">
                     <div className="relative h-48 w-full rounded-lg overflow-hidden">
                       <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
@@ -2039,29 +2695,23 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
                     </div>
                   </div>
                   
-                  {/* Content area - exactly like reference image */}
                   <div className="px-3 pb-3 flex-grow flex flex-col">
-                    {/* Vehicle Title - Two lines */}
                     <h3 className="text-base font-semibold text-text-primary mb-1 leading-tight">
                       {vehicle.title.split(' ').slice(0, 2).join(' ')}
                     </h3>
                     
-                    {/* Vehicle Description - Second line */}
                     <p className="text-sm text-gray-600 mb-1 leading-tight">
                       {vehicle.title.split(' ').slice(2).join(' ')}
                     </p>
                     
-                    {/* Price - Large and prominent */}
                     <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
                     
-                    {/* Details row - Year and Mileage */}
                     <div className="flex items-center text-sm text-gray-500 mb-1">
                       <span>{vehicle.year}</span>
                       <span className="mx-2">|</span>
                       <span>{vehicle.mileage}</span>
                     </div>
                     
-                    {/* Location with icon */}
                     <div className="flex items-center text-sm text-gray-500">
                       <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -2121,8 +2771,12 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
                 });
 
                 return uniqueBrands.map((brand) => (
-                  <div key={brand.id} className="flex flex-col items-center group">
-                    <div className="w-24 h-24 rounded-full bg-bg-primary border-2 border-border-primary p-2 flex items-center justify-center mb-2">
+                  <div 
+                    key={brand.id} 
+                    className="flex flex-col items-center group cursor-pointer"
+                    onClick={() => safeNavigateToFilteredAds('Brand', brand)}
+                  >
+                    <div className="w-24 h-24 rounded-full bg-bg-primary border-2 border-border-primary p-2 flex items-center justify-center mb-2 transition-all duration-200 group-hover:border-emov-purple">
                       {brand.image ? (
                         <div className="w-full h-full flex items-center justify-center">
                           <img 
@@ -2146,7 +2800,7 @@ onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}
                         </div>
                       )}
                     </div>
-                    <span className="text-sm font-medium text-text-primary text-center mt-2">{brand.name}</span>
+                    <span className="text-sm font-medium text-text-primary text-center mt-2 group-hover:text-emov-purple transition-colors">{brand.name}</span>
                   </div>
                 ));
               })()}

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCamera, FaMicrophone, FaUpload, FaCheck, FaChevronDown, FaChevronUp, FaCaretDown, FaMoon, FaSun } from 'react-icons/fa';
+import { FaArrowLeft, FaCamera, FaMicrophone, FaUpload, FaCheck, FaChevronDown, FaChevronUp, FaCaretDown, FaMoon, FaSun, FaStop, FaCircle, FaTimes } from 'react-icons/fa';
 import apiService from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
 import { useTheme } from '../context/ThemeContext';
+import toast from '../utils/toast.jsx';
 
 // Language translations
 const translations = {
@@ -219,6 +220,13 @@ const translations = {
   }
 };
 
+// Format time in MM:SS format
+const formatTime = (seconds) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
 const getTranslatedData = (language) => {
   const t = translations[language];
   return {
@@ -282,6 +290,14 @@ export default function Ads() {
   // Add submitting state
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+
+  // Audio recording states
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
+  const [showRecordingUI, setShowRecordingUI] = useState(false);
+  const recordingInterval = useRef(null);
 
   const t = translations[language];
   const translatedData = getTranslatedData(language);
@@ -460,44 +476,51 @@ export default function Ads() {
   const handleFileChange = async (e) => {
     const { name, files } = e.target;
     console.log(`File input changed - ${name}:`, files);
-  
+
     if (name === 'images' && files.length > 0) {
+      // Check if total images would exceed maximum limit
+      const currentImageCount = formData.Images?.length || 0;
+      if (currentImageCount + files.length > 5) {
+        setFormData(prev => ({
+          ...prev,
+          imageUploadError: `Maximum 5 images allowed. You already have ${currentImageCount} images. Please select only ${5 - currentImageCount} more.`
+        }));
+        return;
+      }
+      
       try {
         setSubmitting(true);
-        const uploadedImageUrls = [];
         
-        // Upload each file one by one
-        for (const file of files) {
-          try {
-            console.log('Uploading file:', file.name);
-            const response = await apiService.upload.uploadImage(file);
-            if (response && response.url) {
-              console.log('Image uploaded successfully:', response.url);
-              
-              // Store just the filename (not full URL)
-              let imageUrl = response.url;
-              
-              // Extract just the filename if it's a full URL
-              if (imageUrl.includes('/')) {
-                imageUrl = imageUrl.split('/').pop();
-              }
-              
-              console.log('Storing image filename for API:', imageUrl);
-              uploadedImageUrls.push(imageUrl);
-            } else {
-              throw new Error('No URL returned from image upload');
+        // Upload all files in parallel for better performance
+        const uploadPromises = Array.from(files).map(async (file) => {
+          console.log('Uploading file:', file.name);
+          const response = await apiService.upload.uploadImage(file);
+          if (response && response.url) {
+            console.log('Image uploaded successfully:', response.url);
+            
+            // Store just the filename (not full URL)
+            let imageUrl = response.url;
+            
+            // Extract just the filename if it's a full URL
+            if (imageUrl.includes('/')) {
+              imageUrl = imageUrl.split('/').pop();
             }
-          } catch (uploadError) {
-            console.error('Error uploading file:', uploadError);
-            throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+            
+            console.log('Storing image filename for API:', imageUrl);
+            return imageUrl;
+          } else {
+            throw new Error('No URL returned from image upload');
           }
-        }
+        });
+        
+        // Wait for all uploads to complete
+        const uploadedImageUrls = await Promise.all(uploadPromises);
         
         console.log('All images uploaded, storing filenames:', uploadedImageUrls);
         
         setFormData(prev => ({
           ...prev,
-          Images: uploadedImageUrls, // Store as array
+          Images: [...(prev.Images || []), ...uploadedImageUrls], // Append to existing images
           imageUploadError: null
         }));
         
@@ -514,7 +537,7 @@ export default function Ads() {
       try {
         // Handle audio upload similarly
         const file = files[0];
-        const response = await apiService.upload.uploadAudio(file); // You might need to create this
+        const response = await apiService.upload.uploadAudio(file);
         if (response && response.url) {
           let audioUrl = response.url;
           if (audioUrl.includes('/')) {
@@ -534,6 +557,112 @@ export default function Ads() {
           audioUploadError: 'Failed to upload audio. Please try again.'
         }));
       }
+    }
+  };
+
+  // Start audio recording
+  const startRecording = async () => {
+    try {
+      console.log('[Audio] Starting recording...');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log('[Audio] Microphone access granted');
+      const mediaRecorder = new MediaRecorder(stream);
+      const audioChunks = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+        
+        try {
+          setSubmitting(true);
+          const response = await apiService.upload.uploadAudio(audioBlob);
+          if (response && response.url) {
+            let audioUrl = response.url;
+            if (audioUrl.includes('/')) {
+              audioUrl = audioUrl.split('/').pop();
+            }
+            
+            setFormData(prev => ({
+              ...prev,
+              AudioURL: audioUrl,
+              audioUploadError: null
+            }));
+          }
+        } catch (error) {
+          console.error('Error uploading recorded audio:', error);
+          setFormData(prev => ({
+            ...prev,
+            audioUploadError: 'Failed to upload recorded audio. Please try again.'
+          }));
+        } finally {
+          setSubmitting(false);
+        }
+        
+        setAudioChunks([]);
+        setRecordingTime(0);
+      };
+
+      console.log('[Audio] MediaRecorder created, starting...');
+      mediaRecorder.start();
+      console.log('[Audio] MediaRecorder started');
+      setMediaRecorder(mediaRecorder);
+      setAudioChunks(audioChunks);
+      setIsRecording(true);
+      setShowRecordingUI(true);
+      console.log('[Audio] States set, starting timer...');
+
+      // Start recording timer
+      recordingInterval.current = setInterval(() => {
+        console.log('[Audio] Timer tick - current time:', recordingTime);
+        setRecordingTime(prev => {
+          if (prev >= 60) { // 60 seconds max recording time
+            stopRecording();
+            return 0;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
+      alert('Could not access microphone. Please check permissions.');
+    }
+  };
+
+  // Stop audio recording
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    setIsRecording(false);
+    setShowRecordingUI(false);
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+      recordingInterval.current = null;
+    }
+  };
+
+  // Cancel recording
+  const cancelRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    setIsRecording(false);
+    setShowRecordingUI(false);
+    setFormData(prev => ({
+      ...prev,
+      AudioURL: null
+    }));
+    setRecordingTime(0);
+    if (recordingInterval.current) {
+      clearInterval(recordingInterval.current);
+      recordingInterval.current = null;
     }
   };
 
@@ -579,18 +708,24 @@ export default function Ads() {
         console.log('VehiclePower missing');
       }
       if (!formData.Transmission) {
-        errors.Transmission = 'Fill this field';
+        errors.Transmission = 'Select a transmission type';
         console.log('Transmission missing');
       }
       if (!formData.Color?.trim()) {
-        errors.Color = 'Fill this field';
+        errors.Color = 'Select a color';
         console.log('Color missing');
       }
     } else if (step === 2) {
-      // Images & Audio step validation - at least one image is required, audio is optional
+      // Images & Audio step validation - minimum 2 and maximum 5 images required, audio is optional
       if (!formData.Images || formData.Images.length === 0) {
-        errors.Images = 'At least one image is required';
+        errors.Images = 'Minimum 2 images are required';
         console.log('Images missing');
+      } else if (formData.Images.length < 2) {
+        errors.Images = 'Minimum 2 images are required';
+        console.log('Not enough images');
+      } else if (formData.Images.length > 5) {
+        errors.Images = 'Maximum 5 images allowed';
+        console.log('Too many images');
       }
       // Audio is optional - no validation needed
     } else if (step === 3) {
@@ -1399,37 +1534,177 @@ const renderBasicDetails = () => (
   </div>
 );
 
-  const renderImagesAudio = () => (
-    <div className="space-y-6">
-      <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">{t.images}</label>
+const renderImagesAudio = () => (
+  <div className="space-y-6">
+    <div>
+      <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+        {t.images} <span className="text-red-500">*</span>
+      </label>
+      <div className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+        fieldErrors.Images 
+          ? 'border-red-400 bg-red-50 dark:bg-red-900/20' 
+          : 'border-gray-300 dark:border-gray-600 hover:border-emov-purple/50 bg-gray-50 dark:bg-gray-700'
+      }`}>
         <input
           type="file"
           name="images"
           multiple
           accept="image/*"
           onChange={handleFileChange}
-          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          disabled={submitting}
         />
-        <p className="text-sm text-gray-500 mt-2">{t.selectMultipleImages}</p>
+        <div className="space-y-2">
+          <FaUpload className="mx-auto text-3xl text-gray-400" />
+          <div>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {submitting ? 'Uploading...' : 'Click to upload or drag and drop'}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Minimum 2 images, Maximum 5 images allowed
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              PNG, JPG, GIF up to 10MB each
+            </p>
+          </div>
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-          {t.audio} ({t.optional})
-        </label>
+      
+      {/* Show upload error */}
+      {formData.imageUploadError && (
+        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400">{formData.imageUploadError}</p>
+        </div>
+      )}
+      
+      {/* Show validation error */}
+      {fieldErrors.Images && (
+        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400">{fieldErrors.Images}</p>
+        </div>
+      )}
+      
+      {/* Show uploaded images */}
+      {formData.Images && formData.Images.length > 0 && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Uploaded Images ({formData.Images.length}/5)
+            </p>
+            {formData.Images.length >= 2 && (
+              <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                ✓ Minimum requirement met
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {formData.Images.map((image, index) => (
+              <div key={index} className="relative group">
+                <div className="aspect-square rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600">
+                  <img
+                    src={`https://api.emov.com.pk/image/${image}`}
+                    alt={`Upload ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src = '/image-placeholder.png';
+                    }}
+                  />
+                </div>
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200 rounded-lg flex items-center justify-center">
+                  <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                    Image {index + 1}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+    
+    <div>
+      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+        {t.audio} ({t.optional})
+      </label>
+      
+      {/* Audio recording button */}
+      <div className="flex gap-3 mb-3">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={isRecording ? stopRecording : startRecording}
+            className={`flex-shrink-0 p-3 rounded-full transition-colors ${isRecording 
+              ? 'text-red-500 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50' 
+              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+            disabled={submitting}
+          >
+            {isRecording ? <FaStop className="w-5 h-5" /> : <FaMicrophone className="w-5 h-5" />}
+          </button>
+          
+          {/* Recording indicator */}
+          {showRecordingUI && (
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center space-x-2 shadow-lg">
+              <FaCircle className="animate-pulse" />
+              <span>Recording... {formatTime(recordingTime)}</span>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cancelRecording();
+                }}
+                className="ml-2 text-white hover:text-gray-200"
+                title="Cancel recording"
+              >
+                <FaTimes className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex-1 text-sm text-gray-600 dark:text-gray-400 flex items-center">
+          {isRecording ? 'Click to stop recording' : 'Click to start recording audio description'}
+        </div>
+      </div>
+      
+      {/* Audio file upload */}
+      <div className="relative border-2 border-dashed rounded-lg p-4 text-center border-gray-300 dark:border-gray-600 hover:border-emov-purple/50 bg-gray-50 dark:bg-gray-700 transition-colors">
         <input
           type="file"
           name="audio"
           accept="audio/*"
           onChange={handleFileChange}
-          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
-        <p className="text-sm text-gray-500 mt-2">{t.uploadAudioDescription}</p>
+        <div className="space-y-1">
+          <FaUpload className="mx-auto text-2xl text-gray-400" />
+          <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Or upload audio file
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            MP3, WAV up to 5MB
+          </p>
+        </div>
       </div>
+      
+      {/* Show audio upload error */}
+      {formData.audioUploadError && (
+        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          <p className="text-sm text-red-600 dark:text-red-400">{formData.audioUploadError}</p>
+        </div>
+      )}
+      
+      {/* Show uploaded audio */}
+      {formData.AudioURL && (
+        <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+          <p className="text-sm text-green-600 dark:text-green-400">
+            ✓ Audio uploaded successfully
+          </p>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
 
-  const renderAdditionalDetails = () => (
+const renderAdditionalDetails = () => (
   <div className="space-y-6">
     <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
       <label className="block text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">
@@ -1637,22 +1912,43 @@ const renderPreview = () => {
     // Convert to string for comparison (API returns strings)
     const id = String(brandId);
     
+    console.log('=== Brand Lookup ===');
+    console.log('Input brandId:', brandId, 'Type:', typeof brandId);
+    console.log('Converted id:', id);
+    console.log('filterData?.brand:', filterData?.brand);
+    
     // Try to find in filterData
     if (filterData?.brand) {
+      if (filterData.brand.length > 0) {
+        console.log('Sample brand structure:', filterData.brand[0]);
+        console.log('Available brand IDs:', filterData.brand.map(b => b.BrandID || b.id));
+      }
       const brand = filterData.brand.find(b => 
         String(b.BrandID || b.id) === id
       );
+      console.log('Found brand:', brand);
       if (brand) {
-        return brand.BrandName || brand.name || 'N/A';
+        const name = brand.BrandName || brand.name || 'N/A';
+        console.log('Returning brand name:', name);
+        return name;
       }
     }
     
     // If not found in filterData, try to get from the stored options
     const storedBrands = JSON.parse(localStorage.getItem('vehicleBrands') || '[]');
+    console.log('Checking localStorage brands:', storedBrands.length);
     const brand = storedBrands.find(b => 
       String(b.BrandID || b.id) === id
     );
-    return brand ? (brand.BrandName || brand.name) : brandId;
+    console.log('Found brand in localStorage:', brand);
+    if (brand) {
+      const name = brand.BrandName || brand.name;
+      console.log('Returning localStorage brand name:', name);
+      return name;
+    }
+    
+    console.log('No brand match found, returning ID:', brandId);
+    return brandId;
   };
 
   // Get model name from ID

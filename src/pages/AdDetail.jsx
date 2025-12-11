@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import apiService from '../services/Api';
 import { useChat } from '../contexts/ChatContext';
+import { toast } from 'react-toastify';
 
 const AdDetail = () => {
   const { adId } = useParams();
@@ -13,6 +14,9 @@ const AdDetail = () => {
   const [filterData, setFilterData] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [showAllDetails, setShowAllDetails] = useState(false);
+  const [chatLoading, setChatLoading] = useState(false);
+  
+  const { startNewChat } = useChat();
 
   // Fetch filter data to get body type names
   useEffect(() => {
@@ -142,8 +146,6 @@ const AdDetail = () => {
     navigate(-1);
   };
 
-  const { startNewChat, setActiveChat } = useChat();
-
   const handleContactSeller = async () => {
     try {
       // Check if user is logged in
@@ -154,6 +156,8 @@ const AdDetail = () => {
         return;
       }
 
+      setChatLoading(true);
+      
       // Get seller's user ID from the ad data
       const sellerUserId = ad.SellerID || ad.UserID || ad.seller_id || '19';
       
@@ -177,13 +181,10 @@ const AdDetail = () => {
       console.error('Error starting chat:', error);
       toast.error(`Failed to start chat: ${error.message}`, {
         position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
+        autoClose: 3000,
       });
+    } finally {
+      setChatLoading(false);
     }
   };
 
@@ -496,22 +497,69 @@ const AdDetail = () => {
 
             {/* Vehicle Title & Basic Info */}
             <div className="surface-card rounded-xl shadow-theme p-6 border border-primary">
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">
-                    {ad.VehicleName}
-                  </h1>
-                  <p className="text-lg text-secondary">
-                    {ad.VehicleBrand} • {ad.VehicleModel} • {ad.RegistrationYear}
-                  </p>
-                </div>
-                <div className="mt-3 sm:mt-0">
-                  <div className="text-3xl font-bold text-emov-purple">
-                    Rs. {parseInt(ad.VehiclePrice || 0).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            </div>
+  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-4">
+    <div>
+      <h1 className="text-2xl sm:text-3xl font-bold text-primary mb-2">
+        {ad.VehicleName}
+      </h1>
+      <p className="text-lg text-secondary">
+        {ad.BrandName} • {ad.ModelName} • {ad.RegistrationYear}
+      </p>
+      
+      {/* Added Tabs Section with Icons */}
+      <div className="flex flex-wrap gap-2 mt-3">
+        {/* Verified */}
+        <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-400 border border-green-400">
+          <svg className="w-3 h-3 text-green-900 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-medium text-green-700">Verified</span>
+        </div>
+        
+        {/* Featured */}
+        <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-red-500 border border-red-700">
+          <svg className="w-3 h-3 text-red-900 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-medium text-red-700">Featured</span>
+        </div>
+        
+        {/* Dealer Maintained */}
+        <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-purple-400 border border-purple-400">
+          <svg className="w-3 h-3 text-purple-900 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-medium text-purple-700">Dealer Maintained</span>
+        </div>
+        
+        {/* Warranty Available */}
+        <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-amber-400 border border-amber-400">
+          <svg className="w-3 h-3 text-amber-900 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-medium text-amber-700">Warranty Available</span>
+        </div>
+        
+        {/* Top Rated Seller */}
+        <div className="inline-flex items-center px-3 py-1.5 rounded-lg bg-emerald-400 border border-emerald-400">
+          <svg className="w-3 h-3 text-emerald-900 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-medium text-emerald-700">Top Rated Seller</span>
+        </div>
+      </div>
+      
+      <div className="text-xs text-gray-500 mt-2">
+        {/* Existing content if any */}
+      </div>
+    </div>
+    <div className="mt-3 sm:mt-0">
+      <div className="text-3xl font-bold text-emov-purple">
+        Rs. {parseInt(ad.VehiclePrice || 0).toLocaleString()}
+      </div>
+    </div>
+  </div>
+</div>
 
             {/* Vehicle Details Grid */}
             <div className="surface-card rounded-xl shadow-theme p-6 border border-primary">
@@ -633,6 +681,42 @@ const AdDetail = () => {
                 )}
               </div>
             </div>
+
+            {/* Audio Description */}
+            {ad.AudioURL && (
+              <div className="surface-card rounded-xl shadow-theme p-6 border border-primary">
+                <h2 className="text-xl font-bold text-primary mb-4 flex items-center">
+                  <svg className="w-6 h-6 mr-2 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Audio Description
+                </h2>
+                <div className="surface-primary rounded-lg p-4 border border-emov-purple/20">
+                  <audio 
+                    controls 
+                    className="w-full"
+                    preload="metadata"
+                  >
+                    <source 
+                      src={ad.AudioURL.startsWith('http') ? ad.AudioURL : `https://api.emov.com.pk/audio/${ad.AudioURL}`} 
+                      type="audio/wav" 
+                    />
+                    <source 
+                      src={ad.AudioURL.startsWith('http') ? ad.AudioURL : `https://api.emov.com.pk/audio/${ad.AudioURL}`} 
+                      type="audio/mp3" 
+                    />
+                    Your browser does not support the audio element.
+                  </audio>
+                  <p className="text-sm text-tertiary mt-3 flex items-center">
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Listen to the seller's audio description of this vehicle
+                  </p>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Right Column - Sidebar */}
@@ -649,12 +733,22 @@ const AdDetail = () => {
               <div className="space-y-3">
                 <button
                   onClick={handleContactSeller}
-                  className="w-full bg-emov-purple text-white py-4 rounded-lg font-semibold hover:bg-emov-purple/90 transition-all duration-200 shadow-theme flex items-center justify-center space-x-2"
+                  disabled={chatLoading}
+                  className="w-full bg-emov-purple text-white py-4 rounded-lg font-semibold hover:bg-emov-purple/90 transition-all duration-200 shadow-theme flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  <span>Chat with Seller</span>
+                  {chatLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      <span>Sending Message...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      <span>Chat with Seller</span>
+                    </>
+                  )}
                 </button>
                 
                 <button className="w-full surface-primary border-2 border-emov-purple text-emov-purple py-4 rounded-lg font-semibold hover:surface-secondary transition-all duration-200">

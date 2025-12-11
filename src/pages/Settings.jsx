@@ -65,24 +65,24 @@ const Settings = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 hover:text-emov-purple dark:hover:text-emov-purple transition-colors px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:border-emov-purple dark:hover:border-emov-purple"
-            >
-              <FaArrowLeft className="w-4 h-4" />
-              <span className="font-medium">Back</span>
-            </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">Manage your account settings and preferences</p>
-            </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Full-width Header with border */}
+      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-16 sm:h-20 py-8 border-b border-border-primary">
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-gray-700 dark:text-gray-300 hover:text-emov-purple dark:hover:text-emov-purple transition-colors p-2"
+          >
+            <FaArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your account settings and preferences</p>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Settings Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

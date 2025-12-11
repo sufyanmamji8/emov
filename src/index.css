@@ -1,5 +1,5 @@
 /* index.css */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -246,10 +246,10 @@
   animation: pulse-slow 4s ease-in-out infinite;
 }
 
-/* Apply Inter font to all elements */
+/* Apply Montserrat font to all elements */
 @layer base {
   html {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -303,192 +303,6 @@
   --shadow-color: rgba(0, 0, 0, 0.3);
 }
 
-/* Toast Notification Styles - Enhanced - MOVED HERE (outside :root) */
-.Toastify__toast-container {
-  width: 100%;
-  max-width: 420px;
-  top: 1.5rem;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0;
-}
-
-.Toastify__toast {
-  border-radius: 12px !important;
-  min-height: 64px !important;
-  padding: 0;
-  margin-bottom: 1rem;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
-  border-left: 5px solid var(--emov-green) !important;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-  color: var(--text-primary) !important;
-  transition: all 0.3s ease !important;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(226, 232, 240, 0.8) !important;
-}
-
-.Toastify__toast:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.18) !important;
-}
-
-.Toastify__toast-body {
-  margin: 0;
-  padding: 18px 20px;
-  font-weight: 500;
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  min-height: 64px;
-  line-height: 1.5;
-}
-
-/* Add icon before text */
-.Toastify__toast--success .Toastify__toast-body::before {
-  content: "✓";
-  display: inline-block;
-  margin-right: 12px;
-  font-weight: bold;
-  color: var(--emov-green);
-  font-size: 18px;
-}
-
-.Toastify__toast--error .Toastify__toast-body::before {
-  content: "✕";
-  display: inline-block;
-  margin-right: 12px;
-  font-weight: bold;
-  color: #ef4444;
-  font-size: 18px;
-}
-
-.Toastify__toast--warning .Toastify__toast-body::before {
-  content: "⚠";
-  display: inline-block;
-  margin-right: 12px;
-  font-weight: bold;
-  color: #f59e0b;
-  font-size: 18px;
-}
-
-.Toastify__toast--info .Toastify__toast-body::before {
-  content: "ℹ";
-  display: inline-block;
-  margin-right: 12px;
-  font-weight: bold;
-  color: #3b82f6;
-  font-size: 18px;
-}
-
-/* Toast Types with better visual distinction */
-.Toastify__toast--success {
-  border-left-color: var(--emov-green) !important;
-  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%) !important;
-}
-
-.Toastify__toast--error {
-  border-left-color: #ef4444 !important;
-  background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%) !important;
-}
-
-.Toastify__toast--warning {
-  border-left-color: #f59e0b !important;
-  background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%) !important;
-}
-
-.Toastify__toast--info {
-  border-left-color: #3b82f6 !important;
-  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%) !important;
-}
-
-/* Progress Bar */
-.Toastify__progress-bar {
-  background: linear-gradient(90deg, var(--emov-green), rgba(74, 222, 128, 0.8)) !important;
-  height: 3px !important;
-  border-radius: 0 0 12px 12px !important;
-}
-
-.Toastify__progress-bar--success {
-  background: linear-gradient(90deg, var(--emov-green), rgba(74, 222, 128, 0.8)) !important;
-}
-
-.Toastify__progress-bar--error {
-  background: linear-gradient(90deg, #ef4444, rgba(239, 68, 68, 0.8)) !important;
-}
-
-.Toastify__progress-bar--warning {
-  background: linear-gradient(90deg, #f59e0b, rgba(245, 158, 11, 0.8)) !important;
-}
-
-.Toastify__progress-bar--info {
-  background: linear-gradient(90deg, #3b82f6, rgba(59, 130, 246, 0.8)) !important;
-}
-
-/* Close Button */
-.Toastify__close-button {
-  align-self: center !important;
-  margin-right: 16px !important;
-  color: var(--text-secondary) !important;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-}
-
-.Toastify__close-button:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.05);
-}
-
-/* Animation tweaks for better entrance */
-@keyframes Toastify__slideInUp {
-  from {
-    transform: translate3d(0, 100%, 0) scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes Toastify__slideOutUp {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: translate3d(0, -100%, 0) scale(0.95);
-    opacity: 0;
-  }
-}
-
-/* Mobile responsiveness */
-@media (max-width: 480px) {
-  .Toastify__toast-container {
-    max-width: 90%;
-    padding: 0 16px;
-  }
-  
-  .Toastify__toast {
-    min-height: 60px !important;
-    border-radius: 10px !important;
-  }
-  
-  .Toastify__toast-body {
-    padding: 16px;
-    font-size: 14px;
-  }
-  
-  .Toastify__close-button {
-    margin-right: 12px !important;
-  }
-}
 
 /* Base styles */
 @layer base {
@@ -606,14 +420,110 @@
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Remove duplicate toast styles at the bottom (you have two sets) */
-/* .Toastify__toast-container {
-  width: 100%;
-  max-width: 400px;
-  top: 1rem;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0;
+/* Enhanced Custom Toast Styles */
+.custom-toast {
+  border-radius: 12px !important;
+  min-height: 64px !important;
+  padding: 0 !important;
+  margin-bottom: 1rem !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  animation: slideInRight 0.3s ease-out !important;
 }
 
-... (remove this entire duplicate toast section) */
+.custom-toast:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
+}
+
+.custom-toast-body {
+  margin: 0 !important;
+  padding: 16px 20px !important;
+  font-weight: 500 !important;
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  font-size: 15px !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: 64px !important;
+  line-height: 1.5 !important;
+  color: inherit !important;
+}
+
+.custom-toast-progress {
+  height: 3px !important;
+  border-radius: 0 0 12px 12px !important;
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Toast animations */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.Toastify__toast--default {
+  animation: slideInRight 0.3s ease-out !important;
+}
+
+.Toastify__toast--close {
+  animation: slideOutRight 0.3s ease-in !important;
+}
+
+/* Dark mode toast adjustments */
+[data-theme="dark"] .custom-toast {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border: 1px solid rgba(51, 65, 85, 0.5) !important;
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .custom-toast-progress {
+  background: rgba(148, 163, 184, 0.3) !important;
+}
+
+/* Success toast specific styles */
+.Toastify__toast--success .custom-toast {
+  background: linear-gradient(135deg, #0DFF9A 0%, #00E69A 100%) !important;
+  border: 1px solid #0DFF9A !important;
+  color: #ffffff !important;
+}
+
+/* Error toast specific styles */
+.Toastify__toast--error .custom-toast {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%) !important;
+  border: 1px solid #FF6B6B !important;
+  color: #ffffff !important;
+}
+
+/* Info toast specific styles */
+.Toastify__toast--info .custom-toast {
+  background: linear-gradient(135deg, #7B3DFF 0%, #A67AF5 100%) !important;
+  border: 1px solid #7B3DFF !important;
+  color: #ffffff !important;
+}
+
+/* Warning toast specific styles */
+.Toastify__toast--warning .custom-toast {
+  background: linear-gradient(135deg, #FFA726 0%, #FF9800 100%) !important;
+  border: 1px solid #FFA726 !important;
+  color: #ffffff !important;
+}

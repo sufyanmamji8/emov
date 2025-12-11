@@ -55,7 +55,6 @@ module.exports = {
     },
   },
   plugins: [],
-  darkMode: 'class',
   safelist: [
     'dark',
     'light',

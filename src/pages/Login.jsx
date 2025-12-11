@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authApi from '../services/authApi';
+import toast from '../utils/toast.jsx';
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
@@ -107,10 +108,15 @@ const Login = ({ onLogin }) => {
           onLogin(token);
         }
         
-        // Navigate to the dashboard or the page the user was trying to access
-        const from = location.state?.from?.pathname || '/dashboard';
-        console.log('Navigating to:', from);
-        navigate(from, { replace: true });
+        // Show success toast
+        toast.success('Logged In Successfully');
+        
+        // Navigate after a short delay to allow toast to show
+        setTimeout(() => {
+          const from = location.state?.from?.pathname || '/dashboard';
+          console.log('Navigating to:', from);
+          navigate(from, { replace: true });
+        }, 1000);
       } else {
         console.error('No accessToken found in response:', response);
         setError('Authentication failed. No access token received.');
@@ -136,143 +142,136 @@ const Login = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row overflow-x-hidden">
-    {/* Left Section - Decorative Section */}
-<div className="hidden lg:flex lg:w-1/2 relative bg-white overflow-hidden">
-  {/* Gradient at top-left */}
-  <div className="absolute top-0 left-0 w-80 h-80">
-    <img 
-      src="/topleftauth.png" 
-      alt="Gradient Left" 
-      className="w-full h-full object-contain"
-    />
-  </div>
-  
-  {/* Gradient at bottom-right */}
-  <div className="absolute bottom-0 right-0 w-80 h-80">
-    <img 
-      src="/bottomrightauth.png" 
-      alt="Gradient Right Bottom" 
-      className="w-full h-full object-contain"
-    />
-  </div>
-  
-  {/* Floating Bubbles Animation */}
-  <div className="absolute inset-0 overflow-hidden">
-    {/* Bubble 1 - Large, slow float */}
-    <div className="absolute top-1/4 left-1/4 w-24 h-24 rounded-full bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-float-slow blur-[2px]"></div>
-    
-    {/* Bubble 2 - Medium, medium speed */}
-    <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-gradient-to-r from-cyan-400/15 to-blue-400/15 animate-float-medium blur-[1px]"></div>
-    
-    {/* Bubble 3 - Small, fast float */}
-    <div className="absolute bottom-1/3 left-1/3 w-12 h-12 rounded-full bg-gradient-to-r from-purple-400/10 to-pink-400/10 animate-float-fast blur-[1px]"></div>
-    
-    {/* Bubble 4 - Medium, reverse direction */}
-    <div className="absolute top-2/3 left-1/2 w-20 h-20 rounded-full bg-gradient-to-r from-blue-300/15 to-cyan-300/15 animate-float-reverse blur-[2px]"></div>
-    
-    {/* Bubble 5 - Small, diagonal */}
-    <div className="absolute top-1/2 right-1/3 w-14 h-14 rounded-full bg-gradient-to-r from-indigo-400/10 to-blue-400/10 animate-float-diagonal blur-[1px]"></div>
-    
-    {/* Bubble 6 - Tiny, quick */}
-    <div className="absolute bottom-1/4 right-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-pink-400/10 to-rose-400/10 animate-float-quick"></div>
-    
-    {/* Bubble 7 - Large elliptical */}
-    <div className="absolute top-1/4 right-1/3 w-28 h-24 rounded-full bg-gradient-to-r from-sky-400/10 to-blue-400/10 animate-float-elliptical blur-[2px]"></div>
-    
-    {/* Bubble 8 - Medium, delayed */}
-    <div className="absolute bottom-1/3 left-1/4 w-18 h-18 rounded-full bg-gradient-to-r from-violet-400/10 to-purple-400/10 animate-float-delayed blur-[1px]"></div>
-    
-    {/* Subtle particle effect bubbles */}
-    <div className="absolute inset-0">
-      {[...Array(12)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-2 h-2 rounded-full bg-blue-300/30 animate-particles"
-          style={{
-            top: `${Math.random() * 100}%`,
-            left: `${Math.random() * 100}%`,
-            animationDelay: `${i * 0.5}s`,
-            animationDuration: `${3 + Math.random() * 4}s`
-          }}
-        ></div>
-      ))}
-    </div>
-  </div>
-  
-  {/* Centered content with enhanced container */}
-  <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 z-10">
-    <div className="relative w-36 h-36">
-      {/* Glow effect behind logo */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full blur-xl animate-pulse-slow"></div>
-      
-      {/* Logo container with subtle animation */}
-      <div className="relative w-full h-full animate-soft-float">
-        <img 
-          src="/emovlogo.png" 
-          alt="Emov Logo" 
-          className="w-full h-full object-contain drop-shadow-lg"
-        />
+    <div className="h-screen flex flex-col lg:flex-row overflow-hidden">
+      {/* Left Section - Decorative Section */}
+      <div className="hidden lg:flex lg:w-1/2 relative bg-white overflow-hidden">
+        {/* Gradient at top-left */}
+        <div className="absolute top-0 left-0 w-80 h-80">
+          <img 
+            src="/topleftauth.png" 
+            alt="Gradient Left" 
+            className="w-full h-full object-contain"
+          />
+        </div>
+        
+        {/* Gradient at bottom-right */}
+        <div className="absolute bottom-0 right-0 w-80 h-80">
+          <img 
+            src="/bottomrightauth.png" 
+            alt="Gradient Right Bottom" 
+            className="w-full h-full object-contain"
+          />
+        </div>
+        
+        {/* Floating Bubbles Animation */}
+        <div className="absolute inset-0 overflow-hidden">
+          {/* Bubble 1 - Large, slow float */}
+          <div className="absolute top-1/4 left-1/4 w-24 h-24 rounded-full bg-gradient-to-r from-blue-400/20 to-purple-400/20 animate-float-slow blur-[2px]"></div>
+          
+          {/* Bubble 2 - Medium, medium speed */}
+          <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-gradient-to-r from-cyan-400/15 to-blue-400/15 animate-float-medium blur-[1px]"></div>
+          
+          {/* Bubble 3 - Small, fast float */}
+          <div className="absolute bottom-1/3 left-1/3 w-12 h-12 rounded-full bg-gradient-to-r from-purple-400/10 to-pink-400/10 animate-float-fast blur-[1px]"></div>
+          
+          {/* Bubble 4 - Medium, reverse direction */}
+          <div className="absolute top-2/3 left-1/2 w-20 h-20 rounded-full bg-gradient-to-r from-blue-300/15 to-cyan-300/15 animate-float-reverse blur-[2px]"></div>
+          
+          {/* Bubble 5 - Small, diagonal */}
+          <div className="absolute top-1/2 right-1/3 w-14 h-14 rounded-full bg-gradient-to-r from-indigo-400/10 to-blue-400/10 animate-float-diagonal blur-[1px]"></div>
+          
+          {/* Bubble 6 - Tiny, quick */}
+          <div className="absolute bottom-1/4 right-1/2 w-8 h-8 rounded-full bg-gradient-to-r from-pink-400/10 to-rose-400/10 animate-float-quick"></div>
+          
+          {/* Bubble 7 - Large elliptical */}
+          <div className="absolute top-1/4 right-1/3 w-28 h-24 rounded-full bg-gradient-to-r from-sky-400/10 to-blue-400/10 animate-float-elliptical blur-[2px]"></div>
+          
+          {/* Bubble 8 - Medium, delayed */}
+          <div className="absolute bottom-1/3 left-1/4 w-18 h-18 rounded-full bg-gradient-to-r from-violet-400/10 to-purple-400/10 animate-float-delayed blur-[1px]"></div>
+          
+          {/* Subtle particle effect bubbles */}
+          <div className="absolute inset-0">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-2 h-2 rounded-full bg-blue-300/30 animate-particles"
+                style={{
+                  top: `${Math.random() * 100}%`,
+                  left: `${Math.random() * 100}%`,
+                  animationDelay: `${i * 0.5}s`,
+                  animationDuration: `${3 + Math.random() * 4}s`
+                }}
+              ></div>
+            ))}
+          </div>
+        </div>
+        
+        {/* Centered content with enhanced container */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4 z-10">
+          <div className="relative w-36 h-36">
+            {/* Glow effect behind logo */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/10 to-purple-400/10 rounded-full blur-xl animate-pulse-slow"></div>
+            
+            {/* Logo container with subtle animation */}
+            <div className="relative w-full h-full animate-soft-float">
+              <img 
+                src="/emovlogo.png" 
+                alt="Emov Logo" 
+                className="w-full h-full object-contain drop-shadow-lg"
+              />
+            </div>
+            
+            {/* Ring animation around logo */}
+            <div className="absolute -inset-4 border-2 border-blue-300/20 rounded-full animate-ring-expand"></div>
+            <div className="absolute -inset-6 border border-purple-300/10 rounded-full animate-ring-expand-delayed"></div>
+          </div>
+          
+          <div className="relative w-32">
+            <img 
+              src="/emovfont.png" 
+              alt="Emov" 
+              className="w-full h-auto drop-shadow-sm"
+            />
+            {/* Subtle text glow */}
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/5 to-transparent blur-sm -z-10"></div>
+          </div>
+          
+          <h2 className="text-gray-600 text-sm font-medium relative">
+            Buy and Sell Vehicles
+            {/* Animated underline */}
+            <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-400/30 to-transparent animate-shimmer"></span>
+          </h2>
+        </div>
       </div>
-      
-      {/* Ring animation around logo */}
-      <div className="absolute -inset-4 border-2 border-blue-300/20 rounded-full animate-ring-expand"></div>
-      <div className="absolute -inset-6 border border-purple-300/10 rounded-full animate-ring-expand-delayed"></div>
-    </div>
-    
-    <div className="relative w-32">
-      <img 
-        src="/emovfont.png" 
-        alt="Emov" 
-        className="w-full h-auto drop-shadow-sm"
-      />
-      {/* Subtle text glow */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-400/5 to-transparent blur-sm -z-10"></div>
-    </div>
-    
-    <h2 className="text-gray-600 text-sm font-medium relative">
-      Buy and Sell Vehicles
-      {/* Animated underline */}
-      <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-blue-400/30 to-transparent animate-shimmer"></span>
-    </h2>
-  </div>
-</div>
+
       {/* Right Section - Login Form */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center relative overflow-y-auto flex-1">
-        {/* Top Section with both logos - Made responsive */}
-        <div 
-          className="w-full h-96 md:h-80 lg:h-96 flex flex-col items-center justify-center relative bg-cover bg-center bg-no-repeat"
-          style={{ 
-            backgroundImage: 'url(/authpattern.png)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            minHeight: '16rem' // Ensures minimum height on all devices
-          }}
-        >
-          {/* Small emovfont.png at the top - Made responsive */}
-          <div className="absolute -mt-6 top-8 md:top-16">
+      <div className="w-full lg:w-1/2 flex flex-col items-center relative overflow-hidden">
+        {/* Top Section with both logos */}
+        <div className="w-full h-96 flex flex-col items-center justify-center relative bg-cover bg-center" style={{ backgroundImage: 'url(/authpattern.png)' }}>
+          {/* Small emovfont.png at the top */}
+          <div className="absolute top-16">
             <img 
               src="/emovlogowhite.png" 
               alt="Emov" 
-              className="h-6 md:h-8 object-contain"
+              className="h-8 object-contain"
             />
           </div>
-          {/* Main authemov.png in the center - Improved positioning */}
-          <div className="absolute -mt-16 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20 w-full px-4">
+          {/* Main authemov.png in the center */}
+          <div className="absolute -mt-8 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
             <img 
               src="/authemov.png" 
               alt="Emov" 
-              className="h-16 md:h-20 lg:h-24 w-auto mx-auto object-contain"
+              className="h-24 object-contain"
             />
           </div>
         </div>
         
-        {/* Login Card - Improved spacing and responsiveness */}
-        <div className="w-full max-w-xl bg-white rounded-3xl lg:-mt-64 mx-4 p-6 md:p-8 z-10 shadow-lg border border-gray-100 shadow-gray-400/30 my-6 lg:my-0">
+        {/* Login Card */}
+        <div className="w-full max-w-xl bg-white rounded-3xl -mt-56 p-8 z-10 shadow-lg border border-gray-100 shadow-gray-400/30">
           {/* Welcome Text */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mt-6 text-gray-900 mb-1">Welcome</h1>
-            <p className="text-gray-600">Drive your business forward Sign In </p>
+            <h1 className="text-2xl font-bold mt-2 text-gray-900 mb-1">Welcome</h1>
+            <p className="text-gray-600">Drive your business forward Sign In</p>
           </div>
 
           {/* Success Message */}
@@ -402,13 +401,12 @@ const Login = ({ onLogin }) => {
               </Link>
             </div>
 
-         
-            {/* Social Login Button - Made more responsive */}
+            {/* Social Login Button */}
             <div className="flex justify-center mt-4">
               <img 
                 src="/continue.png" 
                 alt="Continue with social media" 
-                className="cursor-pointer w-40 md:w-48 h-auto"
+                className="cursor-pointer w-48 h-auto"
                 onClick={() => console.log('Continue with social')}
               />
             </div>

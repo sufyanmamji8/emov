@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer } from './utils/toast.jsx';
+import toast from './utils/toast.jsx';
 import { ThemeProvider } from './context/ThemeContext';
 import { ChatProvider } from './contexts/ChatContext';
 import Login from './pages/Login';
@@ -107,11 +108,26 @@ function App() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
-    setIsAuthenticated(false);
-    // Removed forced redirect - let the routing handle it
+    // Show toast with explicit options
+    const toastId = toast.success('Signed Out', {
+      autoClose: 2000,
+      closeOnClick: true,
+      pauseOnHover: false,
+    });
+    
+    // Clear authentication data and redirect after toast duration
+    setTimeout(() => {
+      // Force close any remaining toasts
+      toast.dismiss();
+      
+      localStorage.removeItem('token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('user');
+      setIsAuthenticated(false);
+      
+      // Redirect
+      window.location.href = '/login';
+    }, 2000);
   };
 
   return (
@@ -123,21 +139,7 @@ function App() {
           handleLogin={handleLogin}
           handleLogout={handleLogout}
         />
-        <ToastContainer 
-          position="top-center"
-          autoClose={3000}
-          hideProgressBar
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss={false}
-          draggable={false}
-          pauseOnHover={false}
-          className="toast-container"
-          toastClassName="custom-toast"
-          bodyClassName="toast-body"
-          progressClassName="toast-progress"
-        />
+        <ToastContainer />
       </ChatProvider>
     </ThemeProvider>
   );

@@ -130,23 +130,48 @@ const FilteredVehicles = () => {
   }
 
   return (
-    <div className="min-h-screen bg-bg-secondary py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <button 
-            onClick={() => navigate(-1)}
-            className="mb-4 flex items-center text-emov-purple hover:text-purple-700 font-medium"
-          >
-            ← Back to Dashboard
-          </button>
-          
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary mb-2">
-            {formatFilterType(filterType)}: {filterName}
-          </h1>
-          
-          <p className="text-text-secondary">
-            {ads.length} {ads.length === 1 ? 'vehicle found' : 'vehicles found'}
-          </p>
+    <div className="min-h-screen surface-primary">
+      {/* Professional Header */}
+      <div className="surface-secondary border-b border-primary sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={() => navigate(-1)}
+              className="flex items-center space-x-2 text-secondary hover:text-primary transition-all duration-200 font-medium group"
+            >
+              <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              <span>Back</span>
+            </button>
+            
+            <div className="flex items-center space-x-3">
+              <div className="text-sm text-tertiary">
+                {ads.length} {ads.length === 1 ? 'vehicle' : 'vehicles'} found
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="surface-card rounded-xl shadow-theme p-6 border border-primary mb-8">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-12 h-12 bg-emov-purple/10 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-emov-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-primary">
+                {formatFilterType(filterType)}: {filterName}
+              </h1>
+              <p className="text-secondary mt-1">
+                Browse through our selection of {ads.length} {ads.length === 1 ? 'vehicle' : 'vehicles'}
+              </p>
+            </div>
+          </div>
         </div>
 
         {error && (

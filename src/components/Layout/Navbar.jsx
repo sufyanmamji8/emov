@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaSun, FaMoon, FaGlobe, FaCaretDown, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { FaSun, FaMoon, FaGlobe, FaCaretDown, FaSignOutAlt, FaBars, FaTimes, FaCog, FaUser } from 'react-icons/fa';
 import { useTheme } from '../../hooks/useTheme';
 import axios from 'axios';
 
@@ -226,7 +226,15 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   href="/profile"
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
                 >
-                  <span>Show all details</span>
+                  <FaUser className="w-4 h-4 flex-shrink-0" />
+                  <span>My Profile</span>
+                </a>
+                <a
+                  href="/settings"
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
+                >
+                  <FaCog className="w-4 h-4 flex-shrink-0" />
+                  <span>Settings</span>
                 </a>
                 <button
                   onClick={handleSignOut}
