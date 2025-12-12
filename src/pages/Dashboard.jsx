@@ -1524,7 +1524,7 @@ useEffect(() => {
  <div className="min-h-screen bg-bg-primary text-text-primary overflow-x-hidden">
       {/* Gradient Background Section - Wrapping all three sections */}
        <div className="relative z-10 w-full">
-      <div className="relative w-full min-h-[400px] md:min-h-[500px] bg-bg-secondary overflow-hidden">
+      <div className="relative w-full min-h-[280px] md:min-h-[500px] bg-bg-secondary overflow-hidden">
         {/* Left Gradient - Responsive */}
         {/* Left Gradient - Full Height */}
         <div 
@@ -1560,16 +1560,16 @@ useEffect(() => {
         {/* Wrapper for all three sections */}
        
           {/* Top Header Section */}
- <div className="bg-bg-secondary/90 w-full">
+<div className="bg-bg-secondary/90 w-full">
   {/* Top Bar */}
   <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
     <div className="flex justify-between items-center h-12 sm:h-14 py-2 border-b border-border-primary">
       {/* Download App */}
       <div className="flex items-center space-x-2 cursor-pointer group">
-        <svg className="h-5 w-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
+        <svg className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
-        <span className="text-sm font-medium text-text-primary group-hover:text-emov-green transition-colors">Download App</span>
+        <span className="text-sm font-medium text-text-primary group-hover:text-emov-green transition-colors duration-300">Download App</span>
       </div>
 
       {/* Right side controls */}
@@ -1577,7 +1577,7 @@ useEffect(() => {
         {/* Mobile Theme Toggle */}
         <button 
           onClick={toggleTheme}
-          className="md:hidden focus:outline-none p-2 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
+          className="md:hidden focus:outline-none p-2 transition-all duration-300 hover:scale-110 rounded-xl text-text-primary hover:bg-bg-tertiary active:scale-95"
           style={{ borderRadius: '12px' }}
           aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
         >
@@ -1591,21 +1591,21 @@ useEffect(() => {
             <select 
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none cursor-pointer"
+              className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-300 appearance-none cursor-pointer hover:text-emov-green"
             >
               <option value="english">English</option>
               <option value="urdu">Urdu</option>
               <option value="french">French</option>
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
-              <FaCaretDown className="text-text-secondary w-3 h-3 transition-transform group-hover:rotate-180" />
+              <FaCaretDown className="text-text-secondary w-3 h-3 transition-transform duration-300 group-hover:rotate-180" />
             </div>
           </div>
           
           {/* Theme Toggle Button */}
           <button 
             onClick={toggleTheme}
-            className="focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
+            className="focus:outline-none p-2 sm:p-2.5 transition-all duration-300 hover:scale-110 rounded-xl text-text-primary hover:bg-bg-tertiary active:scale-95"
             style={{ borderRadius: '12px' }}
             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
           >
@@ -1618,16 +1618,16 @@ useEffect(() => {
           {!userProfile && (
             <div className="flex items-center space-x-2 sm:space-x-4">
               <button
-                className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-emov-green transition-colors px-3 py-1.5 rounded-lg hover:bg-white/5"
+                className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-emov-green transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-white/5"
                 onClick={() => navigate('/login')}
               >
                 <span>Sign In</span>
               </button>
               <button
-                className="flex items-center justify-center space-x-1 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] min-w-[80px]"
+                className="flex items-center justify-center space-x-1 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 active:scale-95 min-w-[80px]"
                 style={{
                   backgroundColor: 'var(--emov-green, #27c583)',
-                  boxShadow: '0 2px 10px rgba(39, 197, 131, 0.3)',
+                  boxShadow: '0 4px 20px rgba(39, 197, 131, 0.4)',
                 }}
                 onClick={() => navigate('/signup')}
               >
@@ -1652,58 +1652,255 @@ useEffect(() => {
     />
   </div>
 
-  {/* Hero Section */}
-  <section className="relative w-full pb-8 sm:pb-12 md:pb-16">
+  {/* Hero Section with Enhanced Gradients - Mobile Redesign */}
+  <section className="relative w-full mt-18 overflow-hidden">
+    {/* Enhanced Background Gradients */}
+    <div className="absolute inset-0 pointer-events-none">
+      {/* Left Gradient Overlay */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-1/3 opacity-40 transition-opacity duration-700"
+        style={{
+          background: isDark 
+            ? 'radial-gradient(ellipse at left, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 30%, transparent 70%)'
+            : 'radial-gradient(ellipse at left, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 30%, transparent 70%)',
+        }}
+      />
+      
+      {/* Right Gradient Overlay */}
+      <div 
+        className="absolute right-0 top-0 bottom-0 w-1/3 opacity-40 transition-opacity duration-700"
+        style={{
+          background: isDark 
+            ? 'radial-gradient(ellipse at right, rgba(0, 255, 169, 0.12) 0%, rgba(0, 255, 169, 0.06) 30%, transparent 70%)'
+            : 'radial-gradient(ellipse at right, rgba(0, 255, 169, 0.08) 0%, rgba(0, 255, 169, 0.04) 30%, transparent 70%)',
+        }}
+      />
+    </div>
+
     <div className="relative max-w-[2000px] mx-auto">
-      {/* Content */}
-      <div className="text-center mt-16 sm:mt-20 md:mt-6 md:mt-8 md:mt-10 px-4 sm:px-6 lg:px-8 mb-6 sm:mb-8 md:mb-10">
+      {/* Content - Compact for Mobile */}
+      <div className="text-center pt-12 pb-12 md:pt-8 md:pb-16 px-4 sm:px-6 lg:px-8">
         <div className="w-full text-center max-w-4xl sm:max-w-5xl lg:max-w-6xl mx-auto">
-          <h1 className="text-text-primary font-semibold text-lg sm:text-2xl md:text-3xl lg:text-4xl font-normal mb-2 sm:mb-3 md:mb-4 leading-tight">
+          <h1 className="text-text-primary font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3 md:mb-4 leading-tight tracking-tight"
+            style={{
+              textShadow: isDark 
+                ? '0 2px 20px rgba(0, 0, 0, 0.3)' 
+                : '0 2px 10px rgba(0, 0, 0, 0.05)',
+              lineHeight: '1.2'
+            }}
+          >
             {t.findVehicles}
           </h1>
-          <h1 className="text-sm sm:text-xl md:text-2xl lg:text-3xl font-normal mb-4 sm:mb-5 md:mb-6 leading-tight text-text-tertiary">
+          <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal mb-4 md:mb-6 leading-relaxed text-text-tertiary opacity-90"
+            style={{
+              lineHeight: '1.6',
+              letterSpacing: '0.01em'
+            }}
+          >
             {t.tagline}
-          </h1>
+          </h2>
         </div>
-      </div>
 
-      {/* Mobile Search Bar */}
-      <div className={`md:hidden ${showSearchResults ? 'pb-96' : ''}`}>
-        <div className="w-full px-4 sm:px-6">
-          <div className="relative max-w-full mx-auto search-container">
+        {/* Mobile Search Bar - Overlapping Position */}
+        <div className={`md:hidden relative z-30 mt-4 ${showSearchResults ? 'mb-96' : 'mb-8'}`}>
+          <div className="w-full px-4">
+            <div className="relative max-w-md mx-auto">
+              {/* Premium Glassmorphic Search Bar */}
+              <div 
+                className="relative w-full h-14 rounded-2xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/30 group"
+                style={{
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.3)',
+                  background: isDark 
+                    ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  boxShadow: isDark
+                    ? `
+                      0 8px 32px rgba(0, 0, 0, 0.3),
+                      0 2px 8px rgba(0, 0, 0, 0.2),
+                      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+                      inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
+                    `
+                    : `
+                      0 8px 32px rgba(0, 0, 0, 0.1),
+                      0 2px 8px rgba(0, 0, 0, 0.06),
+                      inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+                      inset 0 -1px 0 0 rgba(255, 255, 255, 0.2)
+                    `,
+                }}
+              >
+                {/* Inner Glow Effect */}
+                <div 
+                  className="absolute inset-0 opacity-30 pointer-events-none rounded-2xl"
+                  style={{
+                    background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
+                  }}
+                />
+
+                {/* Frost/Glass Texture */}
+                <div 
+                  className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-2xl"
+                  style={{
+                    backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%23ffffff\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+                    backgroundSize: '100px 100px',
+                  }}
+                />
+
+                {/* Search Icon */}
+                <div className="absolute left-4 z-10 flex items-center h-full">
+                  <svg 
+                    className={`w-5 h-5 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+
+                {/* Input Field */}
+                <input
+                  type="text"
+                  placeholder={t.searchPlaceholder || "Search for vehicles..."}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
+                  onFocus={() => {
+                    if (searchQuery.trim()) {
+                      setShowSearchResults(true);
+                    }
+                  }}
+                  className={`w-full h-full pl-12 pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-300' : 'text-gray-900 placeholder-gray-600'} text-base font-medium focus:outline-none z-10 transition-all duration-300`}
+                />
+
+                {/* Right Side Icons */}
+                <div className="absolute right-2 z-10 flex items-center h-full space-x-1">
+                    <button className="p-2 mb-24 sm:p-2.5 md:p-3 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center group/filter"
+                        aria-label="Toggle filters">
+                  <svg 
+                    className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300 group-hover/filter:scale-110 group-hover/filter:text-emov-purple`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </button>
+                  {/* Clear Button */}
+                  {searchQuery && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery('');
+                        setShowSearchResults(false);
+                      }}
+                      className="p-1 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90"
+                      aria-label="Clear search"
+                    >
+                      <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Filter Icon */}
+                
+                </div>
+              </div>
+
+              {/* Search Results Dropdown */}
+              {showSearchResults && (
+                <div 
+                  className="absolute top-full left-0 right-0 mt-2 rounded-xl border overflow-hidden z-40 animate-fadeIn"
+                  style={{
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+                    background: isDark 
+                      ? 'linear-gradient(135deg, rgba(40, 40, 45, 0.95) 0%, rgba(30, 30, 35, 0.92) 100%)'
+                      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 252, 0.92) 100%)',
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                    boxShadow: isDark 
+                      ? '0 10px 30px rgba(0, 0, 0, 0.4)'
+                      : '0 10px 30px rgba(0, 0, 0, 0.15)'
+                  }}
+                >
+                  <div className="max-h-64 overflow-y-auto">
+                    {searchQuery.trim() && searchResults.length > 0 ? (
+                      <div className="p-3 space-y-2">
+                        {searchResults.slice(0, 5).map((ad) => (
+                          <SearchResultItem 
+                            key={ad.AdID || ad.id || ad.adId || ad._id}
+                            ad={ad}
+                            isDark={isDark}
+                            handleAdClick={handleAdClick}
+                          />
+                        ))}
+                      </div>
+                    ) : searchQuery.trim() ? (
+                      <div className="p-4 text-center">
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No results found</p>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop Search Bar - Original */}
+        <div className={`hidden md:block w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-24 transition-all duration-500 ${showSearchResults ? 'pb-96' : ''}`}>
+          <div className="relative max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto search-container">
             <div 
-              className="relative w-full h-12 sm:h-14 rounded-2xl border border-white/40 flex items-center transition-all duration-300 hover:border-white/50 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/20"
+              className="relative w-full h-16 sm:h-18 md:h-20 rounded-3xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-4 focus-within:ring-emov-purple/20 group"
               style={{
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)',
                 background: isDark 
-                  ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.92) 0%, rgba(20, 20, 20, 0.88) 100%)'
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.88) 100%)',
-                backdropFilter: 'blur(20px) saturate(200%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(200%)',
+                  ? 'linear-gradient(135deg, rgba(40, 40, 45, 0.95) 0%, rgba(25, 25, 30, 0.92) 100%)'
+                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 252, 0.92) 100%)',
+                backdropFilter: 'blur(28px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(28px) saturate(180%)',
                 boxShadow: isDark
                   ? `
-                    0 4px 6px -1px rgba(0, 0, 0, 0.3),
-                    0 2px 4px -1px rgba(0, 0, 0, 0.2),
-                    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
+                    0 10px 40px rgba(0, 0, 0, 0.4),
+                    0 4px 12px rgba(0, 0, 0, 0.3),
+                    inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.4)
                   `
                   : `
-                    0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                    0 2px 4px -1px rgba(0, 0, 0, 0.03),
-                    inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
-                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.05)
+                    0 10px 40px rgba(0, 0, 0, 0.1),
+                    0 4px 12px rgba(0, 0, 0, 0.06),
+                    inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
+                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.08)
                   `,
               }}
             >
+              {/* Enhanced Radial Gradient Overlay */}
               <div 
-                className="absolute inset-0 opacity-30 pointer-events-none"
+                className="absolute inset-0 opacity-40 pointer-events-none rounded-3xl transition-opacity duration-300 group-hover:opacity-60"
                 style={{
-                  background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.8) 0%, transparent 70%)',
+                  background: 'radial-gradient(circle at 25% 50%, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.3) 25%, transparent 60%)',
                 }}
               />
 
-              <div className="absolute left-4 z-10">
+              {/* Shimmer Effect on Hover */}
+              <div 
+                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl"
+                style={{
+                  background: 'linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.25) 50%, transparent 70%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'shimmer 2s infinite',
+                }}
+              />
+
+              {/* Search Icon */}
+              <div className="absolute left-5 sm:left-6 md:left-7 z-10 flex items-center h-full">
                 <svg 
-                  className={`w-5 h-5 ${isDark ? 'text-gray-300' : 'text-gray-600'}`} 
+                  className={`w-6 h-6 sm:w-7 sm:h-7 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -1713,6 +1910,7 @@ useEffect(() => {
                 </svg>
               </div>
 
+              {/* Input Field */}
               <input
                 type="text"
                 placeholder={t.searchPlaceholder || "Search for vehicles..."}
@@ -1726,53 +1924,76 @@ useEffect(() => {
                     setShowSearchResults(true);
                   }
                 }}
-                className={`w-full h-full pl-12 pr-12 bg-transparent ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-800 placeholder-gray-500'} text-sm font-medium focus:outline-none z-10`}
-              />
-
-              <div className="absolute right-4 z-10 cursor-pointer group">
-                <svg 
-                  className={`w-5 h-5 ${isDark ? 'text-gray-300' : 'text-gray-600'} transition-transform duration-200 group-hover:scale-110`} 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                  strokeWidth={3}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-
-              <div 
-                className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                className={`w-full h-full pl-14 sm:pl-16 md:pl-20 pr-20 sm:pr-24 md:pr-28 bg-transparent ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-800 placeholder-gray-500'} text-base sm:text-lg md:text-xl font-medium focus:outline-none z-10 transition-all duration-300`}
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%)',
+                  textShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none'
                 }}
               />
+
+              {/* Right Side Icons Container */}
+
+              <div className="absolute right-3 sm:right-4 md:right-5 z-10 flex items-center h-full space-x-2">
+                 <button className="p-2 mb-40 sm:p-2.5 md:p-3 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center group/filter"
+                        aria-label="Toggle filters">
+                  <svg 
+                    className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300 group-hover/filter:scale-110 group-hover/filter:text-emov-purple`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                    strokeWidth={2.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                </button>
+                {/* Clear Button (X) */}
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setShowSearchResults(false);
+                    }}
+                    className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center"
+                    aria-label="Clear search"
+                  >
+                    <svg className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+
+                {/* Filter Icon */}
+               
+              </div>
             </div>
 
-            {/* Mobile Search Results Dropdown */}
-            <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${isDark ? 'border-white/20' : 'border-gray-200'} ${showSearchResults ? 'block' : 'hidden'} z-50`}
+            {/* Desktop Search Results Dropdown */}
+            <div 
+              className={`absolute top-full left-0 right-0 mt-4 rounded-2xl border overflow-hidden transition-all duration-300 ${showSearchResults ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'} z-50`}
               style={{
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                boxShadow: isDark 
+                  ? '0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.3)'
+                  : '0 20px 60px rgba(0, 0, 0, 0.12), 0 8px 20px rgba(0, 0, 0, 0.08)'
               }}
             >
               <div 
                 className="max-h-[500px] overflow-y-auto"
                 style={{
                   background: isDark 
-                    ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(20, 20, 20, 0.95) 100%)'
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
-                  backdropFilter: 'blur(20px) saturate(200%)',
-                  WebkitBackdropFilter: 'blur(20px) saturate(200%)',
+                    ? 'linear-gradient(135deg, rgba(35, 35, 40, 0.98) 0%, rgba(25, 25, 30, 0.96) 100%)'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 252, 0.96) 100%)',
+                  backdropFilter: 'blur(28px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(28px) saturate(180%)',
                 }}
               >
                 {/* Recent Searches */}
                 {!searchQuery.trim() && recentSearches.length > 0 && (
-                  <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                    <div className="flex items-center justify-between mb-3">
+                  <div className={`p-5 sm:p-6 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+                    <div className="flex items-center justify-between mb-4">
                       <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Recent Searches</h3>
                       <button
                         onClick={clearRecentSearches}
-                        className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors`}
+                        className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-200`}
                       >
                         Clear
                       </button>
@@ -1782,9 +2003,9 @@ useEffect(() => {
                         <button
                           key={index}
                           onClick={() => handleSearchSubmit(search)}
-                          className={`w-full text-left px-3 py-2 text-sm ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg transition-colors flex items-center space-x-2`}
+                          className={`w-full text-left px-4 py-3 text-sm ${isDark ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-700 hover:bg-gray-100/70'} rounded-xl transition-all duration-200 flex items-center space-x-3 group`}
                         >
-                          <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'} group-hover:scale-110 transition-transform duration-200`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span>{search}</span>
@@ -1796,15 +2017,15 @@ useEffect(() => {
 
                 {/* Search Results */}
                 {searchQuery.trim() && (
-                  <div className="p-4">
+                  <div className="p-5 sm:p-6">
                     {isSearching ? (
-                      <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2`}>Searching...</p>
-                      </div>
+                      <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
+                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-3`}>Searching...</p>
+                    </div>
                     ) : searchResults.length > 0 ? (
                       <div className="space-y-2">
-                        <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                        <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-4`}>
                           Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
                         </h3>
                         {searchResults.map((ad) => (
@@ -1817,8 +2038,12 @@ useEffect(() => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-4">
+                      <div className="text-center py-8">
+                        <svg className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
+                        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Try adjusting your search terms</p>
                       </div>
                     )}
                   </div>
@@ -1828,188 +2053,73 @@ useEffect(() => {
           </div>
         </div>
       </div>
-
-      {/* Desktop Search Bar */}
-      <div className={`hidden md:block w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-24 ${showSearchResults ? 'pb-96' : ''}`}>
-        <div className="relative max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto search-container">
-          <div 
-            className="relative w-full h-12 sm:h-14 md:h-16 rounded-2xl border border-white/40 flex items-center transition-all duration-300 hover:border-white/50 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/20"
-            style={{
-              background: isDark 
-                ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.92) 0%, rgba(20, 20, 20, 0.88) 100%)'
-                : 'linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.88) 100%)',
-              backdropFilter: 'blur(20px) saturate(200%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(200%)',
-              boxShadow: isDark
-                ? `
-                  0 4px 6px -1px rgba(0, 0, 0, 0.3),
-                  0 2px 4px -1px rgba(0, 0, 0, 0.2),
-                  inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-                  inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
-                `
-                : `
-                  0 4px 6px -1px rgba(0, 0, 0, 0.05),
-                  0 2px 4px -1px rgba(0, 0, 0, 0.03),
-                  inset 0 1px 0 0 rgba(255, 255, 255, 0.6),
-                  inset 0 -1px 0 0 rgba(0, 0, 0, 0.05)
-                `,
-            }}
-          >
-            <div 
-              className="absolute inset-0 opacity-30 pointer-events-none"
-              style={{
-                background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.8) 0%, transparent 70%)',
-              }}
-            />
-
-            <div className="absolute left-4 sm:left-5 md:left-6 z-10">
-              <svg 
-                className={`w-5 h-5 sm:w-6 sm:h-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-
-            <input
-              type="text"
-              placeholder={t.searchPlaceholder || "Search for vehicles..."}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                handleSearch(e.target.value);
-              }}
-              onFocus={() => {
-                if (searchQuery.trim()) {
-                  setShowSearchResults(true);
-                }
-              }}
-              className={`w-full h-full pl-12 sm:pl-14 md:pl-16 pr-12 sm:pr-14 md:pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-800 placeholder-gray-500'} text-sm sm:text-base md:text-lg font-medium focus:outline-none z-10`}
-            />
-
-            <div className="absolute right-4 sm:right-5 md:right-6 z-10 cursor-pointer group">
-              <svg 
-                className={`w-5 h-5 sm:w-6 sm:h-6 ${isDark ? 'text-gray-300' : 'text-gray-600'} transition-transform duration-200 group-hover:scale-110`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                strokeWidth={3}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-
-            <div 
-              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-              style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%)',
-              }}
-            />
-          </div>
-
-          {/* Desktop Search Results Dropdown */}
-          <div className={`absolute top-full left-0 right-0 mt-2 rounded-xl border ${isDark ? 'border-white/20' : 'border-gray-200'} ${showSearchResults ? 'block' : 'hidden'} z-50`}
-            style={{
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
-            }}
-          >
-            <div 
-              className="max-h-[500px] overflow-y-auto"
-              style={{
-                background: isDark 
-                  ? 'linear-gradient(135deg, rgba(30, 30, 30, 0.98) 0%, rgba(20, 20, 20, 0.95) 100%)'
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.95) 100%)',
-                backdropFilter: 'blur(20px) saturate(200%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(200%)',
-              }}
-            >
-              {/* Recent Searches */}
-              {!searchQuery.trim() && recentSearches.length > 0 && (
-                <div className={`p-4 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Recent Searches</h3>
-                    <button
-                      onClick={clearRecentSearches}
-                      className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors`}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                  <div className="space-y-2">
-                    {recentSearches.map((search, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleSearchSubmit(search)}
-                        className={`w-full text-left px-3 py-2 text-sm ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg transition-colors flex items-center space-x-2`}
-                      >
-                        <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{search}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Search Results */}
-              {searchQuery.trim() && (
-                <div className="p-4">
-                  {isSearching ? (
-                    <div className="text-center py-4">
-                      <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
-                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-2`}>Searching...</p>
-                    </div>
-                  ) : searchResults.length > 0 ? (
-                    <div className="space-y-2">
-                      <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
-                        Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
-                      </h3>
-                      {searchResults.map((ad) => (
-                        <SearchResultItem 
-                          key={ad.AdID || ad.id || ad.adId || ad._id}
-                          ad={ad}
-                          isDark={isDark}
-                          handleAdClick={handleAdClick}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </section>
+
+  {/* Spacer to allow search bar overlap */}
+
+
 </div>
+
+<style jsx>{`
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  /* Custom Scrollbar for Search Results */
+  .search-container ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .search-container ::-webkit-scrollbar-track {
+    background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+    border-radius: 10px;
+  }
+
+  .search-container ::-webkit-scrollbar-thumb {
+    background: ${isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+    border-radius: 10px;
+    transition: background 0.3s ease;
+  }
+
+  .search-container ::-webkit-scrollbar-thumb:hover {
+    background: ${isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+  }
+
+  /* Smooth scrolling */
+  .search-container > div {
+    scroll-behavior: smooth;
+  }
+
+  /* Focus visible for accessibility */
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--emov-purple, #8b5cf6);
+    outline-offset: 2px;
+  }
+`}</style>
         </div>
          </div>
-         
-       
-      
-      {/* Banner Section */}
-      {/* <section className="w-full bg-bg-primary py-0 sm:py-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="w-full rounded-xl overflow-hidden ">
-            <img 
-              src="/banner.png" 
-              alt="Special Offers" 
-              className="w-full h-auto"
-              style={{ maxHeight: '300px', objectFit: 'cover' }}
-              loading="lazy"
-            />
-          </div>
-        </div>
-      </section> */}
 
       {/* Main Content */}
       <main className="w-full relative z-10">

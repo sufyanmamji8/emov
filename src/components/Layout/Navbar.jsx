@@ -259,7 +259,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
       >
         {/* Mobile Menu Sidebar */}
         <div 
-          className="absolute top-0 left-0 h-full w-80 max-w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out"
+          className="absolute top-0 left-0 h-full w-80 max-w-full bg-bg-secondary shadow-xl transform transition-transform duration-300 ease-in-out z-50"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex flex-col h-full">
