@@ -3,6 +3,10 @@ import chatService from '../services/chatService';
 
 const ChatContext = createContext();
 
+// In-memory caches
+const messageCache = new Map(); // chatId -> messages array
+const imageUrlCache = new Map(); // original URL -> formatted URL
+
 // Helper function to get current time in Pakistan timezone
 const getPakistanTime = () => {
   const now = new Date();
@@ -49,25 +53,29 @@ export const ChatProvider = ({ children }) => {
     }
   }, []);
 
-  // Delete message function - MOVED TO COMPONENT LEVEL (ONLY CHANGE)
+  // Delete message function
   const deleteMessage = async (messageId, deleteType = "me") => {
     try {
-      console.log('🗑️ Deleting message:', { messageId, deleteType });
-      
       // Remove message from UI immediately
       setMessages(prev => prev.filter(msg => msg._id !== messageId));
       
+      // Invalidate cache for current chat
+      if (currentChat) {
+        const chatId = currentChat.conversation_id || currentChat._id;
+        messageCache.delete(chatId);
+      }
+      
       // Call API to delete message
       await chatService.deleteMessage([messageId], deleteType);
-      
-      console.log('✅ Message deleted successfully');
       
     } catch (error) {
       console.error('❌ Error deleting message:', error);
       
       // Reload messages to restore the deleted message if API call failed
       if (currentChat) {
-        const updatedMessages = await loadMessages(currentChat.conversation_id || currentChat._id);
+        const chatId = currentChat.conversation_id || currentChat._id;
+        messageCache.delete(chatId); // Clear cache before reload
+        const updatedMessages = await loadMessages(chatId);
         setMessages(updatedMessages);
       }
       
@@ -75,10 +83,74 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
+  // Format image URLs properly with caching
+  const formatImageUrl = (url) => {
+    if (!url || url === 'N/A' || url === 'null' || url === 'undefined' || url === '') {
+      return null;
+    }
+    
+    // Check cache first
+    if (imageUrlCache.has(url)) {
+      return imageUrlCache.get(url);
+    }
+    
+    // Format URL
+    let formattedUrl;
+    if (url.startsWith('http')) {
+      formattedUrl = url;
+    } else {
+      formattedUrl = `https://api.emov.com.pk${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    
+    // Cache the result
+    imageUrlCache.set(url, formattedUrl);
+    return formattedUrl;
+  };
+
+  // Helper function to transform messages with proper image URL handling
+  const transformMessages = (messages, currentUserId) => {
+    if (!Array.isArray(messages)) return [];
+    
+    return messages.map(msg => {
+      // Extract content from different possible fields
+      let content = msg.message_text || msg.content || '';
+      const messageType = msg.message_type || 'text';
+      
+      // Handle image messages
+      if (messageType === 'image' || messageType === 'file') {
+        // Check multiple possible locations for the image URL
+        const imageUrl = msg.media_url || msg.image_url || msg.file_url || 
+                        (messageType === 'image' ? content : '');
+        
+        // If we found an image URL, use it as the content
+        if (imageUrl) {
+          content = imageUrl;
+        }
+      }
+
+      // Format the image URL if it's an image message
+      if (messageType === 'image' && content) {
+        content = formatImageUrl(content);
+      }
+
+      // Determine if the message is from the current user
+      const isFromCurrentUser = parseInt(msg.sender_id) === parseInt(currentUserId);
+      
+      return {
+        _id: msg.id || msg.message_id || `temp-${Date.now()}-${Math.random()}`,
+        message_id: msg.id || msg.message_id,
+        content: content,
+        sender: isFromCurrentUser ? 'me' : 'other',
+        sender_id: msg.sender_id,
+        createdAt: msg.created_at || msg.timestamp || getPakistanTime().toISOString(),
+        message_type: messageType,
+        _original: msg
+      };
+    });
+  };
+
   // Transform API response to UI format - Grouped by other user ID
   const transformChatsData = (apiData) => {
-    console.log('Transforming chats data from API:', apiData);
-    
     let conversationsArray = [];
     
     if (Array.isArray(apiData)) {
@@ -88,7 +160,6 @@ export const ChatProvider = ({ children }) => {
     } else if (apiData?.data) {
       conversationsArray = Array.isArray(apiData.data) ? apiData.data : [];
     } else {
-      console.log('No conversations data found in API response format');
       return [];
     }
 
@@ -190,25 +261,20 @@ export const ChatProvider = ({ children }) => {
       return new Date(b.lastMessage.createdAt) - new Date(a.lastMessage.createdAt);
     });
     
-    console.log('Grouped chats by user:', result);
     return result;
   };
 
   // Load all chats for the current user
   const loadChats = useCallback(async () => {
     if (!currentUserId) {
-      console.log(' No current user ID available');
       return [];
     }
     
     try {
       setLoading(true);
       setError(null);
-      console.log(' Loading chats for user:', currentUserId);
       
       const data = await chatService.getChats(currentUserId);
-      console.log(' Raw chats data from API:', data);
-      
       const transformedChats = transformChatsData(data);
       setChats(transformedChats);
       setHasLoaded(true);
@@ -216,27 +282,24 @@ export const ChatProvider = ({ children }) => {
       const totalUnread = transformedChats.reduce((total, chat) => total + (chat.unreadCount || 0), 0);
       setUnreadCount(totalUnread);
       
-      console.log(' Chats loaded successfully:', transformedChats.length, 'chats');
       return transformedChats;
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to load chats';
       setError(errorMsg);
-      console.error(' Error loading chats:', err);
+      console.error('Error loading chats:', err);
       return [];
     } finally {
       setLoading(false);
     }
   }, [currentUserId]);
 
-  // Start a new chat - FIXED: Now properly refreshes chat list
+  // Start a new chat
   const startNewChat = async (adId, message, user2Id) => {
     try {
       setLoading(true);
       setError(null);
-      console.log(' Starting new chat with adId:', adId, 'message:', message, 'user2Id:', user2Id);
       
       const newChat = await chatService.startConversation(adId, message, user2Id);
-      console.log(' New chat created:', newChat);
       
       // Create temporary chat for immediate UI response
       const tempChat = {
@@ -273,79 +336,30 @@ export const ChatProvider = ({ children }) => {
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to start chat';
       setError(errorMsg);
-      console.error(' Error in startNewChat:', err);
+      console.error('Error in startNewChat:', err);
       throw err;
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper function to transform messages with proper image URL handling
-  const transformMessages = (messages, currentUserId) => {
-    if (!Array.isArray(messages)) return [];
-    
-    return messages.map(msg => {
-      // Extract content from different possible fields
-      let content = msg.message_text || msg.content || '';
-      const messageType = msg.message_type || 'text';
-      
-      // Handle image messages
-      if (messageType === 'image' || messageType === 'file') {
-        // Check multiple possible locations for the image URL
-        const imageUrl = msg.media_url || msg.image_url || msg.file_url || 
-                        (messageType === 'image' ? content : '');
-        
-        // If we found an image URL, use it as the content
-        if (imageUrl) {
-          content = imageUrl;
-        }
-      }
-
-      // Format the image URL if it's an image message
-      if (messageType === 'image' && content) {
-        content = formatImageUrl(content);
-      }
-
-      // Determine if the message is from the current user
-      const isFromCurrentUser = parseInt(msg.sender_id) === parseInt(currentUserId);
-      
-      return {
-        _id: msg.id || msg.message_id || `temp-${Date.now()}-${Math.random()}`,
-        message_id: msg.id || msg.message_id,
-        content: content,
-        sender: isFromCurrentUser ? 'me' : 'other',
-        sender_id: msg.sender_id,
-        createdAt: msg.created_at || msg.timestamp || getPakistanTime().toISOString(),
-        message_type: messageType,
-        _original: msg // Store original data for debugging
-      };
-    });
-  };
-
-  // Format image URLs properly
-  const formatImageUrl = (url) => {
-    if (!url || url === 'N/A' || url === 'null' || url === 'undefined' || url === '') {
-      return null;
-    }
-    if (url.startsWith('http')) return url;
-    return `https://api.emov.com.pk${url.startsWith('/') ? '' : '/'}${url}`;
-  };
-
-  // Load messages with retry logic and better error handling
-  const loadMessages = useCallback(async (chatId, retryCount = 0) => {
+  // Load messages with caching and retry logic
+  const loadMessages = useCallback(async (chatId, retryCount = 0, forceRefresh = false) => {
     if (!chatId) {
       console.error('No chat ID provided to loadMessages');
       return [];
     }
     
+    // Check cache first (unless force refresh)
+    if (!forceRefresh && messageCache.has(chatId)) {
+      return messageCache.get(chatId);
+    }
+    
     const MAX_RETRIES = 2;
-    const RETRY_DELAY = 1000; // 1 second
+    const RETRY_DELAY = 1000;
     
     try {
-      console.log(`🔄 Loading messages for chat: ${chatId} (attempt ${retryCount + 1}/${MAX_RETRIES + 1})`);
-      
       const data = await chatService.getMessages(chatId);
-      console.log('✅ Successfully loaded messages:', data);
       
       // Reset error state on success
       setError(null);
@@ -364,17 +378,18 @@ export const ChatProvider = ({ children }) => {
       
       // Transform messages with proper image URL handling
       const transformedMessages = transformMessages(messagesArray, currentUserId);
-      console.log('✅ Transformed messages:', transformedMessages);
+      
+      // Cache the transformed messages
+      messageCache.set(chatId, transformedMessages);
+      
       return transformedMessages;
     } catch (error) {
       const errorMsg = error.response?.data?.message || error.message || 'Failed to load messages';
-      console.error(`❌ Error in loadMessages (attempt ${retryCount + 1}):`, error);
       
       // Retry logic for transient errors (like 500)
       if (retryCount < MAX_RETRIES) {
-        console.log(`⏳ Retrying in ${RETRY_DELAY}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return loadMessages(chatId, retryCount + 1);
+        return loadMessages(chatId, retryCount + 1, forceRefresh);
       }
       
       // Only show error if we've exhausted all retries
@@ -401,6 +416,18 @@ export const ChatProvider = ({ children }) => {
         )
       );
       
+      // Update cache
+      if (currentChat) {
+        const chatId = currentChat.conversation_id || currentChat._id;
+        if (messageCache.has(chatId)) {
+          const cachedMessages = messageCache.get(chatId);
+          const updatedCache = cachedMessages.map(msg =>
+            messageIds.includes(msg._id) ? { ...msg, read: true } : msg
+          );
+          messageCache.set(chatId, updatedCache);
+        }
+      }
+      
       // Update unread count in chats list
       setChats(prevChats => 
         prevChats.map(chat => {
@@ -420,69 +447,31 @@ export const ChatProvider = ({ children }) => {
     }
   }, [currentChat]);
 
-  // Send message function
-const sendMessage = async (content, messageType = 'text') => {
-  if (!currentChat) {
-    throw new Error('No active chat selected');
-  }
-  
-  // Get current user from localStorage
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
-  const currentUser = {
-    id: userData.id || userData.userId || currentUserId,
-    name: userData.name || 'You',
-    avatar: userData.profileImage || userData.avatar || '/default-avatar.png'
-  };
-
-  if (!currentUser.id) {
-    throw new Error('User not authenticated');
-  }
-
-  const tempId = `temp-${Date.now()}`;
-  const messageContent = content;
-  
-  // Create temporary message with current time in Pakistan timezone
-  const tempMessage = {
-    _id: tempId,
-    content: messageContent,
-    sender: currentUser.id,
-    senderInfo: {
-      id: currentUser.id,
-      name: currentUser.name,
-      avatar: currentUser.avatar
-    },
-    createdAt: getPakistanTime().toISOString(),
-    status: 'sending',
-    message_type: messageType,
-    read: false
-  };
-
-  setMessages(prev => [...prev, tempMessage]);
-
-  try {
-    console.log('Sending message with content:', {
-      content: messageContent,
-      type: messageType,
-      chatId: currentChat.conversation_id || currentChat._id,
-      userId: currentUser.id
-    });
-
-    const response = await chatService.sendMessage(
-      currentChat.conversation_id || currentChat._id, 
-      messageContent,
-      currentUser.id,
-      messageType
-    );
+  // Send message function - OPTIMIZED: No longer reloads all messages
+  const sendMessage = async (content, messageType = 'text') => {
+    if (!currentChat) {
+      throw new Error('No active chat selected');
+    }
     
-    console.log('Message sent to API, response:', response);
-    
-    // Use server's timestamp if available, otherwise use our Pakistan time
-    const serverTime = response.createdAt || getPakistanTime().toISOString();
-    const normalizedServerTime = toPakistanTime(serverTime).toISOString();
+    // Get current user from localStorage
+    const userData = JSON.parse(localStorage.getItem('user') || '{}');
+    const currentUser = {
+      id: userData.id || userData.userId || currentUserId,
+      name: userData.name || 'You',
+      avatar: userData.profileImage || userData.avatar || '/default-avatar.png'
+    };
 
-    const newMessage = {
-      _id: response.message_id || response.id || tempId,
-      message_id: response.message_id || response.id,
+    if (!currentUser.id) {
+      throw new Error('User not authenticated');
+    }
+
+    const tempId = `temp-${Date.now()}`;
+    const messageContent = content;
+    const chatId = currentChat.conversation_id || currentChat._id;
+    
+    // Create temporary message with current time in Pakistan timezone
+    const tempMessage = {
+      _id: tempId,
       content: messageContent,
       sender: currentUser.id,
       senderInfo: {
@@ -490,141 +479,193 @@ const sendMessage = async (content, messageType = 'text') => {
         name: currentUser.name,
         avatar: currentUser.avatar
       },
-      createdAt: normalizedServerTime,
-      status: 'sent',
-      read: false,
-      message_type: messageType
+      createdAt: getPakistanTime().toISOString(),
+      status: 'sending',
+      message_type: messageType,
+      read: false
     };
+
+    // Add to UI immediately
+    setMessages(prev => [...prev, tempMessage]);
     
-    // Update the temporary message with the actual server response
-    setMessages(prev => 
-      prev.map(msg => 
-        msg._id === tempId ? newMessage : msg
-      )
-    );
-    
-    // Update the chat's last message
-    const chatId = currentChat.conversation_id || currentChat._id;
-    setChats(prevChats => 
-      prevChats.map(chat => {
-        const currentChatId = chat.conversation_id || chat._id;
-        
-        if (currentChatId === chatId) {
-          let lastMessageContent = messageContent;
-          if (messageType === 'image') {
-            lastMessageContent = 'You sent a photo';
-          } else if (messageType === 'audio') {
-            lastMessageContent = 'You sent an audio';
-          } else if (messageType === 'file') {
-            lastMessageContent = 'You sent a file';
-          } else if (messageType === 'text') {
-            lastMessageContent = 'You sent a message';
-          }
-          
-          return {
-            ...chat,
-            lastMessage: {
-              content: lastMessageContent,
-              message_type: messageType,
-              sender: 'me',
-              sender_id: currentUser.id,
-              createdAt: normalizedServerTime
-            },
-            updatedAt: normalizedServerTime,
-            unreadCount: 0
-          };
-        }
-        return chat;
-      })
-    );
-    
-    // Update the current chat in state if needed
-    setCurrentChat(prev => {
-      if (!prev) return null;
-      let lastMessageContent = messageContent;
-      if (messageType === 'image') {
-        lastMessageContent = 'You sent a photo';
-      } else if (messageType === 'audio') {
-        lastMessageContent = 'You sent an audio';
-      } else if (messageType === 'file') {
-        lastMessageContent = 'You sent a file';
-      } else if (messageType === 'text') {
-        lastMessageContent = 'You sent a message';
+    // Update cache immediately with temp message
+    if (messageCache.has(chatId)) {
+      const cachedMessages = messageCache.get(chatId);
+      messageCache.set(chatId, [...cachedMessages, tempMessage]);
+    }
+
+    try {
+      const response = await chatService.sendMessage(
+        chatId, 
+        messageContent,
+        currentUser.id,
+        messageType
+      );
+      
+      // Use server's timestamp if available, otherwise use our Pakistan time
+      const serverTime = response.createdAt || getPakistanTime().toISOString();
+      const normalizedServerTime = toPakistanTime(serverTime).toISOString();
+
+      const newMessage = {
+        _id: response.message_id || response.id || tempId,
+        message_id: response.message_id || response.id,
+        content: messageContent,
+        sender: currentUser.id,
+        senderInfo: {
+          id: currentUser.id,
+          name: currentUser.name,
+          avatar: currentUser.avatar
+        },
+        createdAt: normalizedServerTime,
+        status: 'sent',
+        read: false,
+        message_type: messageType
+      };
+      
+      // Update the temporary message with the actual server response
+      setMessages(prev => 
+        prev.map(msg => 
+          msg._id === tempId ? newMessage : msg
+        )
+      );
+      
+      // Update cache with real message
+      if (messageCache.has(chatId)) {
+        const cachedMessages = messageCache.get(chatId);
+        const updatedCache = cachedMessages.map(msg =>
+          msg._id === tempId ? newMessage : msg
+        );
+        messageCache.set(chatId, updatedCache);
       }
       
-      return {
-        ...prev,
-        lastMessage: {
-          content: lastMessageContent,
-          message_type: messageType,
-          sender: 'me',
-          sender_id: currentUser.id,
-          createdAt: serverTime
-        },
-        updatedAt: serverTime
-      };
-    });
-    
-    // Reload messages to ensure consistency
-    setTimeout(async () => {
-      try {
-        const updatedMessages = await loadMessages(chatId);
-        setMessages(updatedMessages);
-      } catch (error) {
-        console.error('Error reloading messages:', error);
+      // Update the chat's last message
+      setChats(prevChats => 
+        prevChats.map(chat => {
+          const currentChatId = chat.conversation_id || chat._id;
+          
+          if (currentChatId === chatId) {
+            let lastMessageContent = messageContent;
+            if (messageType === 'image') {
+              lastMessageContent = 'You sent a photo';
+            } else if (messageType === 'audio') {
+              lastMessageContent = 'You sent an audio';
+            } else if (messageType === 'file') {
+              lastMessageContent = 'You sent a file';
+            } else if (messageType === 'text') {
+              lastMessageContent = 'You sent a message';
+            }
+            
+            return {
+              ...chat,
+              lastMessage: {
+                content: lastMessageContent,
+                message_type: messageType,
+                sender: 'me',
+                sender_id: currentUser.id,
+                createdAt: normalizedServerTime
+              },
+              updatedAt: normalizedServerTime,
+              unreadCount: 0
+            };
+          }
+          return chat;
+        })
+      );
+      
+      // Update the current chat in state if needed
+      setCurrentChat(prev => {
+        if (!prev) return null;
+        let lastMessageContent = messageContent;
+        if (messageType === 'image') {
+          lastMessageContent = 'You sent a photo';
+        } else if (messageType === 'audio') {
+          lastMessageContent = 'You sent an audio';
+        } else if (messageType === 'file') {
+          lastMessageContent = 'You sent a file';
+        } else if (messageType === 'text') {
+          lastMessageContent = 'You sent a message';
+        }
+        
+        return {
+          ...prev,
+          lastMessage: {
+            content: lastMessageContent,
+            message_type: messageType,
+            sender: 'me',
+            sender_id: currentUser.id,
+            createdAt: serverTime
+          },
+          updatedAt: serverTime
+        };
+      });
+      
+      return newMessage;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      
+      // Update message status to failed
+      setMessages(prev => 
+        prev.map(msg => 
+          msg._id === tempId ? { ...msg, status: 'failed' } : msg
+        )
+      );
+      
+      // Update cache with failed status
+      if (messageCache.has(chatId)) {
+        const cachedMessages = messageCache.get(chatId);
+        const updatedCache = cachedMessages.map(msg =>
+          msg._id === tempId ? { ...msg, status: 'failed' } : msg
+        );
+        messageCache.set(chatId, updatedCache);
       }
-    }, 500);
-    
-    return newMessage;
-  } catch (error) {
-    console.error('Error sending message:', {
-      error: error.message,
-      stack: error.stack,
-      response: error.response?.data
-    });
-    
-    // Update message status to failed
-    setMessages(prev => 
-      prev.map(msg => 
-        msg._id === tempId ? { ...msg, status: 'failed' } : msg
-      )
-    );
-    
-    throw new Error('Failed to send message. Please try again.');
-  }
-};
+      
+      throw new Error('Failed to send message. Please try again.');
+    }
+  };
 
-  // Set the current active chat - FIXED: Better error handling
+  // Set the current active chat - OPTIMIZED: Uses cache
   const setActiveChat = useCallback(async (chat) => {
-    console.log(' Setting active chat:', chat);
-    
     // Always set the current chat first for immediate UI response
     setCurrentChat(chat);
-    setMessages([]);
     
     if (chat) {
-      try {
-        console.log('🔄 Loading messages for new chat...');
-        const loadedMessages = await loadMessages(chat.conversation_id || chat._id);
-        setMessages(loadedMessages);
+      const chatId = chat.conversation_id || chat._id;
+      
+      // Check cache first for instant load
+      if (messageCache.has(chatId)) {
+        const cachedMessages = messageCache.get(chatId);
+        setMessages(cachedMessages);
         
         // Mark messages as read when chat is opened
-        const unreadMsgs = loadedMessages.filter(msg => !msg.read && msg.sender !== 'me').map(msg => msg._id);
+        const unreadMsgs = cachedMessages.filter(msg => !msg.read && msg.sender !== 'me').map(msg => msg._id);
         if (unreadMsgs.length > 0) {
           await markMessagesAsRead(unreadMsgs);
         }
-      } catch (error) {
-        console.error('Error loading messages for chat:', error);
-        // Set empty messages even if there's an error
+      } else {
+        // Load from API if not cached
         setMessages([]);
+        try {
+          const loadedMessages = await loadMessages(chatId);
+          setMessages(loadedMessages);
+          
+          // Mark messages as read when chat is opened
+          const unreadMsgs = loadedMessages.filter(msg => !msg.read && msg.sender !== 'me').map(msg => msg._id);
+          if (unreadMsgs.length > 0) {
+            await markMessagesAsRead(unreadMsgs);
+          }
+        } catch (error) {
+          console.error('Error loading messages for chat:', error);
+          setMessages([]);
+        }
       }
+    } else {
+      setMessages([]);
     }
   }, [loadMessages, markMessagesAsRead]);
 
   // Load chats when user ID changes (disabled here; chat screens load explicitly)
   useEffect(() => {
     if (false && currentUserId && !hasLoaded) {
-      console.log('🔄 Initial chat load triggered');
       loadChats();
     }
   }, [currentUserId, hasLoaded, loadChats]);
@@ -633,6 +674,10 @@ const sendMessage = async (content, messageType = 'text') => {
   const deleteConversation = async (chatId) => {
     try {
       await chatService.deleteConversation(chatId);
+      
+      // Clear from cache
+      messageCache.delete(chatId);
+      
       setChats(prev => prev.filter(chat => chat._id !== chatId));
       if (currentChat?._id === chatId) {
         setCurrentChat(null);
@@ -645,6 +690,12 @@ const sendMessage = async (content, messageType = 'text') => {
       throw err;
     }
   };
+
+  // Optional: Clear cache function (can be called when needed)
+  const clearCache = useCallback(() => {
+    messageCache.clear();
+    imageUrlCache.clear();
+  }, []);
 
   return (
     <ChatContext.Provider
@@ -662,7 +713,8 @@ const sendMessage = async (content, messageType = 'text') => {
         markMessagesAsRead,
         deleteConversation,
         deleteMessage, 
-        currentUserId
+        currentUserId,
+        clearCache // Export if you want to manually clear cache
       }}
     >
       {children}

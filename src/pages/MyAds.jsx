@@ -56,6 +56,20 @@ const translations = {
     certification: "Certification",
     accidentHistory: "Accident History",
     sellerComment: "Seller Comment",
+    drivetrain: "Drivetrain",
+    axleConfiguration: "Axle Configuration",
+    vehicleCondition: "Vehicle Condition",
+    inspectionStatus: "Inspection Status",
+    electricRange: "Electric Range",
+    batteryCapacity: "Battery Capacity",
+    enterDrivetrain: "e.g., 2WD, 4WD, AWD",
+    enterAxleConfiguration: "e.g., 4x2, 6x4, 8x4",
+    enterFuelEfficiency: "e.g., 15 km/l",
+    selectCondition: "Select condition",
+    enterInspectionStatus: "e.g., Certified, Pre-inspected",
+    enterElectricRange: "e.g., 300 km",
+    
+    enterBatteryCapacity: "e.g., 60 kWh",
     enterLoadCapacity: "e.g., 60,000 kg",
     addComments: "Add any additional comments about your vehicle...",
     diesel: "Diesel",
@@ -282,36 +296,44 @@ export default function Ads() {
     IsNegotiable: false,
     ContactNumber: '',
     City: '',
-    Address: ''
+    Address: '',
+    // New fields for AdDetail compatibility
+    Drivetrain: '',
+    AxleConfiguration: '',
+    FuelEfficiency: '',
+    VehicleCondition: '',
+    InspectionStatus: '',
+    ElectricRange: '',
+    BatteryCapacity: '',
+    AccidentHistory: 'No Accidents',
+    Certification: 'Not Certified'
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const [stepErrors, setStepErrors] = useState({});
-  
-  // Add submitting state
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState(null);
 
-  // Audio recording states
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
-  const [showRecordingUI, setShowRecordingUI] = useState(false);
-  const recordingInterval = useRef(null);
+const t = translations[language];
+const translatedData = getTranslatedData(language);
+const navigate = useNavigate();
 
-  const t = translations[language];
-  const translatedData = getTranslatedData(language);
-  const navigate = useNavigate();
+const vehicleModels = ['Model S', 'Model 3', 'Civic', 'Accord', 'Camry', 'Corolla', 'F-150', 'X5'];
+const registrationYears = Array.from({length: 30}, (_, i) => new Date().getFullYear() - i);
+const bodyTypes = ['Container Body', 'Flatbed', 'Box Truck', 'Tanker', 'Dump Truck', 'Refrigerated'];
 
-  const vehicleModels = ['Model S', 'Model 3', 'Civic', 'Accord', 'Camry', 'Corolla', 'F-150', 'X5'];
-  const registrationYears = Array.from({length: 30}, (_, i) => new Date().getFullYear() - i);
-  const bodyTypes = ['Container Body', 'Flatbed', 'Box Truck', 'Tanker', 'Dump Truck', 'Refrigerated'];
+const [submitting, setSubmitting] = useState(false);
+const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await apiService.user.getProfile();
-        
+// Audio recording states
+const [isRecording, setIsRecording] = useState(false);
+const [recordingTime, setRecordingTime] = useState(0);
+const [mediaRecorder, setMediaRecorder] = useState(null);
+const [audioChunks, setAudioChunks] = useState([]);
+const [showRecordingUI, setShowRecordingUI] = useState(false);
+const recordingInterval = useRef(null);
+
+useEffect(() => {
+  const fetchUserProfile = async () => {
+    try {
+      const response = await apiService.user.getProfile();
         if (response.status === 200) {
           setUserProfile(response.data);
         } else {
@@ -338,7 +360,6 @@ export default function Ads() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    console.log(`Field changed - ${name}:`, value, 'Type:', type);
     
     // Handle different input types
     let newValue = value;
@@ -357,21 +378,17 @@ export default function Ads() {
       newValue = value;
     }
     
-    console.log(`Updating ${name} with value:`, newValue);
-    
     setFormData(prev => {
       const updated = {
         ...prev,
         [name]: newValue
       };
-      console.log('Updated formData:', updated);
       return updated;
     });
   };
   
   // Debug: Log form data changes
   useEffect(() => {
-    console.log('Form data updated:', formData);
   }, [formData]);
 
   // Filtering functions for cascading dropdowns
@@ -380,9 +397,6 @@ export default function Ads() {
       return [];
     }
     
-    console.log('Filtering brands for vehicle type:', vehicleTypeId);
-    console.log('Available brand data:', filterData.brand.slice(0, 3)); // Show first 3 brands for debugging
-    
     const filtered = filterData.brand.filter(brand => {
       // Try different possible field names for the vehicle type relationship
       const matches = brand.VehicleTypeID === vehicleTypeId || 
@@ -390,14 +404,9 @@ export default function Ads() {
                      brand.CategoryID === vehicleTypeId ||
                      brand.category_id === vehicleTypeId;
       
-      if (matches) {
-        console.log('Brand matches:', brand.BrandName, brand);
-      }
-      
       return matches;
     });
     
-    console.log('Filtered brands result:', filtered);
     return filtered;
   };
 
@@ -406,9 +415,6 @@ export default function Ads() {
       return [];
     }
     
-    console.log('Filtering models for brand:', brandId);
-    console.log('Available model data:', filterData.model.slice(0, 2)); // Show first 2 models for debugging
-    
     const filtered = filterData.model.filter(model => {
       // Try different possible field names for the brand relationship
       const matches = model.VehicleBrandID === brandId || 
@@ -416,38 +422,18 @@ export default function Ads() {
                      model.BrandID === brandId ||
                      model.brand_id === brandId;
       
-      if (matches) {
-        console.log('Model matches:', model.ModelName || model.name, model);
-      }
-      
       return matches;
     });
     
-    console.log('Filtered models result:', filtered);
     return filtered;
   };
 
   const filterBodyTypesByVehicleType = (vehicleTypeId) => {
-    console.log('=== Body Type Filtering Debug ===');
-    console.log('VehicleTypeId:', vehicleTypeId);
-    console.log('FilterData exists:', !!filterData);
-    console.log('FilterData keys:', filterData ? Object.keys(filterData) : 'none');
-    console.log('body_type exists:', !!filterData?.body_type);
-    console.log('bodyType exists:', !!filterData?.bodyType);
-    console.log('body_type data:', filterData?.body_type);
-    console.log('bodyType data:', filterData?.bodyType);
-    
-    // Try both possible field names for body types
     const bodyTypeData = filterData?.body_type || filterData?.bodyType || [];
-    console.log('Using bodyTypeData:', bodyTypeData);
-    console.log('Length:', bodyTypeData.length);
     
     if (!vehicleTypeId || bodyTypeData.length === 0) {
-      console.log('Returning empty array - no vehicle type or no body type data');
       return [];
     }
-    
-    console.log('Sample body type structure:', bodyTypeData[0]);
     
     const filtered = bodyTypeData.filter(bodyType => {
       // Try different possible field names for the vehicle type relationship
@@ -460,27 +446,21 @@ export default function Ads() {
                      bodyType.Category === vehicleTypeId ||
                      bodyType.category === vehicleTypeId;
       
-      if (matches) {
-        console.log('Body type matches:', bodyType.BodyTypeName || bodyType.name, bodyType);
-      }
-      
       return matches;
     });
     
-    console.log('Filtered body types result:', filtered);
-    console.log('Total body types available:', bodyTypeData.length);
-    console.log('=== End Body Type Debug ===');
     return filtered;
   };
 
   const handleFileChange = async (e) => {
     const { name, files } = e.target;
+    
     console.log(`File input changed - ${name}:`, files);
 
     if (name === 'images' && files.length > 0) {
       // Check if total images would exceed maximum limit
       const currentImageCount = formData.Images?.length || 0;
-      if (currentImageCount + files.length > 5) {
+      if (currentImageCount + files.length > 10) {
         setFormData(prev => ({
           ...prev,
           imageUploadError: `Maximum 5 images allowed. You already have ${currentImageCount} images. Please select only ${5 - currentImageCount} more.`
@@ -493,10 +473,8 @@ export default function Ads() {
         
         // Upload all files in parallel for better performance
         const uploadPromises = Array.from(files).map(async (file) => {
-          console.log('Uploading file:', file.name);
           const response = await apiService.upload.uploadImage(file);
           if (response && response.url) {
-            console.log('Image uploaded successfully:', response.url);
             
             // Store just the filename (not full URL)
             let imageUrl = response.url;
@@ -506,7 +484,6 @@ export default function Ads() {
               imageUrl = imageUrl.split('/').pop();
             }
             
-            console.log('Storing image filename for API:', imageUrl);
             return imageUrl;
           } else {
             throw new Error('No URL returned from image upload');
@@ -516,8 +493,7 @@ export default function Ads() {
         // Wait for all uploads to complete
         const uploadedImageUrls = await Promise.all(uploadPromises);
         
-        console.log('All images uploaded, storing filenames:', uploadedImageUrls);
-        
+                
         setFormData(prev => ({
           ...prev,
           Images: [...(prev.Images || []), ...uploadedImageUrls], // Append to existing images
@@ -563,9 +539,7 @@ export default function Ads() {
   // Start audio recording
   const startRecording = async () => {
     try {
-      console.log('[Audio] Starting recording...');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log('[Audio] Microphone access granted');
       const mediaRecorder = new MediaRecorder(stream);
       const audioChunks = [];
 
@@ -609,7 +583,6 @@ export default function Ads() {
 
       console.log('[Audio] MediaRecorder created, starting...');
       mediaRecorder.start();
-      console.log('[Audio] MediaRecorder started');
       setMediaRecorder(mediaRecorder);
       setAudioChunks(audioChunks);
       setIsRecording(true);
@@ -753,6 +726,10 @@ export default function Ads() {
       if (!formData.ServiceHistory) {
         errors.ServiceHistory = 'Fill this field';
         console.log('ServiceHistory missing');
+      }
+      if (!formData.VehicleCondition) {
+        errors.VehicleCondition = 'Select vehicle condition';
+        console.log('VehicleCondition missing');
       }
     }
     
@@ -928,6 +905,7 @@ const validateForm = () => {
     { key: 'EngineType', name: 'Engine Type' },
     { key: 'VehicleBodyTypeID', name: 'Vehicle Body Type' },
     { key: 'Ownership', name: 'Ownership' },
+    { key: 'VehicleCondition', name: 'Vehicle Condition' },
   ];
 
   const errors = [];
@@ -1051,7 +1029,17 @@ const handleSubmit = async () => {
       UserID: String(userId),
       // **FIX**: Send as ARRAY of strings
       Images: imagesArray,
-      AudioURL: formData.AudioURL || null
+      AudioURL: formData.AudioURL || null,
+      // New fields for AdDetail compatibility
+      Drivetrain: formData.Drivetrain || '',
+      AxleConfiguration: formData.AxleConfiguration || '',
+      FuelEfficiency: formData.FuelEfficiency || '',
+      VehicleCondition: formData.VehicleCondition || '',
+      InspectionStatus: formData.InspectionStatus || '',
+      ElectricRange: formData.ElectricRange || '',
+      BatteryCapacity: formData.BatteryCapacity || '',
+      AccidentHistory: formData.AccidentHistory || 'No Accidents',
+      Certification: formData.Certification || 'Not Certified'
     };
     
     console.log('📤 Final request data before sending:', requestData);
@@ -1107,7 +1095,16 @@ const handleSubmit = async () => {
         IsNegotiable: false,
         ContactNumber: '',
         City: '',
-        Address: ''
+        Address: '',
+        Drivetrain: '',
+        AxleConfiguration: '',
+        FuelEfficiency: '',
+        VehicleCondition: '',
+        InspectionStatus: '',
+        ElectricRange: '',
+        BatteryCapacity: '',
+        AccidentHistory: 'No Accidents',
+        Certification: 'Not Certified'
       });
       
       // Redirect to my ads page
@@ -1850,6 +1847,195 @@ const renderAdditionalDetails = () => (
         placeholder={t.addComments}
       />
     </div>
+
+    {/* New fields for AdDetail compatibility */}
+    
+    {/* Row 1: Transmission and Drivetrain */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.transmission} <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <select
+            name="Transmission"
+            value={formData.Transmission || ''}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2.5 appearance-none border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+            required
+          >
+            <option value="">{t.selectTransmission || 'Select transmission'}</option>
+            <option value="Manual">Manual</option>
+            <option value="Automatic">Automatic</option>
+            <option value="Semi-Automatic">Semi-Automatic</option>
+          </select>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+            <FaCaretDown />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.drivetrain} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <input
+          type="text"
+          name="Drivetrain"
+          value={formData.Drivetrain || ''}
+          onChange={handleInputChange}
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+          placeholder={t.enterDrivetrain}
+        />
+      </div>
+    </div>
+
+    {/* Row 2: Fuel Efficiency and Axle Configuration */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.fuelEfficiency} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <input
+          type="text"
+          name="FuelEfficiency"
+          value={formData.FuelEfficiency || ''}
+          onChange={handleInputChange}
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+          placeholder={t.enterFuelEfficiency}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.axleConfiguration} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <input
+          type="text"
+          name="AxleConfiguration"
+          value={formData.AxleConfiguration || ''}
+          onChange={handleInputChange}
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+          placeholder={t.enterAxleConfiguration}
+        />
+      </div>
+    </div>
+
+    {/* Row 3: Electric Range and Battery Capacity */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.electricRange} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <input
+          type="text"
+          name="ElectricRange"
+          value={formData.ElectricRange || ''}
+          onChange={handleInputChange}
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+          placeholder={t.enterElectricRange}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.batteryCapacity} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <input
+          type="text"
+          name="BatteryCapacity"
+          value={formData.BatteryCapacity || ''}
+          onChange={handleInputChange}
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+          placeholder={t.enterBatteryCapacity}
+        />
+      </div>
+    </div>
+
+    {/* Row 4: Vehicle Condition and Inspection Status */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.vehicleCondition} <span className="text-red-500">*</span>
+        </label>
+        <div className="relative">
+          <select
+            name="VehicleCondition"
+            value={formData.VehicleCondition || ''}
+            onChange={handleInputChange}
+            className="w-full px-4 py-2.5 appearance-none border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                     focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+            required
+          >
+            <option value="">{t.selectCondition}</option>
+            <option value="Excellent">Excellent</option>
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="Poor">Poor</option>
+          </select>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+            <FaCaretDown />
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          {t.inspectionStatus} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <input
+          type="text"
+          name="InspectionStatus"
+          value={formData.InspectionStatus || ''}
+          onChange={handleInputChange}
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-emov-purple/50 focus:border-emov-purple transition-all duration-200"
+          placeholder={t.enterInspectionStatus}
+        />
+      </div>
+    </div>
+
+    {/* Row 5: Accident History and Certification */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+          {t.accidentHistory} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <select
+          name="AccidentHistory"
+          value={formData.AccidentHistory || ''}
+          onChange={handleInputChange}
+          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        >
+          <option value="No Accidents">No Accidents</option>
+          <option value="Minor Accident">Minor Accident</option>
+          <option value="Major Accident">Major Accident</option>
+        </select>
+      </div>
+      
+      <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+          {t.certification} <span className="text-gray-500">({t.optional})</span>
+        </label>
+        <select
+          name="Certification"
+          value={formData.Certification || ''}
+          onChange={handleInputChange}
+          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        >
+          <option value="Not Certified">Not Certified</option>
+          <option value="Certified">Certified</option>
+          <option value="Pre-inspected">Pre-inspected</option>
+          <option value="Dealer Certified">Dealer Certified</option>
+        </select>
+      </div>
+    </div>
   </div>
 );
 
@@ -2049,6 +2235,15 @@ const renderPreview = () => {
           <p className="text-gray-700 dark:text-gray-300">
             <strong>{t.ownership}:</strong> {formData.Ownership || 'N/A'}
           </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.drivetrain}:</strong> {formData.Drivetrain || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.fuelEfficiency}:</strong> {formData.FuelEfficiency || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.axleConfiguration}:</strong> {formData.AxleConfiguration || 'N/A'}
+          </p>
         </div>
         <div className="space-y-3">
           <p className="text-gray-700 dark:text-gray-300">
@@ -2056,6 +2251,31 @@ const renderPreview = () => {
           </p>
           <p className="text-gray-700 dark:text-gray-300">
             <strong>{t.serviceHistory}:</strong> {formData.ServiceHistory || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.vehicleCondition}:</strong> {formData.VehicleCondition || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.inspectionStatus}:</strong> {formData.InspectionStatus || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.electricRange}:</strong> {formData.ElectricRange || 'N/A'}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="space-y-3">
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.batteryCapacity}:</strong> {formData.BatteryCapacity || 'N/A'}
+          </p>
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.accidentHistory}:</strong> {formData.AccidentHistory || 'N/A'}
+          </p>
+        </div>
+        <div className="space-y-3">
+          <p className="text-gray-700 dark:text-gray-300">
+            <strong>{t.certification}:</strong> {formData.Certification || 'N/A'}
           </p>
         </div>
       </div>

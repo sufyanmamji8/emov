@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater, FaArrowRight } from 'react-icons/fa';
 import { FiMapPin, FiCalendar } from 'react-icons/fi';
 import { useTheme } from '../hooks/useTheme';
-import apiService, { handleUnauthorized } from '../services/Api';
+import apiService, { handleUnauthorized, api } from '../services/Api';
 import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
 import { useFilterNavigation } from '../hooks/useFilterNavigation';
 
@@ -55,6 +55,7 @@ const SearchResultItem = ({ ad, isDark, handleAdClick }) => {
 const gradientLeft = 'gradientleft.png';
 // Encode the space in the filename
 const gradientRight = 'gradientrightbottom.png';
+
 
 // Color constants
 const colors = {
@@ -255,6 +256,9 @@ function Dashboard() {
   const [loadingRecentAds, setLoadingRecentAds] = useState(true);
   const [recentAdsError, setRecentAdsError] = useState(null);
   
+  // Separate responsive logic for Recently Added and Featured Vehicles
+  const [carouselItemsPerRow, setCarouselItemsPerRow] = useState(4);
+  
   // Update items per row based on screen size
   useEffect(() => {
     const updateItemsPerRow = () => {
@@ -277,6 +281,30 @@ function Dashboard() {
     
     // Cleanup
     return () => window.removeEventListener('resize', updateItemsPerRow);
+  }, []);
+
+  // Update carousel items per row for Recently Added and Featured Vehicles
+  useEffect(() => {
+    const updateCarouselItemsPerRow = () => {
+      if (window.innerWidth < 640) { // Mobile - show 1 item at a time
+        setCarouselItemsPerRow(1);
+      } else if (window.innerWidth < 768) { // Small screens
+        setCarouselItemsPerRow(2);
+      } else if (window.innerWidth < 1024) { // Medium screens
+        setCarouselItemsPerRow(3);
+      } else { // Large screens
+        setCarouselItemsPerRow(4);
+      }
+    };
+    
+    // Set initial value
+    updateCarouselItemsPerRow();
+    
+    // Add event listener for window resize
+    window.addEventListener('resize', updateCarouselItemsPerRow);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', updateCarouselItemsPerRow);
   }, []);
   const slideRef = useRef(null);
 
@@ -346,12 +374,48 @@ function Dashboard() {
     handleSearch(query);
   };
 
-  const handleAdClick = (ad) => {
+  const handleAdClick = async (ad) => {
     const adId = ad.AdID || ad.id || ad.adId || ad._id;
+    console.log('Clicked ad:', ad);
+    console.log('Ad ID:', adId);
+    
     if (adId) {
-      navigate(`/ad/${adId}`, { state: { adData: ad } });
+      try {
+        // Try v2 endpoint first
+        console.log('Fetching ad details from /ads endpoint...');
+        const response = await api.get(`/ads/${adId}`);
+        console.log('API response:', response);
+        
+        if (response.data) {
+          console.log('Navigating with ad details:', response.data);
+          navigate(`/ad/${adId}`, { state: { adData: response.data } });
+        } else {
+          console.error('No ad details in response');
+          // Fallback to original ad data
+          navigate(`/ad/${adId}`, { state: { adData: ad } });
+        }
+      } catch (error) {
+        console.error('Error fetching ad details from v2 endpoint:', error);
+        
+        // Try the original endpoint as fallback
+        try {
+          console.log('Trying fallback endpoint...');
+          const fallbackResponse = await api.get(`/ads/${adId}`);
+          console.log('Fallback response:', fallbackResponse);
+          
+          if (fallbackResponse.data) {
+            navigate(`/ad/${adId}`, { state: { adData: fallbackResponse.data } });
+          } else {
+            navigate(`/ad/${adId}`, { state: { adData: ad } });
+          }
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+          // Still navigate with original data as last resort
+          navigate(`/ad/${adId}`, { state: { adData: ad } });
+        }
+      }
     } else {
-      console.log('Ad data:', ad);
+      console.log('No Ad ID found in ad data:', ad);
     }
     setShowSearchResults(false);
   };
@@ -1606,7 +1670,7 @@ useEffect(() => {
       {/* Mobile Search Bar */}
       <div className={`md:hidden ${showSearchResults ? 'pb-96' : ''}`}>
         <div className="w-full px-4 sm:px-6">
-          <div className="relative max-w-full mx-auto">
+          <div className="relative max-w-full mx-auto search-container">
             <div 
               className="relative w-full h-12 sm:h-14 rounded-2xl border border-white/40 flex items-center transition-all duration-300 hover:border-white/50 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/20"
               style={{
@@ -1767,7 +1831,7 @@ useEffect(() => {
 
       {/* Desktop Search Bar */}
       <div className={`hidden md:block w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-24 ${showSearchResults ? 'pb-96' : ''}`}>
-        <div className="relative max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto">
+        <div className="relative max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto search-container">
           <div 
             className="relative w-full h-12 sm:h-14 md:h-16 rounded-2xl border border-white/40 flex items-center transition-all duration-300 hover:border-white/50 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/20"
             style={{
@@ -2292,10 +2356,10 @@ useEffect(() => {
     ) : recentlyAddedVehicles.length > 0 ? (
       <div className="relative">
         <CarouselNavigation
-          onPrev={() => scrollLeft('Recently Added', recentlyAddedVehicles, 4)}
-          onNext={() => scrollRight('Recently Added', recentlyAddedVehicles, 4)}
+          onPrev={() => scrollLeft('Recently Added', recentlyAddedVehicles, carouselItemsPerRow)}
+          onNext={() => scrollRight('Recently Added', recentlyAddedVehicles, carouselItemsPerRow)}
           canGoPrev={canScrollLeft('Recently Added')}
-          canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, 4)}
+          canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, carouselItemsPerRow)}
           section="recently added vehicles"
         />
         
@@ -2391,13 +2455,18 @@ useEffect(() => {
               transition: 'transform 0.3s ease-in-out'
             }}
           >
-            {Array(Math.ceil(recentlyAddedVehicles.length / 4)).fill().map((_, groupIndex) => (
+            {Array(Math.ceil(recentlyAddedVehicles.length / carouselItemsPerRow)).fill().map((_, groupIndex) => (
               <div 
                 key={groupIndex}
-                className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+                className={`w-full flex-shrink-0 gap-6 px-1 ${
+                  carouselItemsPerRow === 1 ? 'grid grid-cols-1' :
+                  carouselItemsPerRow === 2 ? 'grid grid-cols-2' :
+                  carouselItemsPerRow === 3 ? 'grid grid-cols-3' :
+                  'grid grid-cols-4'
+                }`}
                 style={{ minWidth: '100%' }}
               >
-                {recentlyAddedVehicles.slice(groupIndex * 4, (groupIndex + 1) * 4).map((vehicle, vehicleIndex) => {
+                {recentlyAddedVehicles.slice(groupIndex * carouselItemsPerRow, (groupIndex + 1) * carouselItemsPerRow).map((vehicle, vehicleIndex) => {
                   const vehicleImageUrl = vehicle.image || '/mockvehicle.png';
                   
                   return (
@@ -2487,10 +2556,10 @@ useEffect(() => {
     
     <div className="relative">
       <CarouselNavigation
-        onPrev={() => scrollLeft('Featured Vehicles', featuredVehicles, 4)}
-        onNext={() => scrollRight('Featured Vehicles', featuredVehicles, 4)}
+        onPrev={() => scrollLeft('Featured Vehicles', featuredVehicles, carouselItemsPerRow)}
+        onNext={() => scrollRight('Featured Vehicles', featuredVehicles, carouselItemsPerRow)}
         canGoPrev={canScrollLeft('Featured Vehicles')}
-        canGoNext={canScrollRight('Featured Vehicles', featuredVehicles, 4)}
+        canGoNext={canScrollRight('Featured Vehicles', featuredVehicles, carouselItemsPerRow)}
         section="featured vehicles"
       />
       
@@ -2618,58 +2687,18 @@ useEffect(() => {
             transition: 'transform 0.3s ease-in-out'
           }}
         >
-          {Array(Math.ceil(featuredVehicles.length / 4)).fill().map((_, groupIndex) => (
+          {Array(Math.ceil(featuredVehicles.length / carouselItemsPerRow)).fill().map((_, groupIndex) => (
             <div 
               key={groupIndex}
-              className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-1"
+              className={`w-full flex-shrink-0 gap-6 px-1 ${
+                carouselItemsPerRow === 1 ? 'grid grid-cols-1' :
+                carouselItemsPerRow === 2 ? 'grid grid-cols-2' :
+                carouselItemsPerRow === 3 ? 'grid grid-cols-3' :
+                'grid grid-cols-4'
+              }`}
               style={{ minWidth: '100%' }}
             >
-              {[
-                {
-                  id: 1,
-                  title: 'Toyota Camry 2020',
-                  price: '$24,000',
-                  year: '2020',
-                  mileage: '35,000 km',
-                  transmission: 'Automatic',
-                  fuel: 'Petrol',
-                  location: 'New York',
-                  isNew: true
-                },
-                {
-                  id: 2,
-                  title: 'Honda Civic 2021',
-                  price: '$22,500',
-                  year: '2021',
-                  mileage: '25,000 km',
-                  transmission: 'Automatic',
-                  fuel: 'Hybrid',
-                  location: 'Los Angeles',
-                  isNew: false
-                },
-                {
-                  id: 3,
-                  title: 'BMW 3 Series 2019',
-                  price: '$32,000',
-                  year: '2019',
-                  mileage: '28,000 km',
-                  transmission: 'Automatic',
-                  fuel: 'Diesel',
-                  location: 'Miami',
-                  isNew: true
-                },
-                {
-                  id: 4,
-                  title: 'Mercedes C-Class 2020',
-                  price: '$38,500',
-                  year: '2020',
-                  mileage: '18,000 km',
-                  transmission: 'Automatic',
-                  fuel: 'Petrol',
-                  location: 'Chicago',
-                  isNew: false
-                }
-              ].map((vehicle) => (
+              {featuredVehicles.slice(groupIndex * carouselItemsPerRow, (groupIndex + 1) * carouselItemsPerRow).map((vehicle) => (
                 <div 
                   key={vehicle.id} 
                   className="group bg-bg-secondary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
@@ -2678,7 +2707,7 @@ useEffect(() => {
                     <div className="relative h-48 w-full rounded-lg overflow-hidden">
                       <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
                       <img 
-                        src="/mockvehicle.png" 
+                        src={vehicle.image || '/mockvehicle.png'} 
                         alt={vehicle.title}
                         className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
                         style={{
@@ -2687,9 +2716,9 @@ useEffect(() => {
                         }}
                         loading="lazy"
                       />
-                      {vehicle.isNew && (
-                        <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
-                          {t.new}
+                      {vehicle.isFeatured && (
+                        <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-emov-purple rounded">
+                          Featured
                         </div>
                       )}
                     </div>
