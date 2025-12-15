@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FaCaretDown, FaSun, FaMoon, FaPaperPlane, FaImage, FaTimes, FaSearch, FaMicrophone, FaStop, FaCircle } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/Layout/Navbar';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { useChat } from '../contexts/ChatContext';
 import chatService from '../services/chatService'; 
@@ -1788,7 +1789,9 @@ const formatMessageTime = (dateString) => {
             </div>
           </div>
         </div>
-      )}
+        )}
+
+      <MobileBottomNav activePage="chats" />
     </div>
   );
 }

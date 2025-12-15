@@ -4,12 +4,13 @@ import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaM
 import { FiMapPin, FiCalendar } from 'react-icons/fi';
 import { useTheme } from '../hooks/useTheme';
 import apiService, { handleUnauthorized, api } from '../services/Api';
-import Navbar from '../components/Layout/Navbar'; // Import the Navbar component from the correct path
+import Navbar from '../components/Layout/Navbar'; // Import Navbar component from correct path
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import More from './More'; // Import More component
 import { useFilterNavigation } from '../hooks/useFilterNavigation';
 
-
 // Add this component BEFORE your main Dashboard component
-const SearchResultItem = ({ ad, isDark, handleAdClick }) => {
+const SearchResultItem = ({ ad, isDark, handleAdClick}) => {
   const [imageLoading, setImageLoading] = React.useState(true);
   
   return (
@@ -1521,7 +1522,154 @@ useEffect(() => {
   }
 
   return (
- <div className="min-h-screen bg-bg-primary text-text-primary overflow-x-hidden">
+ <>
+      {/* Mobile Search Bar - Perfect Overlapping Position */}
+      <div 
+        className={`md:hidden z-[100] ${showSearchResults ? 'mb-96' : ''}`}
+        style={{
+          position: 'fixed',
+          top: '25vh',
+          left: '0',
+          right: '0',
+          zIndex: 100
+        }}
+      >
+        <div className="w-full px-4">
+          <div className="relative max-w-md mx-auto">
+            {/* Premium Glassmorphic Search Bar */}
+            <div 
+              className="relative w-full h-14 rounded-2xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/30 group"
+              style={{
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.3)',
+                background: isDark 
+                  ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)'
+                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                boxShadow: isDark
+                  ? `
+                    0 8px 32px rgba(0, 0, 0, 0.3),
+                    0 2px 8px rgba(0, 0, 0, 0.2),
+                    inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
+                  `
+                  : `
+                    0 8px 32px rgba(0, 0, 0, 0.1),
+                    0 2px 8px rgba(0, 0, 0, 0.06),
+                    inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+                    inset 0 -1px 0 0 rgba(255, 255, 255, 0.2)
+                  `,
+              }}
+            >
+              {/* Inner Glow Effect */}
+              <div 
+                className="absolute inset-0 opacity-30 pointer-events-none rounded-2xl"
+                style={{
+                  background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
+                }}
+              />
+
+              {/* Frost/Glass Texture */}
+              <div 
+                className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-2xl"
+                style={{
+                  backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%23ffffff\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
+                  backgroundSize: '100px 100px',
+                }}
+              />
+
+              {/* Search Icon */}
+              <div className="absolute left-4 z-10 flex items-center h-full">
+                <svg 
+                  className={`w-5 h-5 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+
+              {/* Input Field */}
+              <input
+                type="text"
+                placeholder={t.searchPlaceholder || "Search for vehicles..."}
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+                onFocus={() => {
+                  if (searchQuery.trim()) {
+                    setShowSearchResults(true);
+                  }
+                }}
+                className={`w-full h-full pl-12 pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-300' : 'text-gray-900 placeholder-gray-600'} text-base font-medium focus:outline-none z-10 transition-all duration-300`}
+              />
+
+              {/* Right Side Icons */}
+              <div className="absolute right-2 z-10 flex items-center h-full">
+                {/* Clear Button */}
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      setShowSearchResults(false);
+                    }}
+                    className="p-1 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90"
+                    aria-label="Clear search"
+                  >
+                    <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && (
+              <div 
+                className="absolute top-full left-0 right-0 mt-2 rounded-xl border overflow-hidden z-40 animate-fadeIn"
+                style={{
+                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
+                  background: isDark 
+                    ? 'linear-gradient(135deg, rgba(40, 40, 45, 0.95) 0%, rgba(30, 30, 35, 0.92) 100%)'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 252, 0.92) 100%)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  boxShadow: isDark 
+                    ? '0 10px 30px rgba(0, 0, 0, 0.4)'
+                    : '0 10px 30px rgba(0, 0, 0, 0.15)'
+                }}
+              >
+                <div className="max-h-64 overflow-y-auto">
+                  {searchQuery.trim() && searchResults.length > 0 ? (
+                    <div className="p-3 space-y-2">
+                      {searchResults.slice(0, 5).map((ad) => (
+                        <SearchResultItem 
+                          key={ad.AdID || ad.id || ad.adId || ad._id}
+                          ad={ad}
+                          isDark={isDark}
+                          handleAdClick={handleAdClick}
+                        />
+                      ))}
+                    </div>
+                  ) : searchQuery.trim() ? (
+                    <div className="p-4 text-center">
+                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No results found</p>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Container */}
+      <div className="min-h-screen bg-bg-primary text-text-primary overflow-x-hidden">
       {/* Gradient Background Section - Wrapping all three sections */}
        <div className="relative z-10 w-full">
       <div className="relative w-full min-h-[280px] md:min-h-[500px] bg-bg-secondary overflow-hidden">
@@ -1574,15 +1722,6 @@ useEffect(() => {
 
       {/* Right side controls */}
       <div className="flex items-center space-x-2 sm:space-x-4">
-        {/* Mobile Theme Toggle */}
-        <button 
-          onClick={toggleTheme}
-          className="md:hidden focus:outline-none p-2 transition-all duration-300 hover:scale-110 rounded-xl text-text-primary hover:bg-bg-tertiary active:scale-95"
-          style={{ borderRadius: '12px' }}
-          aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {isDark ? <FaSun className="w-4 h-4" /> : <FaMoon className="w-4 h-4" />}
-        </button>
 
         {/* Desktop Language Selector and Theme Toggle */}
         <div className="hidden md:flex items-center space-x-4">
@@ -1653,7 +1792,7 @@ useEffect(() => {
   </div>
 
   {/* Hero Section with Enhanced Gradients - Mobile Redesign */}
-  <section className="relative w-full mt-18 overflow-hidden">
+ <section className="relative w-full mt-18 overflow-hidden">
     {/* Enhanced Background Gradients */}
     <div className="absolute inset-0 pointer-events-none">
       {/* Left Gradient Overlay */}
@@ -1678,10 +1817,10 @@ useEffect(() => {
     </div>
 
     <div className="relative max-w-[2000px] mx-auto">
-      {/* Content - Compact for Mobile */}
-      <div className="text-center pt-12 pb-12 md:pt-8 md:pb-16 px-4 sm:px-6 lg:px-8">
+      {/* Content - Optimized for Mobile */}
+      <div className="text-center pt-6 pb-4 md:pt-8 md:pb-16 px-4 sm:px-6 lg:px-8">
         <div className="w-full text-center max-w-4xl sm:max-w-5xl lg:max-w-6xl mx-auto">
-          <h1 className="text-text-primary font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl mb-2 sm:mb-3 md:mb-4 leading-tight tracking-tight"
+          <h1 className="text-text-primary font-bold text-2xl sm:text-2xl md:text-3xl lg:text-4xl mb-2 sm:mb-3 md:mb-4 leading-tight tracking-tight"
             style={{
               textShadow: isDark 
                 ? '0 2px 20px rgba(0, 0, 0, 0.3)' 
@@ -1691,7 +1830,7 @@ useEffect(() => {
           >
             {t.findVehicles}
           </h1>
-          <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-normal mb-4 md:mb-6 leading-relaxed text-text-tertiary opacity-90"
+          <h2 className="text-base sm:text-base md:text-lg lg:text-xl font-normal mb-2 md:mb-6 leading-relaxed text-text-tertiary opacity-90"
             style={{
               lineHeight: '1.6',
               letterSpacing: '0.01em'
@@ -1701,8 +1840,8 @@ useEffect(() => {
           </h2>
         </div>
 
-        {/* Mobile Search Bar - Overlapping Position */}
-        <div className={`md:hidden relative z-30 mt-4 ${showSearchResults ? 'mb-96' : 'mb-8'}`}>
+        {/* Mobile Search Bar - Perfect Overlapping Position */}
+        <div className={`md:hidden absolute z-30 top-36 left-0 right-0 mb-2 ${showSearchResults ? 'mb-96' : ''}`}>
           <div className="w-full px-4">
             <div className="relative max-w-md mx-auto">
               {/* Premium Glassmorphic Search Bar */}
@@ -1779,18 +1918,21 @@ useEffect(() => {
 
                 {/* Right Side Icons */}
                 <div className="absolute right-2 z-10 flex items-center h-full space-x-1">
-                    <button className="p-2 mb-24 sm:p-2.5 md:p-3 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center group/filter"
-                        aria-label="Toggle filters">
-                  <svg 
-                    className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300 group-hover/filter:scale-110 group-hover/filter:text-emov-purple`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
+                  <button 
+                    className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center group/filter"
+                    aria-label="Toggle filters"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </button>
+                    <svg 
+                      className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300 group-hover/filter:scale-110 group-hover/filter:text-emov-purple`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                      strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                  </button>
+                  
                   {/* Clear Button */}
                   {searchQuery && (
                     <button
@@ -1806,9 +1948,6 @@ useEffect(() => {
                       </svg>
                     </button>
                   )}
-
-                  {/* Filter Icon */}
-                
                 </div>
               </div>
 
@@ -1931,20 +2070,8 @@ useEffect(() => {
               />
 
               {/* Right Side Icons Container */}
-
               <div className="absolute right-3 sm:right-4 md:right-5 z-10 flex items-center h-full space-x-2">
-                 <button className="p-2 mb-40 sm:p-2.5 md:p-3 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center group/filter"
-                        aria-label="Toggle filters">
-                  <svg 
-                    className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300 group-hover/filter:scale-110 group-hover/filter:text-emov-purple`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </button>
+                
                 {/* Clear Button (X) */}
                 {searchQuery && (
                   <button
@@ -1960,9 +2087,6 @@ useEffect(() => {
                     </svg>
                   </button>
                 )}
-
-                {/* Filter Icon */}
-               
               </div>
             </div>
 
@@ -2134,15 +2258,15 @@ useEffect(() => {
 
         {/* Tabs */}
         <div className="w-full pb-1">
-          {/* Mobile: Single line tabs */}
-          <div className="md:hidden flex space-x-0.5 overflow-x-auto pb-1 no-scrollbar">
+          {/* Mobile: Enhanced tabs */}
+          <div className="md:hidden flex space-x-1 overflow-x-auto pb-1 no-scrollbar">
             {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
               <button
                 key={tab}
-                className={`px-2.5 py-2 text-[10px] whitespace-nowrap ${
+                className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                   activeTab === tab
                     ? 'text-emov-purple border-b-2 border-emov-purple'
-                    : 'text-text-secondary hover:text-text-primary'
+                    : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
                 }`}
                 onClick={() => handleTabChange(tab)}
               >
@@ -2175,12 +2299,10 @@ useEffect(() => {
       {/* Tab Content */}
       <div className="relative w-full pb-4 sm:pb-6 px-0 bg-bg-secondary rounded-lg">
         <div className="relative w-full overflow-hidden">
-          {/* Arrows */}
+          {/* Arrows - Visible on all screens */}
           <button
             onClick={() => scrollLeft(activeTab)}
-            className={`absolute left-1 sm:left-2 md:left-4 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors p-1.5 sm:p-2 ${
-              !canScrollLeft(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
-            }`}
+            className="absolute left-1 sm:left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors p-1.5 sm:p-2"
             disabled={!canScrollLeft(activeTab)}
           >
             <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 transform rotate-180" />
@@ -2188,9 +2310,7 @@ useEffect(() => {
 
           <button
             onClick={() => scrollRight(activeTab)}
-            className={`absolute right-1 sm:right-2 md:right-4 top-1/2 -translate-y-1/2 z-10 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors p-1.5 sm:p-2 ${
-              !canScrollRight(activeTab) ? 'opacity-30 cursor-not-allowed' : ''
-            }`}
+            className="absolute right-1 sm:right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 bg-bg-primary rounded-full border-2 border-gray-600 text-text-primary hover:bg-bg-tertiary transition-colors p-1.5 sm:p-2"
             disabled={!canScrollRight(activeTab)}
           >
             <FaChevronRight style={{ color: '#7B3DFF' }} className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5" />
@@ -2239,7 +2359,8 @@ useEffect(() => {
               // Determine if current tab has images
               const hasImages = ['Category', 'Brand'].includes(activeTab);
               
-              // MOBILE: Adjust items per slide based on tab type
+              // MOBILE: Show 8 items per slide for categories with images, 12 for others
+              // DESKTOP: Keep original logic
               const itemsPerSlideMobile = hasImages ? 8 : 12;
               const totalSlides = Math.ceil(currentTabData.length /
                 (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage));
@@ -2254,25 +2375,27 @@ useEffect(() => {
 
                 slides.push(
                   <div key={`slide-${i}`} className="flex-shrink-0 w-full" style={{ width: '100%' }}>
-                    {/* MOBILE: Adjust grid based on tab type */}
-                    <div className={`grid gap-2 sm:gap-3 md:gap-4 w-full px-3 sm:px-6 md:px-8 ${
+                    {/* MOBILE: 2x3 grid for categories with images, 3x3 for others */}
+                    {/* DESKTOP: Keep original layout */}
+                    <div className={`grid gap-1.5 sm:gap-2 md:gap-3 w-full px-2 sm:px-4 md:px-6 ${
                       window.innerWidth < 768 
-                        ? (hasImages ? 'grid-cols-4' : 'grid-cols-6')
+                        ? (hasImages ? 'grid-cols-4' : 'grid-cols-3')
                         : 'grid-cols-2 md:sm:grid-cols-3 lg:grid-cols-5'
                     }`}>
                       {slideItems.map((item, index) => {
                         const displayName = item.displayName || item.name || item.CategoryName || 'Unnamed Category';
 
-                        // MOBILE card layout
+                        // MOBILE card layout - simplified for categories
                         const mobileCard = () => (
-                          <div className="flex flex-col items-center justify-center h-full w-full p-1.5">
-                            {hasImages && (item.image || item.icon) ? (
-                              <div className="flex items-center justify-center mb-1 flex-shrink-0" style={{ height: '24px', width: '24px' }}>
-                                {item.icon ? (
-                                  <div className="flex items-center justify-center w-6 h-6 bg-bg-primary rounded-full border border-gray-600">
+                          <div className="flex flex-col items-center justify-center h-full w-full p-2">
+                            {/* Category Icon/Image */}
+                            <div className="flex items-center justify-center mb-2 flex-shrink-0" style={{ height: '32px', width: '32px' }}>
+                              {hasImages && (item.image || item.icon) ? (
+                                item.icon ? (
+                                  <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full border border-gray-300">
                                     {React.cloneElement(item.icon, {
-                                      size: 12,
-                                      style: { color: '#878787' }
+                                      size: 16,
+                                      style: { color: '#6B7280' }
                                     })}
                                   </div>
                                 ) : (
@@ -2290,20 +2413,22 @@ useEffect(() => {
                                       e.target.style.display = 'none';
                                     }}
                                   />
-                                )}
-                              </div>
-                            ) : null}
+                                )
+                              ) : (
+                                <div className="flex items-center justify-center w-8 h-8"></div>
+                              )}
+                            </div>
+                            
+                            {/* Category Name */}
                             <div className="text-center w-full">
-                              <div className={`text-text-primary line-clamp-2 leading-tight ${
-                                hasImages ? 'text-[9px]' : 'text-[8px]'
-                              }`}>
+                              <div className={`text-gray-700 line-clamp-2 leading-tight text-xs font-medium`}>
                                 {displayName}
                               </div>
                             </div>
                           </div>
                         );
 
-                        // DESKTOP card layout
+                        // DESKTOP card layout - keep original
                         const desktopCard = () => {
                           return (
                             <div className="flex flex-col items-center justify-center p-4 h-full w-full">
@@ -2349,17 +2474,17 @@ useEffect(() => {
                         return (
                           <div
                             key={`${item.id || index}-${activeTab}`}
-                            className={`flex flex-col rounded-lg cursor-pointer ${
+                            className={`flex flex-col rounded-lg cursor-pointer transition-all duration-200 ${
                               isDark
                                 ? 'bg-bg-card border border-gray-600'
-                                : 'bg-bg-primary border border-gray-600'
-                            } hover:border-emov-purple transition-all duration-200`}
+                                : 'bg-white border border-gray-300'
+                            } hover:border-purple-400 hover:shadow-md`}
                             style={{
                               width: window.innerWidth < 768 
                                 ? '100%' 
                                 : (hasImages ? '180px' : '160px'),
                               height: window.innerWidth < 768 
-                                ? (hasImages ? '75px' : '50px')
+                                ? '80px'
                                 : (hasImages ? '140px' : '80px'),
                               minHeight: window.innerWidth >= 768 ? '80px' : 'auto'
                             }}
@@ -2378,7 +2503,7 @@ useEffect(() => {
             })()}
           </div>
 
-          {/* CAROUSEL INDICATORS */}
+          {/* CAROUSEL INDICATORS - Always visible */}
           <div className="flex justify-center items-center space-x-2 mt-3 sm:mt-4">
             {(() => {
               const transformedData = transformApiData();
@@ -2395,7 +2520,8 @@ useEffect(() => {
               const dataKey = tabDataMap[activeTab];
               currentTabData = Array.isArray(transformedData[dataKey]) ? transformedData[dataKey] : [];
               
-              const totalSlides = Math.ceil(currentTabData.length / itemsPerPage);
+              const itemsPerSlideMobile = ['Category', 'Brand'].includes(activeTab) ? 8 : 12;
+              const totalSlides = Math.ceil(currentTabData.length / (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage));
               
               if (totalSlides > 1) {
                 return Array.from({ length: totalSlides }, (_, index) => (
@@ -2404,8 +2530,8 @@ useEffect(() => {
                     onClick={() => setCurrentSlides(prev => ({ ...prev, [activeTab]: index }))}     
                     className={`h-2 rounded-full transition-all duration-300 ${
                       currentSlides[activeTab] === index 
-                        ? 'bg-[#0DFF9A] w-6' 
-                        : 'bg-gray-500 hover:bg-gray-600 w-2'
+                        ? 'bg-green-500 w-6' 
+                        : 'bg-gray-400 hover:bg-gray-500 w-2'
                     }`}
                     aria-label={`Go to slide ${index + 1}`}
                   />
@@ -2441,11 +2567,11 @@ useEffect(() => {
 
         {/* Recently Added Section */}
 
-{/* Recently Added Section */}
-<section className="w-full bg-bg-secondary py-12 sm:py-16 relative">
+{/* Recently Added Section - Mobile Optimized */}
+<section className="w-full bg-bg-secondary py-8 sm:py-12 md:py-16 relative">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="mb-6">
-      <h2 className="text-2xl font-bold text-text-primary">{t.recentlyAdded}</h2>
+    <div className="mb-4 sm:mb-6">
+      <h2 className="text-xl sm:text-2xl font-bold text-text-primary">{t.recentlyAdded}</h2>
     </div>
     
     {loadingRecentAds ? (
@@ -2934,9 +3060,7 @@ useEffect(() => {
                           />
                         </div>
                       ) : (
-                        <div className="h-12 w-12 rounded-full flex items-center justify-center">
-                          <FaCar className="text-text-tertiary" />
-                        </div>
+                        <div className="h-12 w-12 flex items-center justify-center"></div>
                       )}
                     </div>
                     <span className="text-sm font-medium text-text-primary text-center mt-2 group-hover:text-emov-purple transition-colors">{brand.name}</span>
@@ -3026,7 +3150,10 @@ useEffect(() => {
           </div>
         </div>
       </footer>
+
+      <MobileBottomNav activePage="home" />
     </div>
+    </>
   );
 }
 

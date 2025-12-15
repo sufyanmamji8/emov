@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaCamera, FaMicrophone, FaUpload, FaCheck, FaChevronDown, FaChevronUp, FaCaretDown, FaMoon, FaSun, FaStop, FaCircle, FaTimes } from 'react-icons/fa';
 import apiService from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useTheme } from '../context/ThemeContext';
 import toast from '../utils/toast.jsx';
 

@@ -83,22 +83,9 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
       <div className="relative z-10 max-w-7xl mx-auto flex items-center justify-between">
         {/* Left side - Logo and Navigation Links */}
         <div className="flex items-center space-x-8 lg:space-x-12">
-          {/* Logo and Hamburger Menu */}
+          {/* Logo - Hide hamburger menu on mobile since we use bottom tab bar */}
           <div className="flex items-center space-x-2">
-            {/* Hamburger Menu Button - Visible only on mobile */}
-            <button
-              className="hamburger-menu md:hidden p-1 focus:outline-none"
-              onClick={toggleMobileMenu}
-              aria-label="Toggle menu"
-              style={{ color: 'var(--emov-green)' }}
-            >
-              {isMobileMenuOpen ? (
-                <FaTimes className="w-4 h-4" />
-              ) : (
-                <FaBars className="w-4 h-4" />
-              )}
-            </button>
-
+            
             {/* Logo */}
             <div className="flex items-center justify-center h-16 sm:h-20">
               <div className="w-auto h-3/4 flex items-center px-2">
@@ -134,21 +121,29 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               My Ads
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
             </a>
-            <a 
+            {/* <a 
               href="/" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               More
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/' ? 'w-full' : ''}`}></span>
-            </a>
+            </a> */}
           </div>
         </div>
 
         {/* Right side - Theme Toggle, Language Selector, and Profile */}
         {userProfile && (
         <div className="flex items-center space-x-4 sm:space-x-6">
-          {/* User Profile Dropdown */}
-          <div className="relative profile-dropdown">
+          {/* Notification Bell - Visible on mobile */}
+          <button className="md:hidden p-2 mr-2 text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white focus:outline-none transition-colors">
+            <img 
+              src="/bell.png" 
+              alt="Notifications" 
+              className="w-6 h-6 object-contain"
+            />
+          </button>
+          {/* User Profile Dropdown - Hidden on mobile */}
+          <div className="relative profile-dropdown hidden md:block">
             <button
               onClick={() => setShowProfileDropdown(!showProfileDropdown)}
               className="flex items-center space-x-2 text-primary focus:outline-none transition-colors group"
@@ -181,14 +176,16 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
 
             {/* Profile Dropdown Menu */}
             <div 
-              className={`absolute right-0 mt-2 w-56 rounded-lg shadow-lg z-50 transition-all duration-200 ease-out transform origin-top-right bg-bg-secondary border border-border-primary ${
+              className={`absolute right-0 mt-2 w-56 rounded-lg shadow-lg z-[99999] transition-all duration-200 ease-out transform origin-top-right bg-bg-secondary border border-border-primary ${
                 showProfileDropdown 
                   ? 'opacity-100 scale-100' 
                   : 'opacity-0 scale-95 pointer-events-none'
               }`}
               style={{
                 borderRadius: '12px',
-                boxShadow: '0 10px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color)'
+                boxShadow: '0 10px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color)',
+                zIndex: 99999,
+                position: 'absolute'
               }}
             >
               <div className="p-4 border-b border-border-primary">

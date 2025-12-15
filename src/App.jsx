@@ -20,6 +20,7 @@ import MyAds from './pages/MyAds';
 import FilteredVehicles from './pages/FilteredVehicles';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import More from './pages/More';
 
 import 'react-toastify/dist/ReactToastify.css';
 import './index.css'; 
@@ -61,6 +62,10 @@ const AppContent = ({ children, isAuthenticated, loading, handleLogin, handleLog
           <Route 
             path="/settings" 
             element={isAuthenticated ? <Settings /> : <Navigate to="/login" state={{ from: '/settings' }} />} 
+          />
+          <Route 
+            path="/more" 
+            element={isAuthenticated ? <More handleLogout={handleLogout} /> : <Navigate to="/login" state={{ from: '/more' }} />} 
           />
           <Route path="/vehicles" element={<Vehicles />} />
 

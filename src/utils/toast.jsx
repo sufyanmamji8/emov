@@ -82,8 +82,8 @@ const injectToastStyles = () => {
 
     /* Toast Types */
     .Toastify__toast--success {
-      background: linear-gradient(135deg, #0DFF9A 0%, #00E69A 100%) !important;
-      border: 1px solid #0DFF9A !important;
+      background: linear-gradient(to right, #00C9FF, #92FE9D) !important;
+      border: 1px solid #00C9FF !important;
       color: #ffffff !important;
     }
 
@@ -92,8 +92,8 @@ const injectToastStyles = () => {
     }
 
     .Toastify__toast--error {
-      background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%) !important;
-      border: 1px solid #FF6B6B !important;
+      background: linear-gradient(to right, #00C9FF, #92FE9D) !important;
+      border: 1px solid #00C9FF !important;
       color: #ffffff !important;
     }
 
@@ -102,8 +102,8 @@ const injectToastStyles = () => {
     }
 
     .Toastify__toast--warning {
-      background: linear-gradient(135deg, #FFA726 0%, #FF9800 100%) !important;
-      border: 1px solid #FFA726 !important;
+      background: linear-gradient(to right, #00C9FF, #92FE9D) !important;
+      border: 1px solid #00C9FF !important;
       color: #ffffff !important;
     }
 
@@ -112,8 +112,8 @@ const injectToastStyles = () => {
     }
 
     .Toastify__toast--info {
-      background: linear-gradient(135deg, #7B3DFF 0%, #A67AF5 100%) !important;
-      border: 1px solid #7B3DFF !important;
+      background: linear-gradient(to right, #00C9FF, #92FE9D) !important;
+      border: 1px solid #00C9FF !important;
       color: #ffffff !important;
     }
 

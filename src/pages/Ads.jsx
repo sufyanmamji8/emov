@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaArrowLeft, FaTrash, FaCar, FaCalendar, FaMapMarkerAlt, FaMoneyBillWave, FaCaretDown, FaMoon, FaSun } from 'react-icons/fa';
 import apiService from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
+import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useTheme } from '../context/ThemeContext';
 import Header from '../components/Layout/Header';
 
@@ -361,6 +362,8 @@ const MyAds = () => {
           </div>
         </div>
       )}
+
+      <MobileBottomNav activePage="myads" />
     </div>
   );
 };
