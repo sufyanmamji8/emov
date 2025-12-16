@@ -3,6 +3,48 @@ import axios from 'axios';
 // Use proxy in development to avoid CORS issues
 const API_BASE_URL = import.meta.env.MODE === 'development' ? '/v2' : 'https://api.emov.com.pk/v2';
 
+// Cache configuration
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const apiCache = new Map();
+
+// Cache helper functions
+const getCacheKey = (url, params = {}) => {
+  const paramString = new URLSearchParams(params).toString();
+  return paramString ? `${url}?${paramString}` : url;
+};
+
+const getCachedData = (key) => {
+  const cached = apiCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  if (cached) {
+    apiCache.delete(key); // Remove expired cache
+  }
+  return null;
+};
+
+const setCachedData = (key, data) => {
+  apiCache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+};
+
+const clearCache = (pattern = null) => {
+  if (pattern) {
+    // Clear cache entries matching pattern
+    for (const key of apiCache.keys()) {
+      if (key.includes(pattern)) {
+        apiCache.delete(key);
+      }
+    }
+  } else {
+    // Clear all cache
+    apiCache.clear();
+  }
+};
+
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -212,8 +254,16 @@ const apiService = {
       }
     },
     
-    // Get all ads (fetches all pages and combines them)
+    // Get all ads (fetches all pages and combines them) - WITH CACHING
     getAll: async (page = 1, limit = 100) => {
+      const cacheKey = getCacheKey('/ads', { page, limit });
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        console.log('[API] Using cached data for getAll ads');
+        return cachedData;
+      }
+
       try {
         // Fetch first page
         const firstResponse = await api.get(`/ads?page=1&limit=${limit}`);
@@ -241,7 +291,7 @@ const apiService = {
           });
 
           // Return combined data
-          return {
+          const result = {
             ...baseData,
             data: allAds,
             pagination: {
@@ -252,9 +302,13 @@ const apiService = {
               totalPages: 1,
             },
           };
+          
+          setCachedData(cacheKey, result);
+          return result;
         }
 
         // Single page - return as is
+        setCachedData(cacheKey, baseData);
         return baseData;
       } catch (error) {
         console.error('[API] Get all ads failed:', error);
@@ -368,11 +422,21 @@ const apiService = {
   
   // Vehicle related APIs
   vehicles: {
-    // Get vehicle filters
+    // Get vehicle filters - WITH CACHING
     getFilters: async () => {
+      const cacheKey = '/vehiclesfilter';
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        console.log('[API] Using cached data for vehicle filters');
+        return cachedData;
+      }
+
       try {
         const response = await api.get('/vehiclesfilter');
-        return response.data;
+        const data = response.data;
+        setCachedData(cacheKey, data);
+        return data;
       } catch (error) {
         console.error('Error fetching vehicle filters:', error);
         return {
@@ -384,22 +448,42 @@ const apiService = {
       }
     },
     
-    // Get vehicle models by brand ID
+    // Get vehicle models by brand ID - WITH CACHING
     getModelsByBrand: async (brandId) => {
+      const cacheKey = getCacheKey('/vehicles/models', { brand_id: brandId });
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        console.log('[API] Using cached data for vehicle models');
+        return cachedData;
+      }
+
       try {
         const response = await api.get(`/v2/vehicles/models?brand_id=${brandId}`);
-        return response.data;
+        const data = response.data;
+        setCachedData(cacheKey, data);
+        return data;
       } catch (error) {
         console.error('Error fetching vehicle models:', error);
         return [];
       }
     },
     
-    // Get featured vehicles
+    // Get featured vehicles - WITH CACHING
     getFeatured: async () => {
+      const cacheKey = '/vehicles/featured';
+      const cachedData = getCachedData(cacheKey);
+      
+      if (cachedData) {
+        console.log('[API] Using cached data for featured vehicles');
+        return cachedData;
+      }
+
       try {
         const response = await api.get('/vehicles/featured');
-        return response.data;
+        const data = response.data;
+        setCachedData(cacheKey, data);
+        return data;
       } catch (error) {
         console.error('Error fetching featured vehicles:', error);
         return [];
@@ -409,7 +493,7 @@ const apiService = {
   
   // File upload API
   upload: {
-    // Upload image file
+    // Upload image file - Optimized with caching
     uploadImage: async (file) => {
       try {
         const formData = new FormData();
@@ -417,22 +501,53 @@ const apiService = {
         
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         
+        // Add timeout and progress tracking
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        
         const response = await axios.post('https://api.emov.com.pk/v2/upload/image', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': token ? `Bearer ${token}` : ''
           },
-          withCredentials: true
+          withCredentials: true,
+          signal: controller.signal,
+          timeout: 30000,
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            console.log(`Upload progress: ${percentCompleted}%`);
+          }
         });
+        
+        clearTimeout(timeoutId);
+        
+        // Cache the uploaded image URL for faster retrieval
+        if (response.data && response.data.url) {
+          const imageUrl = response.data.url.startsWith('http') ? 
+            response.data.url : 
+            `https://api.emov.com.pk/image/${response.data.url.replace(/^\/+|\/+$/g, '').replace(/^uploads\//, '')}`;
+          
+          // Pre-cache the uploaded image
+          try {
+            await fetch(imageUrl, { cache: 'force-cache' });
+          } catch (error) {
+            console.warn('Failed to pre-cache uploaded image:', error);
+          }
+        }
         
         return response.data;
       } catch (error) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Upload timeout - please try again');
+        }
         console.error('Error uploading image:', error);
         throw error;
       }
     },
     
-    // Upload audio file
+    // Upload audio file - Optimized with timeout
     uploadAudio: async (file) => {
       try {
         const formData = new FormData();
@@ -440,16 +555,32 @@ const apiService = {
         
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         
+        // Add timeout and progress tracking
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+        
         const response = await axios.post('https://api.emov.com.pk/v2/upload/audio', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': token ? `Bearer ${token}` : ''
           },
-          withCredentials: true
+          withCredentials: true,
+          signal: controller.signal,
+          timeout: 30000,
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            console.log(`Audio upload progress: ${percentCompleted}%`);
+          }
         });
         
+        clearTimeout(timeoutId);
         return response.data;
       } catch (error) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Upload timeout - please try again');
+        }
         console.error('Error uploading audio:', error);
         throw error;
       }
@@ -457,7 +588,7 @@ const apiService = {
   },
   
   // User related APIs
-  user: {
+  users: {
     // Get user profile
     getProfile: async () => {
       try {
@@ -605,10 +736,17 @@ const apiService = {
   },
 };
 
+// Cache management utilities
+apiService.cache = {
+  clear: clearCache,
+  clearAll: () => apiCache.clear(),
+  getSize: () => apiCache.size,
+  getKeys: () => Array.from(apiCache.keys())
+};
+
 // Utility function to handle 401 errors
 export const handleUnauthorized = (options = {}) => {
   const { preventRedirect = false } = options;
-  
   localStorage.removeItem('token');
   localStorage.removeItem('accessToken');
   localStorage.removeItem('user');

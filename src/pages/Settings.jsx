@@ -67,7 +67,7 @@ const Settings = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Full-width Header with border */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-16 sm:h-20 py-8 border-b border-border-primary">
+      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center pt-8 pb-6 sm:pt-12 sm:pb-8 border-b border-border-primary">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate(-1)}

@@ -9,6 +9,37 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import More from './More'; // Import More component
 import { useFilterNavigation } from '../hooks/useFilterNavigation';
 
+// Dashboard state persistence with localStorage
+const DASHBOARD_CACHE_KEY = 'emov_dashboard_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const getDashboardCache = () => {
+  try {
+    const cached = localStorage.getItem(DASHBOARD_CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      if (Date.now() - timestamp < CACHE_DURATION) {
+        return data;
+      }
+      localStorage.removeItem(DASHBOARD_CACHE_KEY);
+    }
+  } catch (error) {
+    console.warn('Failed to load dashboard cache:', error);
+  }
+  return null;
+};
+
+const setDashboardCache = (data) => {
+  try {
+    localStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch (error) {
+    console.warn('Failed to save dashboard cache:', error);
+  }
+};
+
 // Add this component BEFORE your main Dashboard component
 const SearchResultItem = ({ ad, isDark, handleAdClick}) => {
   const [imageLoading, setImageLoading] = React.useState(true);
@@ -155,19 +186,48 @@ function Dashboard() {
     Model: 0,
     BodyType: 0
   });
-  const [apiData, setApiData] = useState(null);
-  const [vehiclesData, setVehiclesData] = useState([]);
-  const [error, setError] = useState(null);
+  const [apiData, setApiData] = useState(() => {
+    // Initialize with cached data if available
+    const cachedData = getDashboardCache();
+    return cachedData?.apiData || null;
+  });
+  const [vehiclesData, setVehiclesData] = useState(() => {
+    const cachedData = getDashboardCache();
+    return cachedData?.vehiclesData || [];
+  });
+  const [error, setError] = useState(() => {
+    const cachedData = getDashboardCache();
+    return cachedData?.error || null;
+  });
   const [userProfile, setUserProfile] = useState(() => {
     // Initialize with data from localStorage if available
     try {
       const userData = localStorage.getItem('user');
       if (userData) {
         const profile = JSON.parse(userData);
-        // Construct the full image URL if imageUrl exists
-        if (profile.imageUrl && !profile.imageUrl.startsWith('http')) {
-          profile.picture = `https://api.emov.com.pk/${profile.imageUrl.replace(/^\//, '')}`;
+        
+        // Handle profile picture URL construction
+        if (profile.picture) {
+          // If picture is already a full URL, use it as-is
+          if (!profile.picture.startsWith('http')) {
+            profile.picture = `https://api.emov.com.pk/image/${profile.picture.replace(/^\/+/, '')}`;
+          }
+        } else if (profile.imageUrl) {
+          // Fallback to imageUrl if picture doesn't exist
+          if (!profile.imageUrl.startsWith('http')) {
+            profile.picture = `https://api.emov.com.pk/image/${profile.imageUrl.replace(/^\/+/, '')}`;
+          } else {
+            profile.picture = profile.imageUrl;
+          }
+        } else if (profile.UserProfile) {
+          // Fallback to UserProfile if neither picture nor imageUrl exist
+          if (!profile.UserProfile.startsWith('http')) {
+            profile.picture = `https://api.emov.com.pk/image/${profile.UserProfile.replace(/^\/+/, '')}`;
+          } else {
+            profile.picture = profile.UserProfile;
+          }
         }
+        
         return profile;
       }
     } catch (e) {
@@ -175,7 +235,106 @@ function Dashboard() {
     }
     return null;
   });
+
+  // Listen for localStorage changes to sync profile picture updates
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'user') {
+        try {
+          const userData = e.newValue ? JSON.parse(e.newValue) : null;
+          if (userData) {
+            // Apply the same URL construction logic
+            if (userData.picture) {
+              if (!userData.picture.startsWith('http')) {
+                userData.picture = `https://api.emov.com.pk/image/${userData.picture.replace(/^\/+/, '')}`;
+              }
+            } else if (userData.imageUrl) {
+              if (!userData.imageUrl.startsWith('http')) {
+                userData.picture = `https://api.emov.com.pk/image/${userData.imageUrl.replace(/^\/+/, '')}`;
+              } else {
+                userData.picture = userData.imageUrl;
+              }
+            } else if (userData.UserProfile) {
+              if (!userData.UserProfile.startsWith('http')) {
+                userData.picture = `https://api.emov.com.pk/image/${userData.UserProfile.replace(/^\/+/, '')}`;
+              } else {
+                userData.picture = userData.UserProfile;
+              }
+            }
+            
+            setUserProfile(userData);
+          } else {
+            setUserProfile(null);
+          }
+        } catch (error) {
+          console.error('Error parsing updated user data:', error);
+        }
+      }
+    };
+
+    // Listen for custom profile update events
+    const handleProfileUpdate = (e) => {
+      const updatedUser = e.detail;
+      if (updatedUser) {
+        setUserProfile(updatedUser);
+      }
+    };
+
+    // Listen for storage events (from other tabs/windows)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Listen for custom events (from same tab profile updates)
+    window.addEventListener('userProfileUpdated', handleProfileUpdate);
+
+    // Also check for direct localStorage updates (same tab)
+    const checkLocalStorage = () => {
+      try {
+        const userData = localStorage.getItem('user');
+        const currentProfile = JSON.stringify(userProfile);
+        if (userData !== currentProfile) {
+          const parsedUserData = userData ? JSON.parse(userData) : null;
+          if (parsedUserData) {
+            // Apply the same URL construction logic
+            if (parsedUserData.picture) {
+              if (!parsedUserData.picture.startsWith('http')) {
+                parsedUserData.picture = `https://api.emov.com.pk/image/${parsedUserData.picture.replace(/^\/+/, '')}`;
+              }
+            } else if (parsedUserData.imageUrl) {
+              if (!parsedUserData.imageUrl.startsWith('http')) {
+                parsedUserData.picture = `https://api.emov.com.pk/image/${parsedUserData.imageUrl.replace(/^\/+/, '')}`;
+              } else {
+                parsedUserData.picture = parsedUserData.imageUrl;
+              }
+            } else if (parsedUserData.UserProfile) {
+              if (!parsedUserData.UserProfile.startsWith('http')) {
+                parsedUserData.picture = `https://api.emov.com.pk/image/${parsedUserData.UserProfile.replace(/^\/+/, '')}`;
+              } else {
+                parsedUserData.picture = parsedUserData.UserProfile;
+              }
+            }
+            
+            setUserProfile(parsedUserData);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking localStorage:', error);
+      }
+    };
+
+    // Set up periodic check for same-tab updates
+    const intervalId = setInterval(checkLocalStorage, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('userProfileUpdated', handleProfileUpdate);
+      clearInterval(intervalId);
+    };
+  }, [userProfile]);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  
+  // Mobile bottom nav visibility state
+  const [isBottomNavVisible, setIsBottomNavVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   
   // Search functionality
   const [searchQuery, setSearchQuery] = useState('');
@@ -253,9 +412,18 @@ function Dashboard() {
   };
 
   // State for Recently Added vehicles from API
-  const [recentlyAddedVehicles, setRecentlyAddedVehicles] = useState([]);
-  const [loadingRecentAds, setLoadingRecentAds] = useState(true);
-  const [recentAdsError, setRecentAdsError] = useState(null);
+  const [recentlyAddedVehicles, setRecentlyAddedVehicles] = useState(() => {
+    const cachedData = getDashboardCache();
+    return cachedData?.recentlyAddedVehicles || [];
+  });
+  const [loadingRecentAds, setLoadingRecentAds] = useState(() => {
+    const cachedData = getDashboardCache();
+    return cachedData?.recentlyAddedVehicles ? false : true;
+  });
+  const [recentAdsError, setRecentAdsError] = useState(() => {
+    const cachedData = getDashboardCache();
+    return cachedData?.recentAdsError || null;
+  });
   
   // Separate responsive logic for Recently Added and Featured Vehicles
   const [carouselItemsPerRow, setCarouselItemsPerRow] = useState(4);
@@ -432,6 +600,38 @@ function Dashboard() {
   const isImageLoading = (adId) => {
     return imageLoadingStates[adId] !== false;
   };
+
+  // Mobile bottom nav scroll detection - Dashboard specific
+  useEffect(() => {
+    let isMounted = true;
+    
+    const handleScroll = () => {
+      if (!isMounted) return;
+      
+      const currentScrollY = window.scrollY;
+      
+      // Hide bottom nav when scrolling down, show when scrolling up
+      // Only apply this behavior on dashboard page
+      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // Scrolling down and past 100px
+        setIsBottomNavVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up
+        setIsBottomNavVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    // Add scroll event listener with passive option for better performance
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    // Cleanup function
+    return () => {
+      isMounted = false;
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY]);
 
   // Add click outside handler for search results
   useEffect(() => {
@@ -717,24 +917,33 @@ function Dashboard() {
   // Fetch filter data and generate vehicles with images
   useEffect(() => {
     const fetchFilterData = async () => {
+      // Check if we have valid cached data
+      const cachedData = getDashboardCache();
+      if (cachedData && cachedData.apiData && cachedData.vehiclesData) {
+        setApiData(cachedData.apiData);
+        setVehiclesData(cachedData.vehiclesData);
+        setError(cachedData.error);
+        return;
+      }
+
       try {        
         const token = localStorage.getItem('token');
 
         // Try to fetch from API even without token (X-PLATFORM header will be added automatically)
-        
-
         const response = await apiService.vehicles.getFilters();
         
         if (response && response.data) {
-          
-          
-          
-          
-          
           // The API response has the data directly in response.data
           setApiData(response.data);
           const vehicles = generateVehiclesFromFilterData(response.data);
           setVehiclesData(vehicles);
+          
+          // Cache the fetched data
+          setDashboardCache({
+            apiData: response.data,
+            vehiclesData: vehicles,
+            error: null
+          });
         } else {
           throw new Error('No data received from the server');
         }
@@ -750,6 +959,13 @@ function Dashboard() {
         setApiData(fallbackData);
         const vehicles = generateVehiclesFromFilterData(fallbackData);
         setVehiclesData(vehicles);
+        
+        // Cache the fallback data
+        setDashboardCache({
+          apiData: fallbackData,
+          vehiclesData: vehicles,
+          error: err.message
+        });
       }
     };
 
@@ -757,115 +973,101 @@ function Dashboard() {
   }, []);
 
   // Fetch recent ads for Recently Added section
+  useEffect(() => {
+    const fetchRecentAds = async () => {
+      // Check if we have valid cached data for recent ads
+      const cachedData = getDashboardCache();
+      if (cachedData && cachedData.recentlyAddedVehicles) {
+        setRecentlyAddedVehicles(cachedData.recentlyAddedVehicles);
+        setLoadingRecentAds(false);
+        setRecentAdsError(null);
+        return;
+      }
 
-useEffect(() => {
-  const fetchRecentAds = async () => {
-    try {
-      setLoadingRecentAds(true);
-      setRecentAdsError(null);
-      
-      const response = await apiService.ads.getRecentAds();
-      
-      
-      
-      
-      
-      if (response && response.data && response.data.data) {
+      try {
+        setLoadingRecentAds(true);
+        setRecentAdsError(null);
         
-        // Transform the API data to match the expected format
-        const transformedData = response.data.data.map(ad => {
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          
-          // CORRECT: Use /images/ directory instead of /uploads/
-          let imageUrl = '/mockvehicle.png';
-          if (ad.Images && ad.Images.length > 0) {
-            const imageFilename = ad.Images[0];
-            
-            if (imageFilename.startsWith('http')) {
-              imageUrl = imageFilename;
-            } else {
-              // CORRECT PATTERN: https://api.emov.com.pk/images/filename.jpg
-              imageUrl = `https://api.emov.com.pk/image/${imageFilename}`;
+        const response = await apiService.ads.getRecentAds();
+        
+        if (response && response.data && response.data.data) {
+          // Transform the API data to match the expected format
+          const transformedData = response.data.data.map(ad => {
+            // CORRECT: Use /images/ directory instead of /uploads/
+            let imageUrl = '/mockvehicle.png';
+            if (ad.Images && ad.Images.length > 0) {
+              const imageFilename = ad.Images[0];
+              
+              if (imageFilename.startsWith('http')) {
+                imageUrl = imageFilename;
+              } else {
+                // CORRECT PATTERN: https://api.emov.com.pk/images/filename.jpg
+                imageUrl = `https://api.emov.com.pk/image/${imageFilename}`;
+              }
             }
             
-          }
+            return {
+              id: ad.AdID,
+              title: ad.VehicleName,
+              price: `Rs. ${parseInt(ad.VehiclePrice).toLocaleString()}`,
+              year: ad.RegistrationYear,
+              mileage: ad.VehicleMileage,
+              location: ad.LocationName,
+              isNew: true,
+              image: imageUrl,
+              Images: ad.Images,
+              VehicleType: ad.VehicleType,
+              VehiclePrice: ad.VehiclePrice,
+              RegistrationYear: ad.RegistrationYear,
+              VehicleMileage: ad.VehicleMileage,
+              LocationName: ad.LocationName,
+              EngineType: ad.EngineType,
+              Transmission: ad.Transmission,
+              Color: ad.Color,
+              VehiclePower: ad.VehiclePower,
+              LoadCapacity: ad.LoadCapacity,
+              Ownership: ad.Ownership,
+              // Additional fields from API
+              BodyTypeName: ad.BodyTypeName,
+              BrandName: ad.BrandName,
+              ModelName: ad.ModelName,
+              VehicleTypeID: ad.VehicleTypeID,
+              VehicleBrandID: ad.VehicleBrandID,
+              VehicleModelID: ad.VehicleModelID,
+              // Seller information (forwarded so AdDetail can display it)
+              sellerName: ad.sellerName,
+              emailAddress: ad.emailAddress,
+              mobileNo: ad.mobileNo,
+              UserProfile: ad.UserProfile,
+              // Also provide alternative field names that AdDetail expects
+              SellerName: ad.sellerName,
+              SellerEmail: ad.emailAddress,
+              SellerPhone: ad.mobileNo,
+              SellerImage: ad.UserProfile,
+            };
+          });
           
-          return {
-            id: ad.AdID,
-            title: ad.VehicleName,
-            price: `Rs. ${parseInt(ad.VehiclePrice).toLocaleString()}`,
-            year: ad.RegistrationYear,
-            mileage: ad.VehicleMileage,
-            location: ad.LocationName,
-            isNew: true,
-            image: imageUrl,
-            // Keep original API data for reference
-            Images: ad.Images,
-            VehicleName: ad.VehicleName,
-            VehiclePrice: ad.VehiclePrice,
-            RegistrationYear: ad.RegistrationYear,
-            VehicleMileage: ad.VehicleMileage,
-            LocationName: ad.LocationName,
-            SellerComment: ad.SellerComment,
-            // Brand, Model, and Type fields - Use the actual field names from API
-            VehicleBrand: ad.BrandName,
-            VehicleModel: ad.ModelName,
-            VehicleType: ad.VehicleType,
-            VehicleTypeName: ad.VehicleType,
-            VehicleBodyTypeID: ad.VehicleBodyTypeID,
-            EngineType: ad.EngineType,
-            Transmission: ad.Transmission,
-            Color: ad.Color,
-            VehiclePower: ad.VehiclePower,
-            LoadCapacity: ad.LoadCapacity,
-            Ownership: ad.Ownership,
-            // Additional fields from API
-            BodyTypeName: ad.BodyTypeName,
-            BrandName: ad.BrandName,
-            ModelName: ad.ModelName,
-            VehicleTypeID: ad.VehicleTypeID,
-            VehicleBrandID: ad.VehicleBrandID,
-            VehicleModelID: ad.VehicleModelID,
-            // Seller information (forwarded so AdDetail can display it)
-            sellerName: ad.sellerName,
-            emailAddress: ad.emailAddress,
-            mobileNo: ad.mobileNo,
-            UserProfile: ad.UserProfile,
-            // Also provide alternative field names that AdDetail expects
-            SellerName: ad.sellerName,
-            SellerEmail: ad.emailAddress,
-            SellerPhone: ad.mobileNo,
-            SellerImage: ad.UserProfile,
-          };
-        });
-        
-        
-        setRecentlyAddedVehicles(transformedData);
-        
-      } else {
-        
-        setRecentAdsError('No data received from server');
+          setRecentlyAddedVehicles(transformedData);
+          
+          // Update cache with recent ads data
+          const currentCache = getDashboardCache() || {};
+          setDashboardCache({
+            ...currentCache,
+            recentlyAddedVehicles: transformedData
+          });
+        } else {
+          setRecentAdsError('No data received from server');
+        }
+      } catch (err) {
+        console.error('Error fetching recent ads:', err);
+        setRecentAdsError('Failed to load recent ads');
+      } finally {
+        setLoadingRecentAds(false);
       }
-    } catch (err) {
-      console.error('Error fetching recent ads:', err);
-      setRecentAdsError('Failed to load recent ads');
-    } finally {
-      setLoadingRecentAds(false);
-    }
-  };
+    };
 
-  fetchRecentAds();
-}, []);
+    fetchRecentAds();
+  }, []);
 
   // Generate vehicles data from filter API response with optimized image handling
   const generateVehiclesFromFilterData = (filterData) => {
@@ -1523,7 +1725,7 @@ useEffect(() => {
 
   return (
  <>
-      {/* Mobile Search Bar - Perfect Overlapping Position */}
+      {/* Mobile Search Bar - Fixed Position Outside Transformed Containers */}
       <div 
         className={`md:hidden z-[100] ${showSearchResults ? 'mb-96' : ''}`}
         style={{
@@ -1617,11 +1819,17 @@ useEffect(() => {
                       setSearchQuery('');
                       setShowSearchResults(false);
                     }}
-                    className="p-1 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90"
+                    className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center"
                     aria-label="Clear search"
                   >
-                    <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg 
+                      className={`w-4 h-4 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                      strokeWidth={2.5}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 )}
@@ -1838,157 +2046,6 @@ useEffect(() => {
           >
             {t.tagline}
           </h2>
-        </div>
-
-        {/* Mobile Search Bar - Perfect Overlapping Position */}
-        <div className={`md:hidden absolute z-30 top-36 left-0 right-0 mb-2 ${showSearchResults ? 'mb-96' : ''}`}>
-          <div className="w-full px-4">
-            <div className="relative max-w-md mx-auto">
-              {/* Premium Glassmorphic Search Bar */}
-              <div 
-                className="relative w-full h-14 rounded-2xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/30 group"
-                style={{
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.3)',
-                  background: isDark 
-                    ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)'
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
-                  backdropFilter: 'blur(20px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                  boxShadow: isDark
-                    ? `
-                      0 8px 32px rgba(0, 0, 0, 0.3),
-                      0 2px 8px rgba(0, 0, 0, 0.2),
-                      inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
-                      inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
-                    `
-                    : `
-                      0 8px 32px rgba(0, 0, 0, 0.1),
-                      0 2px 8px rgba(0, 0, 0, 0.06),
-                      inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
-                      inset 0 -1px 0 0 rgba(255, 255, 255, 0.2)
-                    `,
-                }}
-              >
-                {/* Inner Glow Effect */}
-                <div 
-                  className="absolute inset-0 opacity-30 pointer-events-none rounded-2xl"
-                  style={{
-                    background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
-                  }}
-                />
-
-                {/* Frost/Glass Texture */}
-                <div 
-                  className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-2xl"
-                  style={{
-                    backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%23ffffff\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
-                    backgroundSize: '100px 100px',
-                  }}
-                />
-
-                {/* Search Icon */}
-                <div className="absolute left-4 z-10 flex items-center h-full">
-                  <svg 
-                    className={`w-5 h-5 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                    strokeWidth={2.5}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-
-                {/* Input Field */}
-                <input
-                  type="text"
-                  placeholder={t.searchPlaceholder || "Search for vehicles..."}
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
-                  onFocus={() => {
-                    if (searchQuery.trim()) {
-                      setShowSearchResults(true);
-                    }
-                  }}
-                  className={`w-full h-full pl-12 pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-300' : 'text-gray-900 placeholder-gray-600'} text-base font-medium focus:outline-none z-10 transition-all duration-300`}
-                />
-
-                {/* Right Side Icons */}
-                <div className="absolute right-2 z-10 flex items-center h-full space-x-1">
-                  <button 
-                    className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center group/filter"
-                    aria-label="Toggle filters"
-                  >
-                    <svg 
-                      className={`w-5 h-5 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300 group-hover/filter:scale-110 group-hover/filter:text-emov-purple`}
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                      strokeWidth={2.5}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
-                  </button>
-                  
-                  {/* Clear Button */}
-                  {searchQuery && (
-                    <button
-                      onClick={() => {
-                        setSearchQuery('');
-                        setShowSearchResults(false);
-                      }}
-                      className="p-1 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90"
-                      aria-label="Clear search"
-                    >
-                      <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Search Results Dropdown */}
-              {showSearchResults && (
-                <div 
-                  className="absolute top-full left-0 right-0 mt-2 rounded-xl border overflow-hidden z-40 animate-fadeIn"
-                  style={{
-                    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
-                    background: isDark 
-                      ? 'linear-gradient(135deg, rgba(40, 40, 45, 0.95) 0%, rgba(30, 30, 35, 0.92) 100%)'
-                      : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 252, 0.92) 100%)',
-                    backdropFilter: 'blur(20px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                    boxShadow: isDark 
-                      ? '0 10px 30px rgba(0, 0, 0, 0.4)'
-                      : '0 10px 30px rgba(0, 0, 0, 0.15)'
-                  }}
-                >
-                  <div className="max-h-64 overflow-y-auto">
-                    {searchQuery.trim() && searchResults.length > 0 ? (
-                      <div className="p-3 space-y-2">
-                        {searchResults.slice(0, 5).map((ad) => (
-                          <SearchResultItem 
-                            key={ad.AdID || ad.id || ad.adId || ad._id}
-                            ad={ad}
-                            isDark={isDark}
-                            handleAdClick={handleAdClick}
-                          />
-                        ))}
-                      </div>
-                    ) : searchQuery.trim() ? (
-                      <div className="p-4 text-center">
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No results found</p>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Desktop Search Bar - Original */}
@@ -2546,24 +2603,7 @@ useEffect(() => {
   </div>
 </section>
 
-        {/* Other Services Section */}
-        <section className="w-full bg-bg-primary py-12 sm:py-16">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2  style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-              {otherServices.map((service, index) => (
-                <div 
-                  key={index}
-                  className="overflow-hidden rounded-lg border border-border-primary p-4 sm:p-5 text-center cursor-pointer bg-bg-secondary hover:border-border-secondary transition-colors"
-                >
-                  <div className="text-2xl sm:text-3xl mb-3 text-emov-purple">{service.icon}</div>
-                  <span className="text-sm sm:text-base font-medium text-text-primary">{service.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
+ 
 
         {/* Recently Added Section */}
 
@@ -3009,6 +3049,25 @@ useEffect(() => {
           </div>
         </section>
 
+               {/* Other Services Section */}
+        <section className="w-full bg-bg-primary py-12 sm:py-16">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2  style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+              {otherServices.map((service, index) => (
+                <div 
+                  key={index}
+                  className="overflow-hidden rounded-lg border border-border-primary p-4 sm:p-5 text-center cursor-pointer bg-bg-secondary hover:border-border-secondary transition-colors"
+                >
+                  <div className="text-2xl sm:text-3xl mb-3 text-emov-purple">{service.icon}</div>
+                  <span className="text-sm sm:text-base font-medium text-text-primary">{service.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Featured Brands Section */}
         <section className="w-full bg-bg-secondary py-12 sm:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -3151,7 +3210,7 @@ useEffect(() => {
         </div>
       </footer>
 
-      <MobileBottomNav activePage="home" />
+      <MobileBottomNav activePage="home" isVisible={isBottomNavVisible} />
     </div>
     </>
   );

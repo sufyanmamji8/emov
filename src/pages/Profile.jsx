@@ -248,9 +248,14 @@ const Profile = () => {
 
       await authApi.updateProfilePic({ userId, imageUrl: fileName });
 
+      // Create the full URL for the profile picture
+      const fullImageUrl = fileName.startsWith('http') ? 
+        fileName : 
+        `https://api.emov.com.pk/image/${fileName.replace(/^\/+/, '')}`;
+
       const updatedUser = {
         ...user,
-        picture: fileName,
+        picture: fullImageUrl,
         imageUrl: fileName,
         UserProfile: fileName,
       };
@@ -264,6 +269,8 @@ const Profile = () => {
       showToast('Profile picture updated successfully');
     } catch (error) {
       setAvatarError(true);
+      console.error('Error updating profile picture:', error);
+      showToast('Failed to update profile picture', 'error');
     }
   };
 
@@ -437,7 +444,7 @@ const Profile = () => {
         }
       `}</style>
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-16 sm:h-20 py-8 border-b border-border-primary">
+      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center pt-8 pb-6 sm:pt-12 sm:pb-8 border-b border-border-primary">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate(-1)}

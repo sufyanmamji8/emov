@@ -1,11 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const MobileBottomNav = ({ activePage }) => {
+const MobileBottomNav = ({ activePage, isVisible = true }) => {
   const navigate = useNavigate();
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 rounded-t-3xl shadow-lg">
+    <div 
+      className={`md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 rounded-t-3xl shadow-lg transition-transform duration-300 ease-in-out ${
+        isVisible ? 'translate-y-0' : 'translate-y-full'
+      }`}
+    >
       <div className="flex items-center justify-around px-2 py-2">
         {/* Home */}
         <button 
