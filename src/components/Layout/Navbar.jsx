@@ -168,7 +168,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   {getUserInitial(userProfile?.name || userProfile?.username || 'U')}
                 </div>
               </div>
-              <span className="hidden sm:block text-sm font-medium text-black">
+              <span className="hidden sm:block text-sm font-medium text-text-primary">
                 {userProfile?.name || 'User'}
               </span>
               <FaCaretDown className={`w-3 h-3 transition-transform duration-200 ${showProfileDropdown ? 'rotate-180' : ''}`} />

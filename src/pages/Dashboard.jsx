@@ -1783,11 +1783,16 @@ function Dashboard() {
             <select 
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-300 appearance-none cursor-pointer hover:text-emov-green"
+              className="bg-bg-primary text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border border-border-primary rounded-lg transition-all duration-300 appearance-none cursor-pointer hover:text-emov-green hover:border-emov-green"
+              style={{
+                color: 'var(--text-primary)',
+                backgroundColor: 'var(--bg-primary)',
+                borderColor: 'var(--border-primary)'
+              }}
             >
-              <option value="english">English</option>
-              <option value="urdu">Urdu</option>
-              <option value="french">French</option>
+              <option value="english" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}>English</option>
+              <option value="urdu" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}>Urdu</option>
+              <option value="french" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}>French</option>
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
               <FaCaretDown className="text-text-secondary w-3 h-3 transition-transform duration-300 group-hover:rotate-180" />
@@ -2365,7 +2370,7 @@ function Dashboard() {
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                   activeTab === tab
                     ? 'text-emov-purple border-b-2 border-emov-purple'
-                    : 'text-gray-600 hover:text-gray-900 border-b-2 border-transparent'
+                    : 'text-text-secondary hover:text-text-primary border-b-2 border-transparent'
                 }`}
                 onClick={() => handleTabChange(tab)}
               >
@@ -2448,7 +2453,7 @@ function Dashboard() {
               if (currentTabData.length === 0) {
                 return (
                   <div className="w-full py-8 text-center flex-shrink-0" style={{ width: '100%' }}>
-                    <p className="text-gray-500">
+                    <p className="text-text-tertiary">
                       {t.noDataAvailable || 'No data available for this category'}
                     </p>
                   </div>
@@ -2496,10 +2501,10 @@ function Dashboard() {
                                 {/* Category Icon/Image */}
                                 <div className="flex items-center justify-center mb-2 flex-shrink-0" style={{ height: '32px', width: '32px' }}>
                                   {item.icon ? (
-                                    <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full border border-gray-300">
+                                    <div className="flex items-center justify-center w-8 h-8 bg-bg-tertiary rounded-full border border-border-primary">
                                       {React.cloneElement(item.icon, {
                                         size: 16,
-                                        style: { color: '#6B7280' }
+                                        style: { color: 'var(--text-secondary)' }
                                       })}
                                     </div>
                                   ) : (
@@ -2519,7 +2524,7 @@ function Dashboard() {
                                 
                                 {/* Category Name */}
                                 <div className="text-center w-full">
-                                  <div className="text-gray-700 line-clamp-2 leading-tight text-xs font-medium">
+                                  <div className="text-text-primary line-clamp-2 leading-tight text-xs font-medium">
                                     {displayName}
                                   </div>
                                 </div>
@@ -2528,7 +2533,7 @@ function Dashboard() {
                               /* Text-only tabs - perfectly centered */
                               <div className="flex items-center justify-center h-full w-full">
                                 <div className="text-center">
-                                  <div className="text-gray-700 line-clamp-2 leading-tight text-xs font-medium">
+                                  <div className="text-text-primary line-clamp-2 leading-tight text-xs font-medium">
                                     {displayName}
                                   </div>
                                 </div>
@@ -2545,10 +2550,10 @@ function Dashboard() {
                                 <>
                                   <div className="flex items-center justify-center mb-3 flex-shrink-0" style={{ height: '50px', width: '50px' }}>
                                     {item.icon ? (
-                                      <div className="flex items-center justify-center w-12 h-12 bg-bg-primary rounded-full border border-gray-600">
+                                      <div className="flex items-center justify-center w-12 h-12 bg-bg-primary rounded-full border border-border-primary">
                                         {React.cloneElement(item.icon, { 
                                           size: 24, 
-                                          style: { color: '#878787' } 
+                                          style: { color: 'var(--text-secondary)' } 
                                         })}
                                       </div>
                                     ) : (

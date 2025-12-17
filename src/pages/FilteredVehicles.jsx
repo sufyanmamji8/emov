@@ -49,13 +49,36 @@ const FilteredVehicles = () => {
       }
 
       console.log('API Params:', apiParams);
-
       console.log('[FilteredVehicles] Fetching ads with params:', apiParams);
       
-      // Use the api instance which handles X-PLATFORM: WEB header for unauthorized requests
-      const response = await api.get('/ads', { params: apiParams });
+      // Try different endpoints to find the correct one
+      let response;
+      try {
+        // First try the standard ads endpoint
+        response = await api.get('/ads', { 
+          params: apiParams,
+          timeout: 30000
+        });
+      } catch (firstError) {
+        console.log('First endpoint failed, trying vehicles endpoint:', firstError);
+        try {
+          // Try vehicles endpoint as fallback
+          response = await api.get('/vehicles', { 
+            params: apiParams,
+            timeout: 30000
+          });
+        } catch (secondError) {
+          console.log('Second endpoint failed, trying vehiclesfilter:', secondError);
+          // Try vehiclesfilter endpoint as another fallback
+          response = await api.get('/vehiclesfilter', { 
+            params: apiParams,
+            timeout: 30000
+          });
+        }
+      }
 
       console.log('API Response:', response.data);
+      console.log('API Status:', response.status);
       
       if (response.data && response.data.data) {
         setAds(response.data.data);
@@ -66,6 +89,12 @@ const FilteredVehicles = () => {
       
     } catch (error) {
       console.error('Error fetching ads:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        response: error.response,
+        request: error.request
+      });
       
       if (error.response && error.response.status === 401) {
         console.log('401 Unauthorized - Clearing auth data');
@@ -81,7 +110,11 @@ const FilteredVehicles = () => {
       if (error.response) {
         setError(`Server error: ${error.response.status} - ${error.response.statusText}`);
       } else if (error.request) {
-        setError('Network error: Could not connect to server. Please check your connection.');
+        if (error.code === 'ECONNABORTED') {
+          setError('Request timeout. Please check your connection and try again.');
+        } else {
+          setError('Network error: Could not connect to server. Please check your internet connection.');
+        }
       } else {
         setError('Failed to load ads. Please try again.');
       }
