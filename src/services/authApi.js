@@ -1,5 +1,56 @@
 import axios from 'axios';
 
+// Import toast for notifications
+const showToast = (message, type = 'error') => {
+  // Create toast element if it doesn't exist
+  let toastContainer = document.getElementById('toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      pointer-events: none;
+    `;
+    document.body.appendChild(toastContainer);
+  }
+
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    background: ${type === 'error' ? '#ef4444' : '#22c55e'};
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+    max-width: 300px;
+    font-size: 14px;
+    font-weight: 500;
+  `;
+  toast.textContent = message;
+
+  toastContainer.appendChild(toast);
+
+  // Animate in
+  setTimeout(() => {
+    toast.style.transform = 'translateX(0)';
+  }, 100);
+
+  // Remove after 4 seconds
+  setTimeout(() => {
+    toast.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 300);
+  }, 4000);
+};
+
 const API_BASE_URL = 'https://api.emov.com.pk';
 
 const api = axios.create({
@@ -32,11 +83,19 @@ api.interceptors.response.use(
                            error.config?.url?.includes('/signup');
       
       if (!isAuthRequest) {
+        // Clear all auth data
         localStorage.removeItem('token');
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
         sessionStorage.removeItem('token');
-        window.location.href = '/';
+        
+        // Show toast notification about session expiration
+        showToast('Your session has expired. Please login again to continue.', 'error');
+        
+        // Delay redirect to allow user to see the toast
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 1500);
       }
     }
     return Promise.reject(error);

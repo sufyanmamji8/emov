@@ -11,7 +11,7 @@ const injectToastStyles = () => {
     /* Toast Container */
     .Toastify__toast-container {
       width: 100%;
-      max-width: 420px;
+      max-width: 250px;
       top: 1.5rem;
       right: 1.5rem;
       left: auto;
@@ -22,8 +22,8 @@ const injectToastStyles = () => {
 
     /* Toast Base */
     .Toastify__toast {
-      border-radius: 12px !important;
-      min-height: 64px !important;
+      border-radius: 50px !important;
+      min-height: 48px !important;
       padding: 0 !important;
       margin-bottom: 1rem !important;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
@@ -32,6 +32,8 @@ const injectToastStyles = () => {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
       border: 1px solid rgba(255, 255, 255, 0.1) !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+      overflow: hidden !important;
+      position: relative !important;
     }
 
     .Toastify__toast:hover {
@@ -41,43 +43,34 @@ const injectToastStyles = () => {
 
     .Toastify__toast-body {
       margin: 0 !important;
-      padding: 16px 20px !important;
+      padding: 12px 20px !important;
       font-weight: 500 !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-      font-size: 15px !important;
-      display: flex !important;
-      align-items: center !important;
-      min-height: 64px !important;
-      line-height: 1.5 !important;
-      color: inherit !important;
-    }
-
-    /* Progress Bar */
-    .Toastify__progress-bar {
-      height: 3px !important;
-      border-radius: 0 0 12px 12px !important;
-      background: rgba(255, 255, 255, 0.3) !important;
-    }
-
-    /* Close Button */
-    .Toastify__close-button {
-      align-self: center !important;
-      margin-right: 16px !important;
-      color: rgba(255, 255, 255, 0.8) !important;
-      opacity: 0.8 !important;
-      transition: all 0.2s ease !important;
-      width: 32px !important;
-      height: 32px !important;
+      font-size: 14px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      border-radius: 50% !important;
+      min-height: 48px !important;
+      line-height: 1.4 !important;
+      color: inherit !important;
+      text-align: center !important;
+      width: 100% !important;
+      text-align: center !important;
+      position: relative !important;
+      z-index: 2 !important;
     }
 
-    .Toastify__close-button:hover {
-      opacity: 1 !important;
-      background: rgba(255, 255, 255, 0.15) !important;
-      color: rgba(255, 255, 255, 1) !important;
+    /* Progress Bar - Hidden but functional */
+    .Toastify__progress-bar {
+      height: 0px !important;
+      border-radius: 0 0 12px 12px !important;
+      background: transparent !important;
+      opacity: 0 !important;
+    }
+
+    /* Close Button - Hidden */
+    .Toastify__close-button {
+      display: none !important;
     }
 
     /* Toast Types */
@@ -161,20 +154,16 @@ const injectToastStyles = () => {
       }
       
       .Toastify__toast {
-        min-height: 60px !important;
-        border-radius: 10px !important;
+        min-height: 44px !important;
+        border-radius: 50px !important;
       }
       
       .Toastify__toast-body {
-        padding: 14px 16px !important;
-        font-size: 14px !important;
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+        min-height: 44px !important;
       }
       
-      .Toastify__close-button {
-        margin-right: 12px !important;
-        width: 28px !important;
-        height: 28px !important;
-      }
     }
 
     /* Dark mode adjustments */
@@ -197,7 +186,7 @@ const toastConfig = {
   pauseOnHover: true,
   draggable: true,
   pauseOnFocusLoss: false,
-  closeButton: true,
+  closeButton: false, // Disabled close button
   newestOnTop: true,
   rtl: false,
   theme: 'light',
@@ -350,7 +339,7 @@ export const ToastContainer = () => {
       draggable={true}
       pauseOnHover={true}
       theme="light"
-      closeButton={true}
+      closeButton={false}
       style={{ zIndex: 9999 }}
     />
   );

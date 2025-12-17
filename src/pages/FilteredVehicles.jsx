@@ -1,6 +1,7 @@
 // src/pages/FilteredVehicles.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { FaSearch, FaArrowLeft, FaFilter } from 'react-icons/fa';
 import apiService, { api } from '../services/Api';
 
 const FilteredVehicles = () => {
@@ -11,6 +12,8 @@ const FilteredVehicles = () => {
   const [loading, setLoading] = useState(true);
   const [filterName, setFilterName] = useState('');
   const [error, setError] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchAds = useCallback(async () => {
     try {
@@ -131,7 +134,7 @@ const FilteredVehicles = () => {
 
   return (
     <div className="min-h-screen surface-primary">
-      {/* Professional Header */}
+      {/* Professional Header with Search */}
       <div className="surface-secondary border-b border-primary sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
@@ -139,14 +142,60 @@ const FilteredVehicles = () => {
               onClick={() => navigate(-1)}
               className="flex items-center space-x-2 text-secondary hover:text-primary transition-all duration-200 font-medium group"
             >
-              <svg className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span>Back</span>
+              <FaArrowLeft className="w-5 h-5 transform group-hover:-translate-x-1 transition-transform" />
+              <span className="hidden sm:inline">Back</span>
             </button>
             
-            <div className="flex items-center space-x-3">
-              <div className="text-sm text-tertiary">
+            {/* Centered Heading */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-primary">
+                Filtered Vehicles
+              </h1>
+            </div>
+            
+            {/* Search Container */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <div className="relative flex items-center">
+                <div 
+                  className={`flex items-center transition-all duration-300 ease-in-out overflow-hidden ${
+                    searchOpen 
+                      ? 'bg-bg-primary border border-border-primary rounded-lg px-2 sm:px-4 py-2 min-w-[250px] sm:min-w-[300px]' 
+                      : 'w-8 h-8 sm:w-10 sm:h-10 bg-bg-primary border border-border-primary rounded-lg'
+                  }`}
+                >
+                  <button
+                    onClick={() => setSearchOpen(!searchOpen)}
+                    className="flex items-center justify-center p-0 hover:bg-transparent transition-colors"
+                  >
+                    <FaSearch className="w-3 h-3 sm:w-4 sm:h-4 text-text-secondary" />
+                  </button>
+                  
+                  {searchOpen && (
+                    <>
+                      <input
+                        type="text"
+                        placeholder="Search..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="bg-transparent border-none outline-none text-text-primary placeholder-text-secondary flex-1 min-w-[150px] sm:min-w-[200px] ml-2 text-sm"
+                        autoFocus
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSearchOpen(false);
+                          setSearchQuery('');
+                        }}
+                        className="ml-1 sm:ml-2 text-text-secondary hover:text-text-primary transition-colors p-1 text-sm"
+                      >
+                        ×
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <div className="hidden sm:block text-xs sm:text-sm text-tertiary">
                 {ads.length} {ads.length === 1 ? 'vehicle' : 'vehicles'} found
               </div>
             </div>
@@ -248,10 +297,10 @@ const FilteredVehicles = () => {
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🚗</div>
             <h3 className="text-xl font-semibold text-text-primary mb-2">
-              No vehicles found
+              No active ads
             </h3>
             <p className="text-text-secondary mb-6">
-              No vehicles match your selected filter criteria.
+              You haven't posted anything yet , Would you like to sell something?
             </p>
             <button 
               onClick={() => navigate('/dashboard')}

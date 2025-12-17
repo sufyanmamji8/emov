@@ -1724,199 +1724,44 @@ function Dashboard() {
   }
 
   return (
- <>
-      {/* Mobile Search Bar - Fixed Position Outside Transformed Containers */}
-      <div 
-        className={`md:hidden z-[100] ${showSearchResults ? 'mb-96' : ''}`}
+    <>
+      {/* Left Gradient - Top of Hero - Maximum Size */}
+      <img 
+        src={`/${gradientLeft}`}
+        alt=""
+        className="absolute left-0 top-0 w-1/2 sm:w-1/3 md:w-1/3 h-full overflow-hidden"
         style={{
-          position: 'fixed',
-          top: '25vh',
-          left: '0',
-          right: '0',
-          zIndex: 100
+          backgroundSize: 'contain',
+          backgroundPosition: 'left center',
+          backgroundRepeat: 'no-repeat',
+          zIndex: 0,
+          opacity: 0.8,
+          borderTopRightRadius: '9999px',
+          borderBottomRightRadius: '9999px',
+          clipPath: 'inset(0 0 0 0 round 0 9999px 9999px 0)',
+          boxShadow: '8px 0 15px -5px rgba(0, 0, 0, 0.15)',
+          transform: 'scaleX(1.2) scaleY(1.1) translateX(-5%)'
         }}
-      >
-        <div className="w-full px-4">
-          <div className="relative max-w-md mx-auto">
-            {/* Premium Glassmorphic Search Bar */}
-            <div 
-              className="relative w-full h-14 rounded-2xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/30 group"
-              style={{
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.3)',
-                background: isDark 
-                  ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)'
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
-                backdropFilter: 'blur(20px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                boxShadow: isDark
-                  ? `
-                    0 8px 32px rgba(0, 0, 0, 0.3),
-                    0 2px 8px rgba(0, 0, 0, 0.2),
-                    inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
-                    inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
-                  `
-                  : `
-                    0 8px 32px rgba(0, 0, 0, 0.1),
-                    0 2px 8px rgba(0, 0, 0, 0.06),
-                    inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
-                    inset 0 -1px 0 0 rgba(255, 255, 255, 0.2)
-                  `,
-              }}
-            >
-              {/* Inner Glow Effect */}
-              <div 
-                className="absolute inset-0 opacity-30 pointer-events-none rounded-2xl"
-                style={{
-                  background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
-                }}
-              />
-
-              {/* Frost/Glass Texture */}
-              <div 
-                className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-2xl"
-                style={{
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' viewBox=\'0 0 100 100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z\' fill=\'%23ffffff\' fill-opacity=\'0.1\' fill-rule=\'evenodd\'/%3E%3C/svg%3E")',
-                  backgroundSize: '100px 100px',
-                }}
-              />
-
-              {/* Search Icon */}
-              <div className="absolute left-4 z-10 flex items-center h-full">
-                <svg 
-                  className={`w-5 h-5 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                  strokeWidth={2.5}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
-
-              {/* Input Field */}
-              <input
-                type="text"
-                placeholder={t.searchPlaceholder || "Search for vehicles..."}
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  handleSearch(e.target.value);
-                }}
-                onFocus={() => {
-                  if (searchQuery.trim()) {
-                    setShowSearchResults(true);
-                  }
-                }}
-                className={`w-full h-full pl-12 pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-300' : 'text-gray-900 placeholder-gray-600'} text-base font-medium focus:outline-none z-10 transition-all duration-300`}
-              />
-
-              {/* Right Side Icons */}
-              <div className="absolute right-2 z-10 flex items-center h-full">
-                {/* Clear Button */}
-                {searchQuery && (
-                  <button
-                    onClick={() => {
-                      setSearchQuery('');
-                      setShowSearchResults(false);
-                    }}
-                    className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center"
-                    aria-label="Clear search"
-                  >
-                    <svg 
-                      className={`w-4 h-4 ${isDark ? 'text-white' : 'text-gray-800'} transition-all duration-300`}
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                      strokeWidth={2.5}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Search Results Dropdown */}
-            {showSearchResults && (
-              <div 
-                className="absolute top-full left-0 right-0 mt-2 rounded-xl border overflow-hidden z-40 animate-fadeIn"
-                style={{
-                  borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
-                  background: isDark 
-                    ? 'linear-gradient(135deg, rgba(40, 40, 45, 0.95) 0%, rgba(30, 30, 35, 0.92) 100%)'
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 252, 0.92) 100%)',
-                  backdropFilter: 'blur(20px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-                  boxShadow: isDark 
-                    ? '0 10px 30px rgba(0, 0, 0, 0.4)'
-                    : '0 10px 30px rgba(0, 0, 0, 0.15)'
-                }}
-              >
-                <div className="max-h-64 overflow-y-auto">
-                  {searchQuery.trim() && searchResults.length > 0 ? (
-                    <div className="p-3 space-y-2">
-                      {searchResults.slice(0, 5).map((ad) => (
-                        <SearchResultItem 
-                          key={ad.AdID || ad.id || ad.adId || ad._id}
-                          ad={ad}
-                          isDark={isDark}
-                          handleAdClick={handleAdClick}
-                        />
-                      ))}
-                    </div>
-                  ) : searchQuery.trim() ? (
-                    <div className="p-4 text-center">
-                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No results found</p>
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Container */}
-      <div className="min-h-screen bg-bg-primary text-text-primary overflow-x-hidden">
-      {/* Gradient Background Section - Wrapping all three sections */}
-       <div className="relative z-10 w-full">
-      <div className="relative w-full min-h-[280px] md:min-h-[500px] bg-bg-secondary overflow-hidden">
-        {/* Left Gradient - Responsive */}
-        {/* Left Gradient - Full Height */}
-        <div 
-          className="absolute left-0 top-0 w-1/2 sm:w-1/3 md:w-1/3 h-full overflow-hidden"
-          style={{
-            backgroundImage: `url(/${gradientLeft})`,
-            backgroundSize: 'contain',
-            backgroundPosition: 'left center',
-            backgroundRepeat: 'no-repeat',
-            zIndex: 0,
-            opacity: 0.8,
-            borderTopRightRadius: '9999px',
-            borderBottomRightRadius: '9999px',
-            clipPath: 'inset(0 0 0 0 round 0 9999px 9999px 0)',
-            boxShadow: '8px 0 15px -5px rgba(0, 0, 0, 0.15)',
-            transform: 'scaleX(1.2) scaleY(1.1) translateX(-5%)'
-          }}
-        />
+      />
+      
+      {/* Right Gradient - Bottom of Hero - Maximum Size */}
+      <img 
+        src={`/${gradientRight}`}
+        alt=""
+        className="absolute right-0 bottom-0 w-5/6 md:w-2/3 h-4/5"
+        style={{
+          backgroundSize: 'contain',
+          backgroundPosition: 'right bottom',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.8,
+          zIndex: 0
+        }}
+      />
         
-        {/* Right Gradient - Bottom of Hero - Maximum Size */}
-        <div 
-          className="absolute right-0 bottom-0 w-5/6 md:w-2/3 h-4/5"
-          style={{
-            backgroundImage: `url(/${gradientRight})`,
-            backgroundSize: 'contain',
-            backgroundPosition: 'right bottom',
-            backgroundRepeat: 'no-repeat',
-            opacity: 0.8,
-            zIndex: 0
-          }}
-        />
-        
-        {/* Wrapper for all three sections */}
-       
-          {/* Top Header Section */}
-<div className="bg-bg-secondary/90 w-full">
+      {/* Wrapper for all three sections */}
+      <div className="relative overflow-x-hidden">
+        {/* Top Header Section */}
+        <div className="bg-bg-secondary/90 w-full">
   {/* Top Bar */}
   <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
     <div className="flex justify-between items-center h-12 sm:h-14 py-2 border-b border-border-primary">
@@ -2000,7 +1845,7 @@ function Dashboard() {
   </div>
 
   {/* Hero Section with Enhanced Gradients - Mobile Redesign */}
- <section className="relative w-full mt-18 overflow-hidden">
+ <section className="relative w-full mt-18 overflow-hidden hide-scrollbar">
     {/* Enhanced Background Gradients */}
     <div className="absolute inset-0 pointer-events-none">
       {/* Left Gradient Overlay */}
@@ -2026,7 +1871,7 @@ function Dashboard() {
 
     <div className="relative max-w-[2000px] mx-auto">
       {/* Content - Optimized for Mobile */}
-      <div className="text-center pt-6 pb-4 md:pt-8 md:pb-16 px-4 sm:px-6 lg:px-8">
+      <div className="text-center pt-6 pb-8 md:pt-8 md:pb-16 px-4 sm:px-6 lg:px-8 overflow-x-hidden">
         <div className="w-full text-center max-w-4xl sm:max-w-5xl lg:max-w-6xl mx-auto">
           <h1 className="text-text-primary font-bold text-2xl sm:text-2xl md:text-3xl lg:text-4xl mb-2 sm:mb-3 md:mb-4 leading-tight tracking-tight"
             style={{
@@ -2038,7 +1883,7 @@ function Dashboard() {
           >
             {t.findVehicles}
           </h1>
-          <h2 className="text-base sm:text-base md:text-lg lg:text-xl font-normal mb-2 md:mb-6 leading-relaxed text-text-tertiary opacity-90"
+          <h2 className="text-base sm:text-base md:text-lg lg:text-xl font-normal mb-4 md:mb-6 leading-relaxed text-text-tertiary opacity-90"
             style={{
               lineHeight: '1.6',
               letterSpacing: '0.01em'
@@ -2048,6 +1893,180 @@ function Dashboard() {
           </h2>
         </div>
 
+      {/* Mobile Search Bar - Fixed Version   */}
+<div className={`md:hidden w-full -mb-4 ${showSearchResults ? 'pb-96' : ''} overflow-visible`}>
+  <div className="relative max-w-md mx-auto px-4">
+    {/* Premium Glassmorphic Search Bar */}
+    <div 
+      className="relative w-full h-14 rounded-2xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/30 group"
+      style={{
+        borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.3)',
+        background: isDark 
+          ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)'
+          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        boxShadow: isDark
+          ? `
+            0 8px 32px rgba(0, 0, 0, 0.3),
+            0 2px 8px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.2),
+            inset 0 -1px 0 0 rgba(0, 0, 0, 0.3)
+          `
+          : `
+            0 8px 32px rgba(0, 0, 0, 0.1),
+            0 2px 8px rgba(0, 0, 0, 0.06),
+            inset 0 1px 0 0 rgba(255, 255, 255, 0.9),
+            inset 0 -1px 0 0 rgba(255, 255, 255, 0.2)
+          `,
+      }}
+    >
+      {/* Inner Glow Effect */}
+      <div 
+        className="absolute inset-0 opacity-30 pointer-events-none rounded-2xl"
+        style={{
+          background: 'radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 60%)',
+        }}
+      />
+
+      {/* Search Icon */}
+      <div className="absolute left-4 z-10 flex items-center h-full">
+        <svg 
+          className={`w-5 h-5 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+
+      {/* Input Field */}
+      <input
+        type="text"
+        placeholder={t.searchPlaceholder || "Search for vehicles..."}
+        value={searchQuery}
+        onChange={(e) => {
+          setSearchQuery(e.target.value);
+          handleSearch(e.target.value);
+        }}
+        onFocus={() => {
+          if (searchQuery.trim()) {
+            setShowSearchResults(true);
+          }
+        }}
+        className={`w-full h-full pl-12 pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-300' : 'text-gray-900 placeholder-gray-600'} text-base font-medium focus:outline-none z-10 transition-all duration-300`}
+      />
+
+      {/* Right Side Icons */}
+      <div className="absolute right-2 z-10 flex items-center h-full">
+        {/* Clear Button */}
+        {searchQuery && (
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setSearchResults([]);
+              setShowSearchResults(false);
+            }}
+            className={`p-2 rounded-full transition-all duration-200 ${isDark ? 'hover:bg-white/10 text-gray-300' : 'hover:bg-gray-100 text-gray-600'}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+    </div>
+
+    {/* Mobile Search Results Dropdown - FIXED */}
+    {showSearchResults && (
+      <div 
+        className="absolute left-4 right-4 mt-2 rounded-2xl border overflow-hidden transition-all duration-300 z-50"
+        style={{
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+          boxShadow: isDark 
+            ? '0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.3)'
+            : '0 20px 60px rgba(0, 0, 0, 0.12), 0 8px 20px rgba(0, 0, 0, 0.08)'
+        }}
+      >
+        <div 
+          className="max-h-[400px] overflow-y-auto"
+          style={{
+            background: isDark 
+              ? 'linear-gradient(135deg, rgba(35, 35, 40, 0.98) 0%, rgba(25, 25, 30, 0.96) 100%)'
+              : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 252, 0.96) 100%)',
+            backdropFilter: 'blur(28px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+          }}
+        >
+          {/* Recent Searches */}
+          {!searchQuery.trim() && recentSearches.length > 0 && (
+            <div className={`p-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Recent Searches</h3>
+                <button
+                  onClick={clearRecentSearches}
+                  className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-200`}
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="space-y-2">
+                {recentSearches.map((search, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setSearchQuery(search);
+                      handleSearch(search);
+                    }}
+                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-3 ${
+                      isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{search}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Search Results */}
+          {isSearching ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-emov-purple border-t-transparent"></div>
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="p-4 space-y-2">
+              <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+              </h3>
+              {searchResults.map((ad) => (
+                <SearchResultItem 
+                  key={ad.AdID || ad.id || ad.adId || ad._id}
+                  ad={ad}
+                  isDark={isDark}
+                  handleAdClick={handleAdClick}
+                />
+              ))}
+            </div>
+          ) : searchQuery.trim() ? (
+            <div className="text-center py-8">
+              <svg className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
+              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Try adjusting your search terms</p>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    )}
+  </div>
+</div>
         {/* Desktop Search Bar - Original */}
         <div className={`hidden md:block w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-24 transition-all duration-500 ${showSearchResults ? 'pb-96' : ''}`}>
           <div className="relative max-w-2xl sm:max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto search-container">
@@ -2298,9 +2317,32 @@ function Dashboard() {
     outline: 2px solid var(--emov-purple, #8b5cf6);
     outline-offset: 2px;
   }
+
+  /* Hide scrollbars on mobile */
+  @media (max-width: 767px) {
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    
+    /* Hide horizontal scrollbar */
+    html, body {
+      overflow-x: hidden;
+    }
+    
+    /* Ensure no horizontal overflow */
+    * {
+      box-sizing: border-box;
+    }
+    
+    .w-full {
+      max-width: 100vw;
+    }
+  }
 `}</style>
-        </div>
-         </div>
 
       {/* Main Content */}
       <main className="w-full relative z-10">
@@ -2415,10 +2457,14 @@ function Dashboard() {
 
               // Determine if current tab has images
               const hasImages = ['Category', 'Brand'].includes(activeTab);
+              const isTextOnlyTab = ['Budget', 'Model', 'Body Type'].includes(activeTab);
               
-              // MOBILE: Show 8 items per slide for categories with images, 12 for others
+              // For mobile card rendering, use more specific logic - FORCE BUDGET TO HAVE NO ICONS
+              const shouldShowIcon = activeTab === 'Budget' ? false : ['Category', 'Brand'].includes(activeTab);
+              
+              // MOBILE: Show 8 items per slide for categories with images, 9 for text-only tabs (3 rows)
               // DESKTOP: Keep original logic
-              const itemsPerSlideMobile = hasImages ? 8 : 12;
+              const itemsPerSlideMobile = hasImages ? 8 : (isTextOnlyTab ? 9 : 12);
               const totalSlides = Math.ceil(currentTabData.length /
                 (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage));
 
@@ -2432,7 +2478,7 @@ function Dashboard() {
 
                 slides.push(
                   <div key={`slide-${i}`} className="flex-shrink-0 w-full" style={{ width: '100%' }}>
-                    {/* MOBILE: 2x3 grid for categories with images, 3x3 for others */}
+                    {/* MOBILE: 2x3 grid for categories with images, 3x3 grid for text-only tabs */}
                     {/* DESKTOP: Keep original layout */}
                     <div className={`grid gap-1.5 sm:gap-2 md:gap-3 w-full px-2 sm:px-4 md:px-6 ${
                       window.innerWidth < 768 
@@ -2445,57 +2491,15 @@ function Dashboard() {
                         // MOBILE card layout - simplified for categories
                         const mobileCard = () => (
                           <div className="flex flex-col items-center justify-center h-full w-full p-2">
-                            {/* Category Icon/Image */}
-                            <div className="flex items-center justify-center mb-2 flex-shrink-0" style={{ height: '32px', width: '32px' }}>
-                              {hasImages && (item.image || item.icon) ? (
-                                item.icon ? (
-                                  <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full border border-gray-300">
-                                    {React.cloneElement(item.icon, {
-                                      size: 16,
-                                      style: { color: '#6B7280' }
-                                    })}
-                                  </div>
-                                ) : (
-                                  <img
-                                    src={item.image}
-                                    alt={displayName}
-                                    className="w-full h-full object-contain"
-                                    style={{
-                                      filter: activeTab === 'Category' 
-                                        ? 'brightness(0) saturate(100%) invert(30%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(80%) contrast(85%)'
-                                        : 'none',
-                                      opacity: activeTab === 'Category' ? 0.8 : 1
-                                    }}
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                    }}
-                                  />
-                                )
-                              ) : (
-                                <div className="flex items-center justify-center w-8 h-8"></div>
-                              )}
-                            </div>
-                            
-                            {/* Category Name */}
-                            <div className="text-center w-full">
-                              <div className={`text-gray-700 line-clamp-2 leading-tight text-xs font-medium`}>
-                                {displayName}
-                              </div>
-                            </div>
-                          </div>
-                        );
-
-                        // DESKTOP card layout - keep original
-                        const desktopCard = () => {
-                          return (
-                            <div className="flex flex-col items-center justify-center p-4 h-full w-full">
-                              {hasImages && (item.image || item.icon) ? (
-                                <div className="flex items-center justify-center mb-3 flex-shrink-0" style={{ height: '50px', width: '50px' }}>
+                            {shouldShowIcon ? (
+                              <>
+                                {/* Category Icon/Image */}
+                                <div className="flex items-center justify-center mb-2 flex-shrink-0" style={{ height: '32px', width: '32px' }}>
                                   {item.icon ? (
-                                    <div className="flex items-center justify-center w-12 h-12 bg-bg-primary rounded-full border border-gray-600">
-                                      {React.cloneElement(item.icon, { 
-                                        size: 24, 
-                                        style: { color: '#878787' } 
+                                    <div className="flex items-center justify-center w-8 h-8 bg-gray-100 rounded-full border border-gray-300">
+                                      {React.cloneElement(item.icon, {
+                                        size: 16,
+                                        style: { color: '#6B7280' }
                                       })}
                                     </div>
                                   ) : (
@@ -2504,9 +2508,6 @@ function Dashboard() {
                                       alt={displayName}
                                       className="w-full h-full object-contain"
                                       style={{
-                                        filter: activeTab === 'Category' 
-                                          ? 'brightness(0) saturate(100%) invert(30%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(80%) contrast(85%)'
-                                          : 'none',
                                         opacity: activeTab === 'Category' ? 0.8 : 1
                                       }}
                                       onError={(e) => {
@@ -2515,15 +2516,75 @@ function Dashboard() {
                                     />
                                   )}
                                 </div>
-                              ) : null}
-                              
-                              <div className="text-center w-full">
-                                <div className={`text-text-primary line-clamp-2 text-sm ${
-                                  hasImages ? '' : 'flex items-center justify-center h-12'
-                                }`}>
-                                  {displayName}
+                                
+                                {/* Category Name */}
+                                <div className="text-center w-full">
+                                  <div className="text-gray-700 line-clamp-2 leading-tight text-xs font-medium">
+                                    {displayName}
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              /* Text-only tabs - perfectly centered */
+                              <div className="flex items-center justify-center h-full w-full">
+                                <div className="text-center">
+                                  <div className="text-gray-700 line-clamp-2 leading-tight text-xs font-medium">
+                                    {displayName}
+                                  </div>
                                 </div>
                               </div>
+                            )}
+                          </div>
+                        );
+
+                        // DESKTOP card layout - keep original
+                        const desktopCard = () => {
+                          return (
+                            <div className="flex flex-col items-center justify-center p-4 h-full w-full">
+                              {shouldShowIcon ? (
+                                <>
+                                  <div className="flex items-center justify-center mb-3 flex-shrink-0" style={{ height: '50px', width: '50px' }}>
+                                    {item.icon ? (
+                                      <div className="flex items-center justify-center w-12 h-12 bg-bg-primary rounded-full border border-gray-600">
+                                        {React.cloneElement(item.icon, { 
+                                          size: 24, 
+                                          style: { color: '#878787' } 
+                                        })}
+                                      </div>
+                                    ) : (
+                                      <img
+                                        src={item.image}
+                                        alt={displayName}
+                                        className="w-full h-full object-contain"
+                                        style={{
+                                          filter: activeTab === 'Category' 
+                                            ? 'brightness(0) saturate(100%) invert(30%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(80%) contrast(85%)'
+                                            : 'none',
+                                          opacity: activeTab === 'Category' ? 0.8 : 1
+                                        }}
+                                        onError={(e) => {
+                                          e.target.style.display = 'none';
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                  
+                                  <div className="text-center w-full">
+                                    <div className="text-text-primary line-clamp-2 text-sm">
+                                      {displayName}
+                                    </div>
+                                  </div>
+                                </>
+                              ) : (
+                                /* Text-only tabs - perfectly centered */
+                                <div className="flex items-center justify-center h-full w-full">
+                                  <div className="text-center">
+                                    <div className="text-text-primary line-clamp-2 text-sm">
+                                      {displayName}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           );
                         };
@@ -2541,7 +2602,7 @@ function Dashboard() {
                                 ? '100%' 
                                 : (hasImages ? '180px' : '160px'),
                               height: window.innerWidth < 768 
-                                ? '80px'
+                                ? (isTextOnlyTab ? '60px' : '80px')
                                 : (hasImages ? '140px' : '80px'),
                               minHeight: window.innerWidth >= 768 ? '80px' : 'auto'
                             }}
@@ -2577,7 +2638,9 @@ function Dashboard() {
               const dataKey = tabDataMap[activeTab];
               currentTabData = Array.isArray(transformedData[dataKey]) ? transformedData[dataKey] : [];
               
-              const itemsPerSlideMobile = ['Category', 'Brand'].includes(activeTab) ? 8 : 12;
+              const hasImages = ['Category', 'Brand'].includes(activeTab);
+              const isTextOnlyTab = ['Budget', 'Model', 'Body Type'].includes(activeTab);
+              const itemsPerSlideMobile = hasImages ? 8 : (isTextOnlyTab ? 9 : 12);
               const totalSlides = Math.ceil(currentTabData.length / (window.innerWidth < 768 ? itemsPerSlideMobile : itemsPerPage));
               
               if (totalSlides > 1) {
@@ -3211,7 +3274,7 @@ function Dashboard() {
       </footer>
 
       <MobileBottomNav activePage="home" isVisible={isBottomNavVisible} />
-    </div>
+      </div>
     </>
   );
 }

@@ -42,14 +42,22 @@ export const ChatProvider = ({ children }) => {
   // Get current user ID from localStorage
   useEffect(() => {
     const user = localStorage.getItem('user');
+    console.log('[ChatContext] Raw user data from localStorage:', user);
     if (user) {
       try {
         const userData = JSON.parse(user);
-        setCurrentUserId(userData.id || userData.userId || '16');
+        console.log('[ChatContext] Parsed user data:', userData);
+        const userId = userData.id || userData.userId || '19';
+        console.log('[ChatContext] Setting currentUserId to:', userId);
+        setCurrentUserId(userId);
       } catch (error) {
         console.error('Error parsing user data:', error);
-        setCurrentUserId('16');
+        console.log('[ChatContext] Using default user ID: 19');
+        setCurrentUserId('19');
       }
+    } else {
+      console.log('[ChatContext] No user data found, using default ID: 19');
+      setCurrentUserId('19');
     }
   }, []);
 

@@ -279,7 +279,9 @@ const AuthManager = {
 
   getUserId() {
     const user = this.getUser();
-    return user ? (user.id || user.userId || 16) : 16;
+    const userId = user ? (user.id || user.userId || 19) : 19;
+    console.log('[AuthManager] getUserId - user:', user, 'final userId:', userId);
+    return userId;
   },
 
   clearAuth() {
@@ -432,6 +434,9 @@ const chatService = {
 
   // Get all conversations - WITH CACHING
   async getChats(userId) {
+    // Clear cache for this user to ensure fresh data
+    ChatApiCache.clear(`/get-user-conversations/${userId}`);
+    
     const cacheKey = ChatApiCache.getCacheKey(`/get-user-conversations/${userId}`);
     const cachedData = ChatApiCache.get(cacheKey);
     
@@ -441,28 +446,73 @@ const chatService = {
     }
 
     const token = AuthManager.getToken();
-    if (!token) throw new Error('Authentication required');
-
-    const response = await fetch(`https://api.emov.com.pk/v2/get-user-conversations/${userId}`, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        AuthManager.clearAuth();
-        window.dispatchEvent(new Event('unauthorized'));
-      }
-      throw new Error(`Failed to fetch chats: ${response.status}`);
+    if (!token) {
+      console.error('[ChatService] No token found');
+      throw new Error('Authentication required');
     }
 
-    const data = await response.json();
-    ChatApiCache.set(cacheKey, data);
-    return data;
+    console.log('[ChatService] Fetching chats for user:', userId);
+    console.log('[ChatService] Token available:', !!token);
+
+    // Try multiple endpoints in case one doesn't work
+    const endpoints = [
+      `https://api.emov.com.pk/v2/get-user-conversations/${userId}`,
+      `https://api.emov.com.pk/v2/get-user-conversation/${userId}`, // singular version
+      `https://api.emov.com.pk/v1/get-user-conversations/${userId}` // v1 fallback
+    ];
+
+    let lastError;
+    
+    for (let i = 0; i < endpoints.length; i++) {
+      const endpoint = endpoints[i];
+      console.log(`[ChatService] Trying endpoint ${i + 1}: ${endpoint}`);
+      
+      try {
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        console.log(`[ChatService] Response status from endpoint ${i + 1}:`, response.status);
+        console.log(`[ChatService] Response headers from endpoint ${i + 1}:`, response.headers);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[ChatService] Chat data received:', data);
+          
+          ChatApiCache.set(cacheKey, data);
+          return data;
+        } else {
+          if (response.status === 401) {
+            console.error('[ChatService] Unauthorized - clearing auth');
+            AuthManager.clearAuth();
+            window.dispatchEvent(new Event('unauthorized'));
+            throw new Error('Authentication failed');
+          }
+          
+          const errorText = await response.text();
+          console.error(`[ChatService] Error response from endpoint ${i + 1}:`, errorText);
+          lastError = `Failed to fetch chats from endpoint ${i + 1}: ${response.status} - ${errorText}`;
+          
+          // Try next endpoint
+          continue;
+        }
+      } catch (error) {
+        console.error(`[ChatService] Error with endpoint ${i + 1}:`, error);
+        lastError = `Network error with endpoint ${i + 1}: ${error.message}`;
+        
+        // Try next endpoint
+        continue;
+      }
+    }
+    
+    // Clear cache on error to force refresh next time
+    ChatApiCache.clear(cacheKey);
+    throw new Error(lastError || 'All endpoints failed to fetch chats');
   },
 
   // Get messages for a conversation - WITH CACHING
