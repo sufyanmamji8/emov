@@ -66,20 +66,18 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Full-width Header with border */}
-      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center pt-8 pb-6 sm:pt-12 sm:pb-8 border-b border-border-primary">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-gray-700 dark:text-gray-300 hover:text-emov-purple dark:hover:text-emov-purple transition-colors p-2"
-          >
-            <FaArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Manage your account settings and preferences</p>
-          </div>
+      {/* Compact Header with centered heading */}
+      <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center pt-4 pb-4 sm:pt-6 sm:pb-6 border-b border-border-primary">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-gray-700 dark:text-gray-300 hover:text-emov-purple dark:hover:text-emov-purple transition-colors p-2"
+        >
+          <FaArrowLeft className="w-5 h-5" />
+        </button>
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h1>
         </div>
+        <div className="w-9"></div> {/* Spacer to balance the layout */}
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -222,18 +222,8 @@ export default function Chats() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [selectedAudio, setSelectedAudio] = useState(null);
-  const [selectedAudioFile, setSelectedAudioFile] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [audioChunks, setAudioChunks] = useState([]);
-  const [showRecordingUI, setShowRecordingUI] = useState(false);
-  const recordingInterval = useRef(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [initialLoadDone, setInitialLoadDone] = useState(false);
-  const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
   const audioInputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -249,6 +239,14 @@ export default function Chats() {
   const [conversationToDelete, setConversationToDelete] = useState(null);
   const [isDeletingConversation, setIsDeletingConversation] = useState(false);
   const [hoveredChatId, setHoveredChatId] = useState(null);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const messagesEndRef = useRef(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [imageLoadingStates, setImageLoadingStates] = useState({});
+  const [isRecording, setIsRecording] = useState(false);
+  const [showRecordingUI, setShowRecordingUI] = useState(false);
+  const recordingInterval = useRef(null);
 
   // Handle deleting a conversation
   const handleDeleteConversation = async () => {
@@ -495,7 +493,7 @@ useEffect(() => {
       loadChats();
       setInitialLoadDone(true);
     }
-  }, []);
+  }, [initialLoadDone, loading, loadChats]);
 
   // Listen for chat refresh events
   useEffect(() => {
@@ -1039,7 +1037,12 @@ const formatMessageTime = (dateString) => {
 
           
           <div className="relative group">
-            <div className="relative w-full max-w-xs h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+            <div className="relative w-64 h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
+              {imageLoadingStates[message._id] && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800 z-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+                </div>
+              )}
               <img
                 src={formattedUrl}
                 alt="Shared content"
@@ -1348,18 +1351,16 @@ const formatMessageTime = (dateString) => {
       const lastMessage = chat.lastMessage || chat.last_message || 
                          (Array.isArray(chat.messages) && chat.messages.length > 0 ? 
                            chat.messages[chat.messages.length - 1] : null) ||
-                         (chat.latest_message) ||
-                         {};
+                         (chat.latest_message);
       
-      // If no message content found at all
-      if (!lastMessage || (!lastMessage.content && !lastMessage.message && !lastMessage.message_type)) {
+      // If no message object found at all
+      if (!lastMessage) {
         return 'Start a conversation';
       }
       
-      // Determine message type and content
-      const messageType = lastMessage.message_type || 
-                         (lastMessage.content?.includes('image') ? 'image' : 
-                          lastMessage.content?.includes('audio') ? 'audio' : 'text');
+      // Check if message has meaningful content
+      const messageType = lastMessage.message_type || 'text';
+      const content = lastMessage.content || lastMessage.message || '';
       
       // Check if the message is from the current user
       const isCurrentUser = lastMessage.sender === 'me' || 
@@ -1367,26 +1368,30 @@ const formatMessageTime = (dateString) => {
                            lastMessage.sender_id === currentUser?._id ||
                            (lastMessage.senderInfo && lastMessage.senderInfo.id === currentUser?.id);
       
-      // Format message based on type
+      // Format message based on type according to requirements
       let displayText = '';
       
       switch(messageType) {
         case 'image':
-          displayText = isCurrentUser ? 'You: Sent a photo' : 'Photo received';
+          displayText = isCurrentUser ? 'You sent an image' : 'Sent a photo';
           break;
         case 'audio':
-          displayText = isCurrentUser ? 'You: Sent an audio' : 'Audio message';
+          displayText = isCurrentUser ? 'You sent an audio' : 'Sent an audio';
+          break;
+        case 'file':
+          displayText = isCurrentUser ? 'You sent a file' : 'Sent a file';
           break;
         default:
-          const content = lastMessage.content || lastMessage.message || '';
-          displayText = content.length > 35 ? content.substring(0, 35) + '...' : content;
-          
-          if (isCurrentUser && !content.startsWith('You: ')) {
-            displayText = `You: ${displayText}`;
+          // For text messages, show actual content with truncation
+          if (content && content.trim()) {
+            displayText = content.length > 35 ? content.substring(0, 35) + '...' : content;
+          } else {
+            // If no text content but we have a message object, show appropriate fallback
+            displayText = isCurrentUser ? 'You sent a message' : 'Message received';
           }
       }
       
-      return displayText;
+      return displayText || 'Start a conversation';
       
     } catch (error) {
       console.error('Error rendering last message:', error);
@@ -1395,8 +1400,11 @@ const formatMessageTime = (dateString) => {
   })()}
 </p>
                       </div>
-                      {isUnread && (
-                        <div className="ml-2 w-2.5 h-2.5 bg-emerald-500 rounded-full"></div>
+                      {/* WhatsApp-style unread message indicator */}
+                      {isUnread && chat.unreadCount > 0 && (
+                        <div className="ml-2 bg-emerald-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                          {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
+                        </div>
                       )}
                     </div>
                   );
@@ -1791,7 +1799,7 @@ const formatMessageTime = (dateString) => {
         </div>
         )}
 
-      <MobileBottomNav activePage="chats" />
+      {!currentChat && <MobileBottomNav activePage="chats" />}
     </div>
   );
 }

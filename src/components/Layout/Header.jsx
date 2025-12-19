@@ -1,80 +1,181 @@
 // src/components/Layout/Header.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaSun, FaMoon, FaBell, FaUser, FaSearch, FaFilter, FaCaretDown } from 'react-icons/fa';
-import { useTheme } from "../../context/ThemeContext"; // Changed from ../ to ../../
-// Remove if not using Navbar: import Navbar from "./Navbar";
+import { FaSun, FaMoon, FaBell, FaUser, FaSearch, FaFilter, FaCaretDown, FaCheck } from 'react-icons/fa';
+import { useTheme } from "../../context/ThemeContext";
 
 const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQuery }) => {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [language, setLanguage] = useState('english');
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showLanguageDropdown && !event.target.closest('.language-dropdown')) {
+        setShowLanguageDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLanguageDropdown]);
+
+  const languages = [
+    { value: 'english', label: 'English', flag: '🇬🇧' },
+    { value: 'urdu', label: 'اردو', flag: '🇵🇰' },
+    { value: 'french', label: 'Français', flag: '🇫🇷' }
+  ];
+
+  const handleLanguageChange = (lang) => {
+    setLanguage(lang);
+    setShowLanguageDropdown(false);
+  };
+
+  const currentLanguage = languages.find(lang => lang.value === language);
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-8 sm:h-10 py-6 border-b border-border-primary">
-            <div className="flex items-center space-x-2 ">
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-              <span className="text-sm font-medium text-text-primary">Download App</span>
-            </div>
+    <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-8 sm:h-10 py-6 border-b border-border-primary backdrop-blur-sm bg-bg-primary/80">
+      {/* Left side - Download App */}
+      <div className="flex items-center space-x-2 group cursor-pointer">
+        <div className="p-1.5 rounded-lg bg-gradient-to-br from-emerald-400/10 to-green-500/10 group-hover:from-emerald-400/20 group-hover:to-green-500/20 transition-all duration-300">
+          <svg 
+            className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24" 
+            style={{color: 'var(--emov-green, #00FFA9)'}}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <span className="text-sm font-medium text-text-primary group-hover:text-text-secondary transition-colors duration-300">
+          Download App
+        </span>
+      </div>
 
-               {/* Right side controls */}
-                    <div className="flex items-center space-x-2 sm:space-x-4">
-                      {/* Desktop Language Selector and Theme Toggle */}
-                      <div className="hidden md:flex items-center space-x-4">
-                        {/* Language Selector */}
-                        <div className="relative">
-                          <select 
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value)}
-                            className="bg-transparent text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border-0 transition-all duration-200 appearance-none"
-                          >
-                            <option value="english">English</option>
-                            <option value="urdu">Urdu</option>
-                            <option value="french">French</option>
-                          </select>
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
-                            <FaCaretDown className="text-text-secondary w-3 h-3" />
-                          </div>
-                        </div>
-                        
-                        {/* Theme Toggle Button */}
-                        <button 
-                          onClick={toggleTheme}
-                          className="focus:outline-none p-2 sm:p-2.5 transition-all duration-200 hover:scale-105 rounded-xl text-text-primary hover:bg-bg-tertiary"
-                          style={{ borderRadius: '12px' }}
-                          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-                        >
-                          {theme === 'dark' ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
-                        </button>
-                      </div>
+      {/* Right side controls */}
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        {/* Desktop Language Selector and Theme Toggle */}
+        <div className="hidden md:flex items-center space-x-4">
+          {/* Enhanced Language Selector */}
+          <div className="relative language-dropdown">
+            <button
+              onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+              className="flex items-center space-x-2 bg-bg-secondary/50 hover:bg-bg-secondary text-text-primary px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all duration-300 border border-border-primary/50 hover:border-emerald-500/30 group"
+            >
+              <span className="text-lg">{currentLanguage?.flag}</span>
+              <span className="font-medium">{currentLanguage?.label}</span>
+              <FaCaretDown 
+                className={`text-text-secondary w-3 h-3 transition-all duration-300 ease-out group-hover:text-emerald-500 ${
+                  showLanguageDropdown ? 'rotate-180' : 'rotate-0'
+                }`} 
+              />
+            </button>
             
-            <div className="flex items-center space-x-4">
-              {!userProfile && (
-                <div className="flex items-center space-x-4">
+            {/* Enhanced Dropdown Menu */}
+            <div 
+              className={`absolute top-full mt-2 right-0 bg-bg-primary border border-border-primary rounded-xl shadow-2xl overflow-hidden min-w-[160px] transition-all duration-300 ease-out transform-gpu ${
+                showLanguageDropdown 
+                  ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto visible' 
+                  : 'opacity-0 scale-95 -translate-y-2 pointer-events-none invisible'
+              }`}
+              style={{
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+              }}
+            >
+              <div className="py-2">
+                {languages.map((lang, index) => (
                   <button
-                    className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-colors border-none"
-                    onClick={() => navigate('/login')}
+                    key={lang.value}
+                    onClick={() => handleLanguageChange(lang.value)}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-all duration-200 flex items-center justify-between group/item ${
+                      language === lang.value 
+                        ? 'bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-text-primary font-medium' 
+                        : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                    }`}
                   >
-                    <span>Sign In</span>
+                    <div className="flex items-center space-x-3">
+                      <span className="text-lg">{lang.flag}</span>
+                      <span>{lang.label}</span>
+                    </div>
+                    {language === lang.value && (
+                      <FaCheck className="w-3 h-3 text-emerald-500" />
+                    )}
                   </button>
-                  <button
-                    className="flex items-center space-x-1 text-text-primary px-4 py-1 rounded-full text-sm font-medium transition-colors"
-                    style={{
-                      backgroundColor: 'var(--emov-green, #27c583ff)',
-                    }}
-                    onMouseOver={(e) => (e.currentTarget.style.opacity = '0.9')}
-                    onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-                    onClick={() => navigate('/signup')}
-                  >
-                    <span>Sign Up</span>
-                  </button>
-                </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          {/* Enhanced Theme Toggle Button */}
+          <button 
+            onClick={toggleTheme}
+            className="relative focus:outline-none p-2.5 transition-all duration-300 hover:scale-110 rounded-xl text-text-primary hover:bg-bg-secondary border border-border-primary/50 hover:border-emerald-500/30 group overflow-hidden"
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {/* Background glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/0 to-green-500/0 group-hover:from-emerald-400/10 group-hover:to-green-500/10 transition-all duration-300 rounded-xl"></div>
+            
+            <div className="relative">
+              {theme === 'dark' ? (
+                <FaSun className="w-5 h-5 transition-transform duration-300 group-hover:rotate-45" />
+              ) : (
+                <FaMoon className="w-5 h-5 transition-transform duration-300 group-hover:-rotate-12" />
               )}
             </div>
-          </div>
-          </div>
+          </button>
+        </div>
+
+        {/* Auth Buttons */}
+        <div className="flex items-center space-x-3">
+          {!userProfile && (
+            <div className="flex items-center space-x-3">
+              {/* Sign In Button */}
+              <button
+                className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-all duration-300 px-4 py-2 rounded-lg hover:bg-bg-secondary"
+                onClick={() => navigate('/login')}
+              >
+                <span>Sign In</span>
+              </button>
+              
+              {/* Sign Up Button */}
+              <button
+                className="relative flex items-center space-x-1 text-white px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 overflow-hidden group"
+                style={{
+                  backgroundColor: 'var(--emov-green, #27c583ff)',
+                }}
+                onClick={() => navigate('/signup')}
+              >
+                {/* Hover effect overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <span className="relative z-10">Sign Up</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* CSS Keyframes for dropdown animation */}
+      <style jsx>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
+    </div>
   );
 };
 

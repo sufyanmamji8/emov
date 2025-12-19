@@ -257,9 +257,11 @@ const MyAds = () => {
                       alt={ad.VehicleName}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 bg-gray-100"
                     />
-                    <div className="absolute top-2 right-2 bg-emov-purple text-white px-2 py-1 rounded text-xs font-medium">
-                      {ad.VehicleType}
-                    </div>
+                    <img
+                      src="/emovcheck.png"
+                      alt="Emov Check"
+                      className="absolute top-2 right-2 w-12 h-12 object-contain"
+                    />
                   </div>
 
                   {/* Content */}

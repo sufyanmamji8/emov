@@ -208,7 +208,7 @@ export const ChatProvider = ({ children }) => {
       
       // Handle different message types
       if (messageType === 'image') {
-        lastMessageContent = isFromCurrentUser ? 'You sent a photo' : 'Sent a photo';
+        lastMessageContent = isFromCurrentUser ? 'You sent an image' : 'Sent a photo';
       } else if (messageType === 'audio') {
         lastMessageContent = isFromCurrentUser ? 'You sent an audio' : 'Sent an audio';
       } else if (messageType === 'file') {
@@ -554,13 +554,13 @@ export const ChatProvider = ({ children }) => {
           if (currentChatId === chatId) {
             let lastMessageContent = messageContent;
             if (messageType === 'image') {
-              lastMessageContent = 'You sent a photo';
+              lastMessageContent = 'You sent an image';
             } else if (messageType === 'audio') {
               lastMessageContent = 'You sent an audio';
             } else if (messageType === 'file') {
               lastMessageContent = 'You sent a file';
             } else if (messageType === 'text') {
-              lastMessageContent = 'You sent a message';
+              lastMessageContent = messageContent;
             }
             
             return {
@@ -585,13 +585,13 @@ export const ChatProvider = ({ children }) => {
         if (!prev) return null;
         let lastMessageContent = messageContent;
         if (messageType === 'image') {
-          lastMessageContent = 'You sent a photo';
+          lastMessageContent = 'You sent an image';
         } else if (messageType === 'audio') {
           lastMessageContent = 'You sent an audio';
         } else if (messageType === 'file') {
           lastMessageContent = 'You sent a file';
         } else if (messageType === 'text') {
-          lastMessageContent = 'You sent a message';
+          lastMessageContent = messageContent;
         }
         
         return {
