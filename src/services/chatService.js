@@ -280,8 +280,7 @@ const AuthManager = {
   getUserId() {
     const user = this.getUser();
     const userId = user ? (user.id || user.userId || 19) : 19;
-    console.log('[AuthManager] getUserId - user:', user, 'final userId:', userId);
-    return userId;
+        return userId;
   },
 
   clearAuth() {
@@ -304,7 +303,7 @@ const chatService = {
     const formData = new FormData();
     formData.append('image', file);
 
-    const response = await fetch('https://api.emov.com.pk/v2/upload/image', {
+    const response = await fetch('/v2/upload/image', {
       method: 'POST',
       headers: { 'Authorization': token ? `Bearer ${token}` : '' },
       body: formData
@@ -336,7 +335,7 @@ const chatService = {
     const formData = new FormData();
     formData.append('audio', file);
 
-    const response = await fetch('https://api.emov.com.pk/v2/upload/audio', {
+    const response = await fetch('/v2/upload/audio', {
       method: 'POST',
       headers: { 'Authorization': token ? `Bearer ${token}` : '' },
       body: formData
@@ -358,7 +357,7 @@ const chatService = {
     const user1Id = AuthManager.getUserId();
     if (!user2Id) throw new Error('Seller user ID required');
 
-    const response = await fetch('https://api.emov.com.pk/v2/start-conversation', {
+    const response = await fetch('/v2/start-conversation', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -406,7 +405,7 @@ const chatService = {
       payload.media_url = content;
     }
 
-    const response = await fetch('https://api.emov.com.pk/v2/send-message', {
+    const response = await fetch('/v2/send-message', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -433,16 +432,21 @@ const chatService = {
   },
 
   // Get all conversations - WITH CACHING
-  async getChats(userId) {
+  async getChats(userId, forceRefresh = false) {
     // Clear cache for this user to ensure fresh data
-    ChatApiCache.clear(`/get-user-conversations/${userId}`);
+    if (forceRefresh) {
+      ChatApiCache.clear(`/get-user-conversations/${userId}`);
+      ChatApiCache.clear(`/v2/get-user-conversations/${userId}`);
+      ChatApiCache.clear(`/v2/get-user-conversation/${userId}`);
+      ChatApiCache.clear(`/v1/get-user-conversations/${userId}`);
+    }
     
     const cacheKey = ChatApiCache.getCacheKey(`/get-user-conversations/${userId}`);
     const cachedData = ChatApiCache.get(cacheKey);
     
-    if (cachedData) {
-      console.log('[ChatService] Using cached data for chats');
-      return cachedData;
+    // If forceRefresh is true, don't return cached data
+    if (cachedData && !forceRefresh) {
+            return cachedData;
     }
 
     const token = AuthManager.getToken();
@@ -451,22 +455,19 @@ const chatService = {
       throw new Error('Authentication required');
     }
 
-    console.log('[ChatService] Fetching chats for user:', userId);
-    console.log('[ChatService] Token available:', !!token);
-
-    // Try multiple endpoints in case one doesn't work
+        
+    // Try multiple endpoints in case one doesn't work (using proxy)
     const endpoints = [
-      `https://api.emov.com.pk/v2/get-user-conversations/${userId}`,
-      `https://api.emov.com.pk/v2/get-user-conversation/${userId}`, // singular version
-      `https://api.emov.com.pk/v1/get-user-conversations/${userId}` // v1 fallback
+      `/v2/get-user-conversations/${userId}`,
+      `/v2/get-user-conversation/${userId}`, // singular version
+      `/v1/get-user-conversations/${userId}` // v1 fallback
     ];
 
     let lastError;
     
     for (let i = 0; i < endpoints.length; i++) {
       const endpoint = endpoints[i];
-      console.log(`[ChatService] Trying endpoint ${i + 1}: ${endpoint}`);
-      
+            
       try {
         const response = await fetch(endpoint, {
           method: 'GET',
@@ -477,13 +478,10 @@ const chatService = {
           }
         });
 
-        console.log(`[ChatService] Response status from endpoint ${i + 1}:`, response.status);
-        console.log(`[ChatService] Response headers from endpoint ${i + 1}:`, response.headers);
-
+                
         if (response.ok) {
           const data = await response.json();
-          console.log('[ChatService] Chat data received:', data);
-          
+                    
           ChatApiCache.set(cacheKey, data);
           return data;
         } else {
@@ -524,14 +522,13 @@ const chatService = {
     const cachedData = ChatApiCache.get(cacheKey);
     
     if (cachedData) {
-      console.log('[ChatService] Using cached data for messages');
-      return cachedData;
+            return cachedData;
     }
 
     const token = AuthManager.getToken();
     if (!token) throw new Error('Authentication required');
 
-    const response = await fetch('https://api.emov.com.pk/v2/get-messages', {
+    const response = await fetch('/v2/get-messages', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -614,14 +611,20 @@ const chatService = {
   // Delete a conversation - Optimized
   async deleteConversation(conversationId) {
     const token = AuthManager.getToken();
-    const response = await fetch('https://api.emov.com.pk/v2/delete-conversation', {
+    const userId = AuthManager.getUserId();
+    
+    const response = await fetch('/v2/delete-conversation', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Authorization': token ? `Bearer ${token}` : ''
       },
-      body: JSON.stringify({ conversation_id: conversationId })
+      body: JSON.stringify({ 
+        conversation_ids: [conversationId],
+        user_id: userId,
+        type: "me"
+      })
     });
 
     if (!response.ok) {
@@ -636,7 +639,7 @@ const chatService = {
     const token = AuthManager.getToken();
     const userId = AuthManager.getUserId();
 
-    const response = await fetch('https://api.emov.com.pk/v2/delete-message', {
+    const response = await fetch('/v2/delete-message', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -665,5 +668,8 @@ const chatService = {
     getKeys: () => Array.from(ChatApiCache.cache.keys())
   }
 };
+
+// Export ChatApiCache for use in other components
+export { ChatApiCache };
 
 export default chatService;

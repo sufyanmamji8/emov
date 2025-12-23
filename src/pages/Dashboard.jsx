@@ -14,19 +14,8 @@ const DASHBOARD_CACHE_KEY = 'emov_dashboard_cache';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 const getDashboardCache = () => {
-  try {
-    const cached = localStorage.getItem(DASHBOARD_CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        return data;
-      }
-      localStorage.removeItem(DASHBOARD_CACHE_KEY);
-    }
-  } catch (error) {
-    console.warn('Failed to load dashboard cache:', error);
-  }
-  return null;
+  // COMPLETELY DISABLE DASHBOARD CACHE - Force fresh API calls
+    return null;
 };
 
 const setDashboardCache = (data) => {
@@ -186,11 +175,7 @@ function Dashboard() {
     Model: 0,
     BodyType: 0
   });
-  const [apiData, setApiData] = useState(() => {
-    // Initialize with cached data if available
-    const cachedData = getDashboardCache();
-    return cachedData?.apiData || null;
-  });
+  const [apiData, setApiData] = useState(null); // Force null to always call API
   const [vehiclesData, setVehiclesData] = useState(() => {
     const cachedData = getDashboardCache();
     return cachedData?.vehiclesData || [];
@@ -836,8 +821,8 @@ function Dashboard() {
   };
 
   const fetchFilterData = useCallback(async () => {
-    // Skip if we already have data
-    if (apiData) return;
+    // ALWAYS CALL API - Remove data existence check
+    console.log('[Dashboard] Forcing API call for vehicle filters');
     
     try {
       
@@ -856,7 +841,7 @@ function Dashboard() {
     console.log('All API attempts failed, using fallback data');
     setApiData(fallbackData);
     setApiError('Using offline data. Some features may be limited.');
-  }, [apiData]);
+  }, []); // Remove apiData dependency
 
   // Helper function to get first letter of username for profile picture
   const getUserInitial = (username) => {
@@ -914,63 +899,10 @@ function Dashboard() {
     return `${baseUrl}${vehicleTypeKey}-${imageIndex}.jpg${optimizationParams}`;
   };
 
-  // Fetch filter data and generate vehicles with images
+  // Single API call for filter data
   useEffect(() => {
-    const fetchFilterData = async () => {
-      // Check if we have valid cached data
-      const cachedData = getDashboardCache();
-      if (cachedData && cachedData.apiData && cachedData.vehiclesData) {
-        setApiData(cachedData.apiData);
-        setVehiclesData(cachedData.vehiclesData);
-        setError(cachedData.error);
-        return;
-      }
-
-      try {        
-        const token = localStorage.getItem('token');
-
-        // Try to fetch from API even without token (X-PLATFORM header will be added automatically)
-        const response = await apiService.vehicles.getFilters();
-        
-        if (response && response.data) {
-          // The API response has the data directly in response.data
-          setApiData(response.data);
-          const vehicles = generateVehiclesFromFilterData(response.data);
-          setVehiclesData(vehicles);
-          
-          // Cache the fetched data
-          setDashboardCache({
-            apiData: response.data,
-            vehiclesData: vehicles,
-            error: null
-          });
-        } else {
-          throw new Error('No data received from the server');
-        }
-      } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error fetching filter data:', {
-            message: err.message,
-            status: err.response?.status
-          });
-        }
-
-        // On error (including 401 when token exists), fall back to offline data instead of redirecting
-        setApiData(fallbackData);
-        const vehicles = generateVehiclesFromFilterData(fallbackData);
-        setVehiclesData(vehicles);
-        
-        // Cache the fallback data
-        setDashboardCache({
-          apiData: fallbackData,
-          vehiclesData: vehicles,
-          error: err.message
-        });
-      }
-    };
-
     fetchFilterData();
-  }, []);
+  }, [fetchFilterData]);
 
   // Fetch recent ads for Recently Added section
   useEffect(() => {
@@ -2684,8 +2616,14 @@ function Dashboard() {
     
     {loadingRecentAds ? (
       <div className="text-center py-10">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
-        <p className="mt-2 text-text-secondary">Loading vehicles...</p>
+        <div className="relative inline-block">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emov-purple"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <FaCar className="w-6 h-6 text-emov-purple" />
+          </div>
+        </div>
+        <p className="mt-6 text-text-primary font-medium text-lg">Loading vehicles...</p>
+        <p className="mt-2 text-text-secondary text-sm">Please wait a moment</p>
       </div>
     ) : recentAdsError ? (
       <div className="text-center py-10 text-red-500">

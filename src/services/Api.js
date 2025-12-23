@@ -3,6 +3,15 @@ import axios from 'axios';
 // Use proxy in development to avoid CORS issues
 const API_BASE_URL = import.meta.env.MODE === 'development' ? '/v2' : 'https://api.emov.com.pk/v2';
 
+// Create axios instance with timeout and retry configuration
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000, // 10 second timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // Cache configuration
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const apiCache = new Map();
@@ -14,14 +23,8 @@ const getCacheKey = (url, params = {}) => {
 };
 
 const getCachedData = (key) => {
-  const cached = apiCache.get(key);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
-  if (cached) {
-    apiCache.delete(key); // Remove expired cache
-  }
-  return null;
+  // COMPLETELY DISABLE CACHING - Force fresh API calls always
+    return null;
 };
 
 const setCachedData = (key, data) => {
@@ -45,6 +48,8 @@ const clearCache = (pattern = null) => {
   }
 };
 
+export { clearCache };
+
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -61,6 +66,7 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   async (config) => {
+        
     // Get token from localStorage or sessionStorage
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     
@@ -76,7 +82,7 @@ api.interceptors.request.use(
       
       if (isVehicleFilterRequest || isVehicleModelsRequest || isFeaturedVehiclesRequest || isAdsRequest) {
         config.headers['X-PLATFORM'] = 'WEB';
-      }
+              }
     }
 
     // Handle FormData - let browser set Content-Type with boundary
@@ -87,6 +93,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('[API] Request error:', error);
     return Promise.reject(error);
   }
 );

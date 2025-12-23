@@ -169,11 +169,15 @@ const MyAds = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-primary flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emov-purple"></div>
-          <p className="mt-4 text-text-secondary">Loading your ads...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-secondary">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emov-purple"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <FaCar className="w-6 h-6 text-emov-purple" />
+          </div>
         </div>
+        <p className="mt-6 text-text-primary font-medium text-lg">Loading ads...</p>
+        <p className="mt-2 text-text-secondary text-sm">Please wait a moment</p>
       </div>
     );
   }
@@ -218,14 +222,8 @@ const MyAds = () => {
     
 
       {/* Main Content */}
-      <div className="flex justify-end mb-6  px-4 sm:px-6 lg:px-8 mt-10 w-full">
-        <button
-          onClick={() => navigate('/my-ads-list')}
-          className="inline-flex items-center px-6 py-3 text-black rounded-lg font-medium hover:opacity-90 transition-opacity shadow-lg hover:shadow-xl"
-          style={{ backgroundColor: 'var(--emov-green)' }}
-        >
-          Create New Ad
-        </button>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-text-primary">My Ads</h2>
       </div>  
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {ads.length === 0 ? (
@@ -306,7 +304,7 @@ const MyAds = () => {
 
             {/* Pagination */}
             {pagination.totalPages > 1 && (
-              <div className="flex justify-center items-center space-x-2">
+              <div className="flex justify-center items-center space-x-2 pb-20 sm:pb-0">
                 <button
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}

@@ -1,5 +1,6 @@
   import React, { useState, useEffect } from 'react';
   import { useParams, useNavigate, useLocation } from 'react-router-dom';
+  import { FaCar } from 'react-icons/fa';
   import apiService from '../services/Api';
   import { useChat } from '../contexts/ChatContext';
   import { toast } from 'react-toastify';
@@ -19,58 +20,28 @@
     const { startNewChat } = useChat();
 
     const [expandedSections, setExpandedSections] = useState({
-  serviceHistory: false,
-  powertrainSpecs: false,
-  vehicleCondition: false,
-  functionalBodytype: false,
-  otherDetails: false
-});
+    serviceHistory: false,
+    powertrainSpecs: false,
+  });
 
-    // Fetch filter data to get body type names
-    useEffect(() => {
-      const fromMyAds = location.state?.from === 'my-ads';
-
-      if (fromMyAds) {
-        try {
-          const storedBodyTypes = JSON.parse(localStorage.getItem('vehicleBodyTypes') || '[]');
-          if (Array.isArray(storedBodyTypes) && storedBodyTypes.length > 0) {
-            setFilterData({ body_type: storedBodyTypes });
-          }
-        } catch (e) {
-          console.error('Error loading body types from localStorage:', e);
-        }
-        return;
+  const getBodyTypeName = (bodyTypeId) => {
+    if (!bodyTypeId && bodyTypeId !== 0) return 'N/A';
+    const id = String(bodyTypeId);
+    const bodyTypesData = ad?.body_type || ad?.bodyType || [];
+    
+    // Debug logging
+    console.log('BodyTypeID:', bodyTypeId);
+    console.log('Ad body types:', bodyTypesData);
+    
+    if (bodyTypesData.length > 0) {
+      const bodyType = bodyTypesData.find(bt => 
+        String(bt.BodyTypeID || bt.id) === id
+      );
+      console.log('Found body type:', bodyType);
+      if (bodyType) {
+        return bodyType?.BodyTypeName || bodyType?.name || 'N/A';
       }
-
-      const fetchFilterData = async () => {
-        try {
-          const response = await apiService.vehicles.getFilters();
-          setFilterData(response);
-        } catch (err) {
-          console.error('Error fetching filter data:', err);
-        }
-      };
-      fetchFilterData();
-    }, [location.state]);
-
-    const getBodyTypeName = (bodyTypeId) => {
-      if (!bodyTypeId && bodyTypeId !== 0) return 'N/A';
-      const id = String(bodyTypeId);
-      const bodyTypesData = filterData?.body_type || filterData?.bodyType || [];
-      
-      // Debug logging
-      console.log('BodyTypeID:', bodyTypeId);
-      console.log('FilterData body types:', bodyTypesData);
-      
-      if (bodyTypesData.length > 0) {
-        const bodyType = bodyTypesData.find(bt => 
-          String(bt.BodyTypeID || bt.id) === id
-        );
-        console.log('Found body type:', bodyType);
-        if (bodyType) {
-          return bodyType?.BodyTypeName || bodyType?.name || 'N/A';
-        }
-      }
+    }
       
       // Fallback: try localStorage
       const storedBodyTypes = JSON.parse(localStorage.getItem('vehicleBodyTypes') || '[]');
@@ -174,7 +145,11 @@
         const newChat = await startNewChat(
           ad.AdID, 
           `Hi, I'm interested in your ${ad.VehicleName}`,
-          sellerUserId
+          sellerUserId,
+          {
+            name: sellerName,
+            image: sellerImage
+          }
         );
         
         console.log('New chat created:', newChat);
@@ -262,11 +237,15 @@
 
     if (loading) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-300">Loading ad details...</p>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-bg-secondary">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emov-purple"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <FaCar className="w-6 h-6 text-emov-purple" />
+            </div>
           </div>
+          <p className="mt-6 text-text-primary font-medium text-lg">Loading vehicles...</p>
+          <p className="mt-2 text-text-secondary text-sm">Please wait a moment</p>
         </div>
       );
     }
@@ -1057,7 +1036,11 @@
         const newChat = await startNewChat(
           ad.AdID, 
           `Hi, I'm interested in your ${ad.VehicleName}`,
-          sellerUserId
+          sellerUserId,
+          {
+            name: sellerName,
+            image: sellerImage
+          }
         );
         
         console.log('New chat created:', newChat);
@@ -1133,6 +1116,22 @@
             </div>
           </div>
         </div>
+
+      {/* Chat Loading Overlay */}
+      {chatLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center space-y-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-emov-purple/20 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-emov-purple rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p className="text-lg font-medium text-gray-900 dark:text-white">
+              Sending message...
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Please wait while we connect you with the seller</p>
+          </div>
+        </div>
+      )}
       </div>
     );
   };

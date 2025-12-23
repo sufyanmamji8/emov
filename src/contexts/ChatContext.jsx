@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import chatService from '../services/chatService';
+import chatService, { ChatApiCache } from '../services/chatService';
 
 const ChatContext = createContext();
 
@@ -273,7 +273,7 @@ export const ChatProvider = ({ children }) => {
   };
 
   // Load all chats for the current user
-  const loadChats = useCallback(async () => {
+  const loadChats = useCallback(async (forceRefresh = false) => {
     if (!currentUserId) {
       return [];
     }
@@ -282,7 +282,7 @@ export const ChatProvider = ({ children }) => {
       setLoading(true);
       setError(null);
       
-      const data = await chatService.getChats(currentUserId);
+      const data = await chatService.getChats(currentUserId, forceRefresh);
       const transformedChats = transformChatsData(data);
       setChats(transformedChats);
       setHasLoaded(true);
@@ -302,22 +302,22 @@ export const ChatProvider = ({ children }) => {
   }, [currentUserId]);
 
   // Start a new chat
-  const startNewChat = async (adId, message, user2Id) => {
+  const startNewChat = async (adId, message, user2Id, sellerInfo = {}) => {
     try {
       setLoading(true);
       setError(null);
       
       const newChat = await chatService.startConversation(adId, message, user2Id);
       
-      // Create temporary chat for immediate UI response
+      // Create temporary chat for immediate UI response using seller information
       const tempChat = {
         _id: newChat.conversation_id,
         conversation_id: newChat.conversation_id,
         otherUser: {
           id: user2Id,
-          name: 'Seller',
-          avatar: '/default-avatar.png',
-          firstLetter: 'S'
+          name: sellerInfo.name || 'Seller',
+          avatar: sellerInfo.image || '/default-avatar.png',
+          firstLetter: sellerInfo.name ? sellerInfo.name.charAt(0).toUpperCase() : 'S'
         },
         lastMessage: {
           content: message,
@@ -671,33 +671,46 @@ export const ChatProvider = ({ children }) => {
     }
   }, [loadMessages, markMessagesAsRead]);
 
-  // Load chats when user ID changes (disabled here; chat screens load explicitly)
-  useEffect(() => {
-    if (false && currentUserId && !hasLoaded) {
-      loadChats();
-    }
-  }, [currentUserId, hasLoaded, loadChats]);
+// Load chats when user ID changes (disabled here; chat screens load explicitly)
+useEffect(() => {
+  if (currentUserId && !hasLoaded) {
+    loadChats();
+  }
+}, [currentUserId, hasLoaded]);
 
-  // Delete a conversation
-  const deleteConversation = async (chatId) => {
-    try {
-      await chatService.deleteConversation(chatId);
-      
-      // Clear from cache
-      messageCache.delete(chatId);
-      
-      setChats(prev => prev.filter(chat => chat._id !== chatId));
-      if (currentChat?._id === chatId) {
-        setCurrentChat(null);
-        setMessages([]);
-      }
-    } catch (err) {
-      console.error('Error deleting conversation:', err);
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to delete conversation';
-      setError(errorMsg);
-      throw err;
+// Delete a conversation
+const deleteConversation = async (chatId) => {
+  try {
+    await chatService.deleteConversation(chatId);
+    
+    // Clear from cache - both message cache and chats cache
+    messageCache.delete(chatId);
+    
+    // Clear the service cache completely
+    const userId = currentUserId;
+    if (userId) {
+      chatService.cache.clearAll();
     }
-  };
+    
+    // Remove from UI state immediately
+    setChats(prev => prev.filter(chat => chat._id !== chatId && chat.conversation_id !== chatId));
+    if (currentChat?._id === chatId || currentChat?.conversation_id === chatId) {
+      setCurrentChat(null);
+      setMessages([]);
+    }
+    
+    // Force reload chats from server after deletion with forceRefresh
+    setTimeout(() => {
+      loadChats(true); // Pass forceRefresh=true to bypass cache
+    }, 500);
+    
+  } catch (err) {
+    console.error('Error deleting conversation:', err);
+    const errorMsg = err.response?.data?.message || err.message || 'Failed to delete conversation';
+    setError(errorMsg);
+    throw err;
+  }
+};
 
   // Optional: Clear cache function (can be called when needed)
   const clearCache = useCallback(() => {

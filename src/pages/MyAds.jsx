@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaCamera, FaMicrophone, FaUpload, FaCheck, FaChevronDown, FaChevronUp, FaCaretDown, FaMoon, FaSun, FaStop, FaCircle, FaTimes } from 'react-icons/fa';
-import apiService from '../services/Api';
+import { FaArrowLeft, FaTrash, FaCar, FaCalendar, FaMapMarkerAlt, FaMoneyBillWave, FaCaretDown, FaMoon, FaSun } from 'react-icons/fa';
+import apiService, { clearCache } from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useTheme } from '../context/ThemeContext';
@@ -350,6 +350,14 @@ useEffect(() => {
   }, []);
 
   const handleLogout = () => {
+    // Clear API cache to prevent showing old data
+    clearCache();
+    
+    // Clear chat cache as well
+    if (typeof window !== 'undefined' && window.clearChatCache) {
+      window.clearChatCache();
+    }
+    
     localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
@@ -2311,6 +2319,16 @@ const renderPreview = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Navbar */}
+      <Navbar 
+        isDark={theme === 'dark'}
+        toggleTheme={toggleTheme}
+        language={language}
+        setLanguage={setLanguage}
+        userProfile={userProfile}
+        handleLogout={handleLogout}
+      />
+      
           {/* Header */}
       <div className="bg-bg-secondary border-b border-border-primary sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

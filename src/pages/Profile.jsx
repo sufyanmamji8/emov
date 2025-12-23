@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from '../utils/toast.jsx';
 import authApi from '../services/authApi';
@@ -15,7 +15,8 @@ import {
   FaTimes,
   FaCheck,
   FaExclamationTriangle,
-  FaLock
+  FaLock,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 const Profile = () => {
@@ -34,6 +35,8 @@ const Profile = () => {
   const [fieldValue, setFieldValue] = useState('');
   const [avatarError, setAvatarError] = useState(false);
   const [phoneErrors, setPhoneErrors] = useState({ mobileNo: '', secondaryMobileNo: '' });
+  const [isUpdating, setIsUpdating] = useState(false); // Loader state for profile updates
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false); // Specific loader for avatar
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -60,6 +63,9 @@ const Profile = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showDeletePassword, setShowDeletePassword] = useState(false);
 
+  // Date picker state
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
   const showToast = (message, type = 'success') => {
     if (type === 'success') {
       toast.success(message);
@@ -72,9 +78,11 @@ const Profile = () => {
     }
   };
 
+  // Phone number validation functions
   const normalizeMobileNumber = (value) => {
     if (!value) return '';
-    return value.trim();
+    // Remove all non-digit characters except plus sign
+    return value.replace(/[^\d+]/g, '');
   };
 
   const validateMobileNumber = (value, { required } = { required: true }) => {
@@ -84,9 +92,36 @@ const Profile = () => {
     }
     if (!normalized) return '';
 
+    // Remove all non-digit characters for length check
     const digits = normalized.replace(/[^\d]/g, '');
-    if (digits.length < 10 || digits.length > 15) {
-      return 'Please enter a valid mobile number';
+    
+    // Check for minimum length (excluding country code)
+    if (digits.length < 10) {
+      return 'Phone number must have at least 10 digits';
+    }
+    
+    // Check for maximum length
+    if (digits.length > 15) {
+      return 'Phone number cannot exceed 15 digits';
+    }
+
+    // Pakistan specific validation if number starts with 92
+    if (normalized.startsWith('+92') || normalized.startsWith('92')) {
+      const pakDigits = normalized.replace(/[^\d]/g, '');
+      if (pakDigits.length !== 12) {
+        return 'Pakistan numbers must be 12 digits (including 92 country code)';
+      }
+      if (!/^92[3-9]\d{9}$/.test(pakDigits)) {
+        return 'Pakistan mobile numbers must start with 92 followed by 3-9';
+      }
+    }
+
+    // US/Canada specific validation
+    if (normalized.startsWith('+1') || normalized.startsWith('1')) {
+      const usDigits = normalized.replace(/[^\d]/g, '');
+      if (usDigits.length !== 11) {
+        return 'US/Canada numbers must be 11 digits (including 1 country code)';
+      }
     }
 
     return '';
@@ -103,38 +138,48 @@ const Profile = () => {
   }), [user]);
 
   const startEdit = (fieldKey, currentValue) => {
+    if (isUpdating) return; // Prevent editing while updating
     setEditingField(fieldKey);
     setFieldValue(currentValue || '');
+    
+    // Clear any existing errors
+    if (fieldKey === 'mobileNo' || fieldKey === 'secondaryMobileNo') {
+      setPhoneErrors(prev => ({ ...prev, [fieldKey]: '' }));
+    }
   };
 
   const cancelEdit = () => {
     setEditingField(null);
     setFieldValue('');
+    // Clear phone errors when canceling
+    setPhoneErrors({ mobileNo: '', secondaryMobileNo: '' });
   };
 
   const saveField = async () => {
-    if (!editingField) return;
+    if (!editingField || isUpdating) return;
 
     let newValue = fieldValue;
+    let validationError = '';
 
+    // Validate based on field type
     if (editingField === 'mobileNo') {
-      const errorMessage = validateMobileNumber(fieldValue, { required: true });
-      if (errorMessage) {
-        setPhoneErrors((prev) => ({ ...prev, mobileNo: errorMessage }));
-        showToast(errorMessage, 'error');
+      validationError = validateMobileNumber(fieldValue, { required: true });
+      if (validationError) {
+        setPhoneErrors((prev) => ({ ...prev, mobileNo: validationError }));
+        showToast(validationError, 'error');
         return;
       }
       setPhoneErrors((prev) => ({ ...prev, mobileNo: '' }));
       newValue = normalizeMobileNumber(fieldValue);
     } else if (editingField === 'secondaryMobileNo') {
-      const errorMessage = validateMobileNumber(fieldValue, { required: false });
-      if (errorMessage) {
-        setPhoneErrors((prev) => ({ ...prev, secondaryMobileNo: errorMessage }));
-        showToast(errorMessage, 'error');
+      validationError = validateMobileNumber(fieldValue, { required: false });
+      if (validationError) {
+        setPhoneErrors((prev) => ({ ...prev, secondaryMobileNo: validationError }));
+        showToast(validationError, 'error');
         return;
       }
       setPhoneErrors((prev) => ({ ...prev, secondaryMobileNo: '' }));
-      newValue = normalizeMobileNumber(fieldValue);
+      newValue = fieldValue ? normalizeMobileNumber(fieldValue) : '';
     } else if (editingField === 'gender') {
       const trimmed = (fieldValue || '').trim();
       if (!trimmed) {
@@ -143,30 +188,40 @@ const Profile = () => {
       }
       newValue = trimmed;
     } else if (editingField === 'dateOfBirth') {
-      // Validate date format YYYY-MM-DD
       const trimmed = (fieldValue || '').trim();
       if (!trimmed) {
         showToast('Please enter a date of birth', 'error');
         return;
       }
-      // Check if it matches YYYY-MM-DD format
+      
       const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
       if (!dateRegex.test(trimmed)) {
         showToast('Please enter date in YYYY-MM-DD format (e.g., 1990-01-15)', 'error');
         return;
       }
-      // Validate the date is valid
+      
       const date = new Date(trimmed);
       if (isNaN(date.getTime())) {
         showToast('Please enter a valid date', 'error');
         return;
       }
+      
+      // Check if date is in the future
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (date > today) {
+        showToast('Date of birth cannot be in the future', 'error');
+        return;
+      }
+      
       newValue = trimmed;
     }
 
     const updated = { ...user, [editingField]: newValue };
 
     try {
+      setIsUpdating(true); // Show loader
+
       const payload = {};
       if (editingField === 'name') {
         payload.name = newValue;
@@ -201,7 +256,9 @@ const Profile = () => {
       } catch {
         // ignore storage errors
       }
+      showToast('Profile updated locally. Sync with server failed.', 'warning');
     } finally {
+      setIsUpdating(false); // Hide loader
       setEditingField(null);
       setFieldValue('');
     }
@@ -224,10 +281,24 @@ const Profile = () => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
 
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      showToast('Please select a valid image file (JPEG, PNG, GIF)', 'error');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size should be less than 5MB', 'error');
+      return;
+    }
+
     const formData = new FormData();
     formData.append('image', file);
 
     try {
+      setIsSavingAvatar(true);
       setAvatarError(false);
 
       const uploadResponse = await authApi.uploadImage(formData);
@@ -271,6 +342,8 @@ const Profile = () => {
       setAvatarError(true);
       console.error('Error updating profile picture:', error);
       showToast('Failed to update profile picture', 'error');
+    } finally {
+      setIsSavingAvatar(false);
     }
   };
 
@@ -297,16 +370,13 @@ const Profile = () => {
       setDeleteLoading(true);
       setDeletePasswordError('');
 
-      // Call delete account API with password
       await authApi.deleteAccount({ password: deletePassword });
 
-      // Clear user data and redirect to login on successful deletion
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       sessionStorage.removeItem('token');
       showToast('Your account has been successfully deleted.', 'success');
       
-      // Redirect to home page after a short delay
       setTimeout(() => {
         window.location.href = '/';
       }, 1500);
@@ -423,6 +493,24 @@ const Profile = () => {
     }
   };
 
+  const formatDateForDisplay = (dateStr) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  };
+
+  const handleDatePickerChange = (e) => {
+    const value = e.target.value;
+    setFieldValue(value);
+    setShowDatePicker(false);
+  };
+
+  const getTodayDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   const fields = [
     { key: 'name', label: 'Name', editable: true },
     { key: 'email', label: 'Email', editable: false },
@@ -442,20 +530,44 @@ const Profile = () => {
         .animate-fade-in {
           animation: fade-in 0.3s ease-in-out forwards;
         }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
       `}</style>
+
+      {/* Loading Overlay for Profile Updates */}
+      {(isUpdating || isSavingAvatar) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center space-y-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-emov-purple/20 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-emov-purple rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p className="text-lg font-medium text-gray-900 dark:text-white">
+              {isSavingAvatar ? 'Updating Profile Picture...' : 'Updating Profile...'}
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Please wait while we save your changes</p>
+          </div>
+        </div>
+      )}
 
       {/* Compact Header with centered heading */}
       <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center pt-4 pb-4 sm:pt-6 sm:pb-6 border-b border-border-primary">
         <button
           onClick={() => navigate(-1)}
-          className="text-gray-700 dark:text-gray-300 hover:text-emov-purple dark:hover:text-emov-purple transition-colors p-2"
+          className="text-gray-700 dark:text-gray-300 hover:text-emov-purple dark:hover:text-emov-purple transition-colors p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isUpdating || isSavingAvatar}
         >
           <FaArrowLeft className="w-5 h-5" />
         </button>
         <div className="absolute left-1/2 transform -translate-x-1/2">
           <h1 className="text-xl font-semibold text-gray-900 dark:text-white">My Profile</h1>
         </div>
-        <div className="w-9"></div> {/* Spacer to balance the layout */}
+        <div className="w-9"></div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -464,7 +576,7 @@ const Profile = () => {
           <div className="lg:col-span-1">
             <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex flex-col items-center">
-                {/* Avatar with FIXED Edit Icon */}
+                {/* Avatar with Edit Icon */}
                 <div className="relative w-36 h-36 mb-6">
                   <div className="w-36 h-36 rounded-full overflow-hidden bg-gradient-to-br from-emov-purple/20 to-emov-green/20 flex items-center justify-center ring-4 ring-white dark:ring-gray-800 shadow-lg">
                     {getAvatarSrc() ? (
@@ -483,21 +595,32 @@ const Profile = () => {
                         {getAvatarLetter()}
                       </span>
                     )}
+                    {isSavingAvatar && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* Edit Icon - Now Smaller and Better Positioned */}
                   <input
                     id="profile-avatar-input"
                     type="file"
                     accept="image/*"
                     className="hidden"
                     onChange={handleAvatarChange}
+                    disabled={isUpdating || isSavingAvatar}
                   />
                   <label
                     htmlFor="profile-avatar-input"
-                    className="absolute bottom-1 right-1 w-7 h-7 bg-emov-purple rounded-full flex items-center justify-center cursor-pointer shadow-lg border-2 border-white dark:border-gray-800 hover:bg-emov-purple/90 transition-all z-50"
+                    className={`absolute bottom-1 right-1 w-7 h-7 bg-emov-purple rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-gray-800 transition-all z-50 ${
+                      isUpdating || isSavingAvatar ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-emov-purple/90'
+                    }`}
                   >
-                    <FaEdit className="w-3 h-3 text-white" />
+                    {isSavingAvatar ? (
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <FaEdit className="w-3 h-3 text-white" />
+                    )}
                   </label>
                 </div>
 
@@ -511,21 +634,24 @@ const Profile = () => {
                 <div className="w-full space-y-4 mt-8">
                   <button
                     onClick={() => setShowPasswordModal(true)}
-                    className="w-full px-4 py-3 text-sm font-medium rounded-lg bg-emov-purple text-white hover:bg-emov-purple/90 transition-colors flex items-center justify-center space-x-2"
+                    className="w-full px-4 py-3 text-sm font-medium rounded-lg bg-emov-purple text-white hover:bg-emov-purple/90 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isUpdating || isSavingAvatar}
                   >
                     <FaKey className="w-4 h-4" />
                     <span>Change Password</span>
                   </button>
                   <button
                     onClick={() => navigate('/service')}
-                    className="w-full px-4 py-3 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center justify-center space-x-2"
+                    className="w-full px-4 py-3 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isUpdating || isSavingAvatar}
                   >
                     <FaHeadset className="w-4 h-4" />
                     <span>Contact Support</span>
                   </button>
                   <button
                     onClick={openDeleteModal}
-                    className="w-full px-4 py-3 text-sm font-medium rounded-lg border border-red-500 dark:border-red-700 text-white bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 transition-colors flex items-center justify-center space-x-2 mt-4"
+                    className="w-full px-4 py-3 text-sm font-medium rounded-lg border border-red-500 dark:border-red-700 text-white bg-red-500 hover:bg-red-600 dark:bg-red-700 dark:hover:bg-red-800 transition-colors flex items-center justify-center space-x-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={isUpdating || isSavingAvatar}
                   >
                     <FaTrashAlt className="w-4 h-4" />
                     <span>Delete Account</span>
@@ -547,6 +673,8 @@ const Profile = () => {
                 {fields.map((field) => {
                   const value = displayUser[field.key] || '';
                   const isEditing = editingField === field.key;
+                  const isDisabled = isUpdating || isSavingAvatar;
+                  
                   return (
                     <div
                       key={field.key}
@@ -559,9 +687,10 @@ const Profile = () => {
                         {isEditing ? (
                           field.key === 'gender' ? (
                             <select
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent"
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                               value={fieldValue}
                               onChange={(e) => setFieldValue(e.target.value)}
+                              disabled={isDisabled}
                             >
                               <option value="">Select gender</option>
                               <option value="Male">Male</option>
@@ -569,42 +698,51 @@ const Profile = () => {
                               <option value="Other">Other</option>
                             </select>
                           ) : field.key === 'mobileNo' || field.key === 'secondaryMobileNo' ? (
-                            <CustomPhoneInput
-                              name={field.key}
-                              value={fieldValue}
-                              onChange={(val) => {
-                                setFieldValue(val || '');
-                                setPhoneErrors((prev) => ({ ...prev, [field.key]: '' }));
-                              }}
-                              defaultCountry="PK"
-                              label={field.label}
-                              required={field.key === 'mobileNo'}
-                              error={phoneErrors[field.key]}
-                            />
+                            <div className="space-y-1">
+                              <CustomPhoneInput
+                                name={field.key}
+                                value={fieldValue}
+                                onChange={(val) => {
+                                  setFieldValue(val || '');
+                                  setPhoneErrors((prev) => ({ ...prev, [field.key]: '' }));
+                                }}
+                                defaultCountry="PK"
+                                label={field.label}
+                                required={field.key === 'mobileNo'}
+                                error={phoneErrors[field.key]}
+                                disabled={isDisabled}
+                              />
+                              {phoneErrors[field.key] && (
+                                <p className="mt-1 text-xs text-red-500">{phoneErrors[field.key]}</p>
+                              )}
+                            </div>
                           ) : field.key === 'dateOfBirth' ? (
-                            <div>
+                            <div className="relative">
                               <input
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent"
-                                type="text"
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="date"
                                 value={fieldValue}
                                 onChange={(e) => setFieldValue(e.target.value)}
-                                placeholder="YYYY-MM-DD"
+                                max={getTodayDate()}
+                                disabled={isDisabled}
                               />
+                              <FaCalendarAlt className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none" />
                               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                Format: YYYY-MM-DD (e.g., 1990-01-15)
+                                Format: YYYY-MM-DD
                               </p>
                             </div>
                           ) : (
                             <input
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent"
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                               type="text"
                               value={fieldValue}
                               onChange={(e) => setFieldValue(e.target.value)}
+                              disabled={isDisabled}
                             />
                           )
                         ) : (
                           <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                            {value || 'Not provided'}
+                            {field.key === 'dateOfBirth' ? formatDateForDisplay(value) : value || 'Not provided'}
                           </p>
                         )}
                       </div>
@@ -615,14 +753,20 @@ const Profile = () => {
                             <div className="flex space-x-3">
                               <button
                                 onClick={saveField}
-                                className="px-5 py-2.5 text-sm font-medium rounded-lg bg-emov-green text-gray-900 hover:bg-emov-green/90 transition-colors flex items-center space-x-2"
+                                className="px-5 py-2.5 text-sm font-medium rounded-lg bg-emov-green text-gray-900 hover:bg-emov-green/90 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isDisabled}
                               >
-                                <FaCheck className="w-4 h-4" />
-                                <span>Save</span>
+                                {isUpdating ? (
+                                  <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                ) : (
+                                  <FaCheck className="w-4 h-4" />
+                                )}
+                                <span>{isUpdating ? 'Saving...' : 'Save'}</span>
                               </button>
                               <button
                                 onClick={cancelEdit}
-                                className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                                className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={isDisabled}
                               >
                                 <FaTimes className="w-4 h-4" />
                                 <span>Cancel</span>
@@ -631,7 +775,8 @@ const Profile = () => {
                           ) : (
                             <button
                               onClick={() => startEdit(field.key, value)}
-                              className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                              className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={isDisabled}
                             >
                               <FaEdit className="w-4 h-4" />
                               <span>Edit</span>
@@ -659,7 +804,8 @@ const Profile = () => {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h2>
                 <button
                   onClick={() => setShowPasswordModal(false)}
-                  className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={passwordLoading || isUpdating || isSavingAvatar}
                 >
                   <FaTimes className="w-5 h-5" />
                 </button>
@@ -680,11 +826,13 @@ const Profile = () => {
                       passwordErrors.oldPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     placeholder="Enter your current password"
+                    disabled={passwordLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowOldPassword(!showOldPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none disabled:opacity-50"
+                    disabled={passwordLoading}
                   >
                     {showOldPassword ? (
                       <FaEyeSlash className="w-5 h-5" />
@@ -710,11 +858,13 @@ const Profile = () => {
                       passwordErrors.newPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     placeholder="Enter new password"
+                    disabled={passwordLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPassword(!showNewPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none disabled:opacity-50"
+                    disabled={passwordLoading}
                   >
                     {showNewPassword ? (
                       <FaEyeSlash className="w-5 h-5" />
@@ -740,11 +890,13 @@ const Profile = () => {
                       passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     placeholder="Confirm new password"
+                    disabled={passwordLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none disabled:opacity-50"
+                    disabled={passwordLoading}
                   >
                     {showConfirmPassword ? (
                       <FaEyeSlash className="w-5 h-5" />
@@ -767,7 +919,7 @@ const Profile = () => {
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
-                  className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                  className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   onClick={() => setShowPasswordModal(false)}
                   disabled={passwordLoading}
                 >
@@ -809,7 +961,8 @@ const Profile = () => {
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">Delete Account</h2>
                 <button
                   onClick={closeDeleteModal}
-                  className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={deleteLoading || isUpdating || isSavingAvatar}
                 >
                   <FaTimes className="w-5 h-5" />
                 </button>
@@ -845,11 +998,13 @@ const Profile = () => {
                       deletePasswordError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
                     placeholder="Enter your password"
+                    disabled={deleteLoading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowDeletePassword(!showDeletePassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none disabled:opacity-50"
+                    disabled={deleteLoading}
                   >
                     {showDeletePassword ? (
                       <FaEyeSlash className="w-5 h-5" />
@@ -866,13 +1021,14 @@ const Profile = () => {
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"
-                  className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                  className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center space-x-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   onClick={closeDeleteModal}
                   disabled={deleteLoading}
                 >
                   <FaTimes className="w-4 h-4" />
                   <span>Cancel</span>
                 </button>
+                
                 <button
                   type="button"
                   onClick={handleDeleteAccount}

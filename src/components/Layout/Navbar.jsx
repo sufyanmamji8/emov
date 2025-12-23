@@ -3,6 +3,28 @@ import { FaSun, FaMoon, FaGlobe, FaCaretDown, FaSignOutAlt, FaBars, FaTimes, FaC
 import { useTheme } from '../../hooks/useTheme';
 import axios from 'axios';
 
+// Image URL processing function
+const getImageUrl = (imagePath, isAvatar = false) => {
+  if (!imagePath) {
+    return isAvatar ? '/default-avatar.png' : null;
+  }
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http')) {
+    return imagePath;
+  }
+  
+  // Handle avatar images (like profile photos)
+  if (isAvatar) {
+    const avatarUrl = `https://api.emov.com.pk/image/${imagePath}`;
+    return avatarUrl;
+  }
+  
+  // For regular images, use the standard format
+  const imageUrl = `https://api.emov.com.pk/image/${imagePath}`;
+  return imageUrl;
+};
+
 function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handleLogout }) {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -155,7 +177,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               >
                 {userProfile?.picture ? (
                   <img 
-                    src={userProfile.picture} 
+                    src={getImageUrl(userProfile.picture, true)} 
                     alt={userProfile?.username || 'User'} 
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -195,7 +217,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   }`}>
                     {userProfile?.picture ? (
                       <img 
-                        src={userProfile.picture} 
+                        src={getImageUrl(userProfile.picture, true)} 
                         alt={userProfile?.username || 'User'} 
                         className="w-full h-full object-cover"
                         onError={(e) => {

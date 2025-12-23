@@ -63,8 +63,8 @@ export default defineConfig({
     },
     // Enable detailed logging
     watch: {
-      usePolling: true,
-      interval: 100
+      usePolling: false, // Disable polling for better performance
+      interval: 1000 // If needed, use 1 second instead of 100ms
     }
   },
 });

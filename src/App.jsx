@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { FaCar } from 'react-icons/fa';
 import { ToastContainer } from './utils/toast.jsx';
 import toast from './utils/toast.jsx';
 import { ThemeProvider } from './context/ThemeContext';
@@ -76,30 +77,31 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <svg className="animate-spin h-12 w-12 text-emov-purple" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-secondary">
+        <div className="relative">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emov-purple"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            <FaCar className="w-6 h-6 text-emov-purple" />
+          </div>
         </div>
+        <p className="mt-6 text-text-primary font-medium text-lg">Loading vehicles...</p>
+        <p className="mt-2 text-text-secondary text-sm">Please wait a moment</p>
       </div>
     );
   }
 
   return (
     <ThemeProvider>
-      <ChatProvider>
-        <Router>
+      <Router>
+        <ChatProvider>
           <AppRoutes 
             isAuthenticated={isAuthenticated}
             handleLogin={handleLogin}
             handleLogout={handleLogout}
           />
           <ToastContainer />
-        </Router>
-      </ChatProvider>
+        </ChatProvider>
+      </Router>
     </ThemeProvider>
   );
 }
@@ -142,7 +144,7 @@ function AppRoutes({ isAuthenticated, handleLogin, handleLogout }) {
         <Route path="/chats" element={isAuthenticated ? <Chats /> : <Navigate to="/login" />} />
         <Route path="/my-ads" element={isAuthenticated ? <Ads /> : <Navigate to="/login" />} />
         <Route path="/my-ads-list" element={isAuthenticated ? <MyAds /> : <Navigate to="/login" />} />
-        <Route path="/ad/:adId" element={<AdDetail />} />
+        <Route path="/ad/:adId" element={isAuthenticated ? <AdDetail /> : <Navigate to="/login" />} />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </div>

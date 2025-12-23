@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaCaretDown, FaSun, FaMoon, FaPaperPlane, FaImage, FaTimes, FaSearch, FaMicrophone, FaStop, FaCircle } from 'react-icons/fa';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useTheme } from '../context/ThemeContext';
@@ -222,6 +223,7 @@ export default function Chats() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [selectedAudio, setSelectedAudio] = useState(null);
+  const [selectedAudioFile, setSelectedAudioFile] = useState(null);
   const audioInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
@@ -246,6 +248,7 @@ export default function Chats() {
   const [imageLoadingStates, setImageLoadingStates] = useState({});
   const [isRecording, setIsRecording] = useState(false);
   const [showRecordingUI, setShowRecordingUI] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
   const recordingInterval = useRef(null);
 
   // Handle deleting a conversation
@@ -1228,7 +1231,7 @@ const formatMessageTime = (dateString) => {
       {/* Navbar */}
       <div className="flex-shrink-0 relative">
         <Navbar 
-          theme={theme}
+          isDark={theme === 'dark'}
           toggleTheme={toggleTheme}
           language={language}
           setLanguage={setLanguage}
@@ -1592,7 +1595,7 @@ const formatMessageTime = (dateString) => {
                   />
                 </button>
 
-                {/* Audio recording button */}
+                {/* Audio recording/upload button */}
                 <div className="relative">
                   <button
                     type="button"
@@ -1601,6 +1604,11 @@ const formatMessageTime = (dateString) => {
                       ? 'text-red-500 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50' 
                       : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                     disabled={sendingMessage}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      audioInputRef.current?.click();
+                    }}
+                    title="Left click to record, right click to upload audio file"
                   >
                     {isRecording ? <FaStop className="w-5 h-5" /> : <FaMicrophone className="w-5 h-5" />}
                   </button>
@@ -1799,6 +1807,22 @@ const formatMessageTime = (dateString) => {
         </div>
         )}
 
+      {/* Message Sending Loader Overlay */}
+      {sendingMessage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center space-y-4">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 border-4 border-emov-purple/20 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-emov-purple rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p className="text-lg font-medium text-gray-900 dark:text-white">
+              Sending message...
+            </p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Please wait while we deliver your message</p>
+          </div>
+        </div>
+      )}
+      
       {!currentChat && <MobileBottomNav activePage="chats" />}
     </div>
   );
