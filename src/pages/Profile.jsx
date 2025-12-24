@@ -22,6 +22,8 @@ import {
 const Profile = () => {
   const navigate = useNavigate();
 
+  const MAX_NAME_LENGTH = 50;
+
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('user');
@@ -162,7 +164,18 @@ const Profile = () => {
     let validationError = '';
 
     // Validate based on field type
-    if (editingField === 'mobileNo') {
+    if (editingField === 'name') {
+      const trimmed = (fieldValue || '').trim();
+      if (!trimmed) {
+        showToast('Name is required', 'error');
+        return;
+      }
+      if (trimmed.length > MAX_NAME_LENGTH) {
+        showToast(`Name cannot exceed ${MAX_NAME_LENGTH} characters`, 'error');
+        return;
+      }
+      newValue = trimmed;
+    } else if (editingField === 'mobileNo') {
       validationError = validateMobileNumber(fieldValue, { required: true });
       if (validationError) {
         setPhoneErrors((prev) => ({ ...prev, mobileNo: validationError }));
@@ -539,22 +552,6 @@ const Profile = () => {
         }
       `}</style>
 
-      {/* Loading Overlay for Profile Updates */}
-      {(isUpdating || isSavingAvatar) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center space-y-4">
-            <div className="relative w-16 h-16">
-              <div className="absolute inset-0 border-4 border-emov-purple/20 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-emov-purple rounded-full border-t-transparent animate-spin"></div>
-            </div>
-            <p className="text-lg font-medium text-gray-900 dark:text-white">
-              {isSavingAvatar ? 'Updating Profile Picture...' : 'Updating Profile...'}
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Please wait while we save your changes</p>
-          </div>
-        </div>
-      )}
-
       {/* Compact Header with centered heading */}
       <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center pt-4 pb-4 sm:pt-6 sm:pb-6 border-b border-border-primary">
         <button
@@ -628,7 +625,7 @@ const Profile = () => {
                   {displayUser.name}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 flex items-center mt-1">
-                  <span className="mr-2">Email</span> {displayUser.email || 'No email available'}
+                  <span className="mr-2"></span> {displayUser.email || 'No email available'}
                 </p>
 
                 <div className="w-full space-y-4 mt-8">
@@ -732,13 +729,21 @@ const Profile = () => {
                               </p>
                             </div>
                           ) : (
-                            <input
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-                              type="text"
-                              value={fieldValue}
-                              onChange={(e) => setFieldValue(e.target.value)}
-                              disabled={isDisabled}
-                            />
+                            <div className="relative">
+                              <input
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                                type="text"
+                                value={fieldValue}
+                                onChange={(e) => setFieldValue(e.target.value)}
+                                disabled={isDisabled}
+                                maxLength={field.key === 'name' ? MAX_NAME_LENGTH : undefined}
+                              />
+                              {field.key === 'name' && (
+                                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 dark:text-gray-400">
+                                  {fieldValue.length}/{MAX_NAME_LENGTH}
+                                </div>
+                              )}
+                            </div>
                           )
                         ) : (
                           <p className="text-lg font-medium text-gray-900 dark:text-gray-100">

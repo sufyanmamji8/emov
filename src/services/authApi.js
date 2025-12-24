@@ -205,12 +205,13 @@ const authApi = {
     }
   },
 
-  resetPassword: async (email, newPassword, confirmPassword) => {
+  resetPassword: async (email, newPassword, confirmPassword, otp) => {
     try {
       const response = await api.post('/v2/reset-password', {
         email,
         newPassword,
-        confirmPassword
+        confirmPassword,
+        otp
       });
       return response.data;
     } catch (error) {

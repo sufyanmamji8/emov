@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { FaSun, FaMoon, FaGlobe, FaCaretDown, FaSignOutAlt, FaBars, FaTimes, FaCog, FaUser } from 'react-icons/fa';
 import { useTheme } from '../../hooks/useTheme';
 import axios from 'axios';
@@ -122,34 +123,34 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
 
           {/* Desktop Navigation Links - Now positioned right after logo */}
           <div className="hidden md:flex items-center space-x-8 lg:space-x-12">
-            <a 
-              href="/dashboard" 
+            <Link 
+              to="/dashboard" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               Home
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/dashboard' ? 'w-full' : ''}`}></span>
-            </a>
-            <a 
-              href="/chats" 
+            </Link>
+            <Link 
+              to="/chats" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               Chats
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/chats' ? 'w-full' : ''}`}></span>
-            </a>
-            <a 
-              href="/my-ads" 
+            </Link>
+            <Link 
+              to="/my-ads-list" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               My Ads
-              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads' ? 'w-full' : ''}`}></span>
-            </a>
-            {/* <a 
-              href="/" 
+              <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads-list' ? 'w-full' : ''}`}></span>
+            </Link>
+            {/* <Link 
+              to="/" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
               More
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/' ? 'w-full' : ''}`}></span>
-            </a> */}
+            </Link> */}
           </div>
         </div>
 
@@ -241,20 +242,20 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                 </div>
               </div>
               <div className="p-1 space-y-1">
-                <a
-                  href="/profile"
+                <Link
+                  to="/profile"
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
                 >
                   <FaUser className="w-4 h-4 flex-shrink-0" />
                   <span>My Profile</span>
-                </a>
-                <a
-                  href="/settings"
+                </Link>
+                <Link
+                  to="/settings"
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
                 >
                   <FaCog className="w-4 h-4 flex-shrink-0" />
                   <span>Settings</span>
-                </a>
+                </Link>
                 <button
                   onClick={handleSignOut}
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md text-left"
@@ -312,34 +313,34 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
             <div className="flex-1 overflow-y-auto p-4">
               {/* Navigation Links */}
               <div className="space-y-2 mb-8">
-                <a 
-                  href="/dashboard" 
+                <Link 
+                  to="/dashboard" 
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
                   Home
-                </a>
-                <a 
-                  href="/chats" 
+                </Link>
+                <Link 
+                  to="/chats" 
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
                   Chats
-                </a>
-                <a 
-                  href="/my-ads" 
+                </Link>
+                <Link 
+                  to="/my-ads-list" 
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
                   My Ads
-                </a>
-                 <a 
-                  href="/" 
+                </Link>
+                 <Link 
+                  to="/" 
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
                   More
-                </a>
+                </Link>
               </div>
 
               {/* Mobile Controls */}

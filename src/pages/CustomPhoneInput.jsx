@@ -48,13 +48,15 @@ const CustomPhoneInput = ({
   value = '',
   onChange,
   onCountryChange,
-  error,
-  defaultCountry = "PK",
-  label = "Phone Number",
+  error = '',
+  label,
   required = false,
-  ...props
+  defaultCountry = 'PK',
+  disabled = false,
+  onBlur
 }) => {
   const [currentCountry, setCurrentCountry] = useState(defaultCountry);
+  const [isTouched, setIsTouched] = useState(false); // Renamed variable to isTouched
   const inputRef = useRef(null);
   const isProgrammaticChange = useRef(false);
 
@@ -62,6 +64,11 @@ const CustomPhoneInput = ({
     if (isProgrammaticChange.current) {
       isProgrammaticChange.current = false;
       return;
+    }
+
+    // Mark as touched when user starts typing
+    if (!isTouched && phone) {
+      setIsTouched(true);
     }
 
     if (!phone) {
@@ -243,7 +250,12 @@ const CustomPhoneInput = ({
     }
   };
 
-  const validationError = validatePhoneNumber(value);
+  const validationError = isTouched ? validatePhoneNumber(value) : '';
+
+  const handleBlur = () => {
+    setIsTouched(true);
+    if (onBlur) onBlur();
+  };
 
   return (
     <div className="w-full mb-4">
@@ -268,6 +280,7 @@ const CustomPhoneInput = ({
           inputProps={{
             onBeforeInput: handleBeforeInput,
             onPaste: handlePaste,
+            onBlur: handleBlur,
             inputMode: 'tel',
             autoComplete: 'tel',
             // Add direct event listeners to the input

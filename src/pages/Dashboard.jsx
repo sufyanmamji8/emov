@@ -6,6 +6,7 @@ import { useTheme } from '../hooks/useTheme';
 import apiService, { handleUnauthorized, api } from '../services/Api';
 import Navbar from '../components/Layout/Navbar'; // Import Navbar component from correct path
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
+import Header from '../components/Layout/Header'; // Import Header component for consistency
 import More from './More'; // Import More component
 import { useFilterNavigation } from '../hooks/useFilterNavigation';
 
@@ -133,7 +134,7 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
 
 
 
-function Dashboard() {
+function Dashboard({ handleLogout: appLogout }) {
       const { isDark, toggleTheme } = useTheme();
       const { navigateToFilteredAds } = useFilterNavigation(); 
 
@@ -369,26 +370,19 @@ function Dashboard() {
   // Handle user logout
   const handleLogout = async () => {
     try {
-      // Clear auth data first to prevent any race conditions
-      localStorage.removeItem('token');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('user');
-      localStorage.removeItem('refreshToken');
-      sessionStorage.removeItem('token');
-      
-      // Update the user profile state
-      setUserProfile(null);
-      
-      // Make the logout API call (if needed)
-      try {
-        await apiService.auth.logout();
-      } catch (error) {
-        console.error('Logout API error:', error);
-        // Continue with navigation even if logout API fails
+      // Call the logout function passed from App.jsx
+      if (typeof appLogout === 'function') {
+        appLogout();
+      } else {
+        // Fallback: Clear auth data and navigate
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('refreshToken');
+        sessionStorage.removeItem('token');
+        setUserProfile(null);
+        navigate('/', { replace: true });
       }
-      
-      // Navigate to home page
-      navigate('/', { replace: true });
     } catch (error) {
       console.error('Logout error:', error);
       // Still navigate to home even if there's an error
@@ -463,43 +457,63 @@ function Dashboard() {
   const slideRef = useRef(null);
 
   // Search functions
+  const [searchTimeout, setSearchTimeout] = useState(null);
+
   const handleSearch = async (query) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
+    // Clear existing timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
     }
 
-    setIsSearching(true);
-    try {
-      // Search in all ads data
-      const allAds = [...recentlyAddedVehicles];
-      
-      const filtered = allAds.filter(ad => {
-        const searchLower = query.toLowerCase();
-        // Search by category (VehicleType), model name (VehicleName), and seller's comment
-        // Use actual field names from the API response
-        return (
-          (ad.VehicleType && ad.VehicleType.toLowerCase().includes(searchLower)) ||
-          (ad.VehicleName && ad.VehicleName.toLowerCase().includes(searchLower)) ||
-          (ad.Description && ad.Description.toLowerCase().includes(searchLower)) ||
-          (ad.BrandName && ad.BrandName.toLowerCase().includes(searchLower)) ||
-          (ad.ModelName && ad.ModelName.toLowerCase().includes(searchLower)) ||
-          (ad.BrandID && ad.BrandID.toString().includes(searchLower)) ||
-          (ad.ModelID && ad.ModelID.toString().includes(searchLower)) ||
-          (ad.VehicleTypeID && ad.VehicleTypeID.toString().includes(searchLower)) ||
-          (ad.BodyTypeID && ad.BodyTypeID.toString().includes(searchLower))
-        );
-      });
-
-      setSearchResults(filtered);
+    // Show search results immediately if there's a query
+    if (query.trim()) {
       setShowSearchResults(true);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
     }
+
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        // Search in all ads data
+        const allAds = [...recentlyAddedVehicles];
+        console.log('Searching through ads:', allAds.length, 'ads available');
+        console.log('Sample ad data:', allAds[0]);
+        
+        const filtered = allAds.filter(ad => {
+          const searchLower = query.toLowerCase();
+          // Search by category (VehicleType), model name (VehicleName), and seller's comment
+          // Use actual field names from the API response
+          return (
+            (ad.VehicleType && ad.VehicleType.toLowerCase().includes(searchLower)) ||
+            (ad.VehicleName && ad.VehicleName.toLowerCase().includes(searchLower)) ||
+            (ad.Description && ad.Description.toLowerCase().includes(searchLower)) ||
+            (ad.BrandName && ad.BrandName.toLowerCase().includes(searchLower)) ||
+            (ad.ModelName && ad.ModelName.toLowerCase().includes(searchLower)) ||
+            (ad.BrandID && ad.BrandID.toString().includes(searchLower)) ||
+            (ad.ModelID && ad.ModelID.toString().includes(searchLower)) ||
+            (ad.VehicleTypeID && ad.VehicleTypeID.toString().includes(searchLower)) ||
+            (ad.BodyTypeID && ad.BodyTypeID.toString().includes(searchLower))
+          );
+        });
+
+        console.log('Search results:', filtered.length, 'items found');
+        setSearchResults(filtered);
+        setShowSearchResults(true);
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // 300ms debounce delay
+
+    setSearchTimeout(timeout);
   };
 
   const addToRecentSearches = (query) => {
@@ -534,40 +548,9 @@ function Dashboard() {
     console.log('Ad ID:', adId);
     
     if (adId) {
-      try {
-        // Try v2 endpoint first
-        console.log('Fetching ad details from /ads endpoint...');
-        const response = await api.get(`/ads/${adId}`);
-        console.log('API response:', response);
-        
-        if (response.data) {
-          console.log('Navigating with ad details:', response.data);
-          navigate(`/ad/${adId}`, { state: { adData: response.data } });
-        } else {
-          console.error('No ad details in response');
-          // Fallback to original ad data
-          navigate(`/ad/${adId}`, { state: { adData: ad } });
-        }
-      } catch (error) {
-        console.error('Error fetching ad details from v2 endpoint:', error);
-        
-        // Try the original endpoint as fallback
-        try {
-          console.log('Trying fallback endpoint...');
-          const fallbackResponse = await api.get(`/ads/${adId}`);
-          console.log('Fallback response:', fallbackResponse);
-          
-          if (fallbackResponse.data) {
-            navigate(`/ad/${adId}`, { state: { adData: fallbackResponse.data } });
-          } else {
-            navigate(`/ad/${adId}`, { state: { adData: ad } });
-          }
-        } catch (fallbackError) {
-          console.error('Fallback also failed:', fallbackError);
-          // Still navigate with original data as last resort
-          navigate(`/ad/${adId}`, { state: { adData: ad } });
-        }
-      }
+      // Navigate directly with existing ad data - no API calls needed
+      console.log('Navigating with ad data:', ad);
+      navigate(`/ad/${adId}`, { state: { adData: ad } });
     } else {
       console.log('No Ad ID found in ad data:', ad);
     }
@@ -629,8 +612,12 @@ function Dashboard() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      // Cleanup search timeout
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
     };
-  }, [showSearchResults]);
+  }, [showSearchResults, searchTimeout]);
 
   // Update scrollLeft and scrollRight to work with carousel
   const scrollLeft = (tab, items = null, itemsPerRow = 4) => {
@@ -1695,78 +1682,15 @@ function Dashboard() {
         {/* Top Header Section */}
         <div className="bg-bg-secondary/90 w-full">
   {/* Top Bar */}
-  <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto">
-    <div className="flex justify-between items-center h-12 sm:h-14 py-2 border-b border-border-primary">
-      {/* Download App */}
-      <div className="flex items-center space-x-2 cursor-pointer group">
-        <svg className="h-5 w-5 group-hover:scale-110 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{color: 'var(--emov-green, #00FFA9)'}}>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-        </svg>
-        <span className="text-sm font-medium text-text-primary group-hover:text-emov-green transition-colors duration-300">Download App</span>
-      </div>
+  
 
-      {/* Right side controls */}
-      <div className="flex items-center space-x-2 sm:space-x-4">
-
-        {/* Desktop Language Selector and Theme Toggle */}
-        <div className="hidden md:flex items-center space-x-4">
-          {/* Language Selector */}
-          <div className="relative group">
-            <select 
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="bg-bg-primary text-text-primary pr-6 py-1.5 sm:py-2 text-sm sm:text-base focus:outline-none focus:ring-0 border border-border-primary rounded-lg transition-all duration-300 appearance-none cursor-pointer hover:text-emov-green hover:border-emov-green"
-              style={{
-                color: 'var(--text-primary)',
-                backgroundColor: 'var(--bg-primary)',
-                borderColor: 'var(--border-primary)'
-              }}
-            >
-              <option value="english" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}>English</option>
-              <option value="urdu" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}>Urdu</option>
-              <option value="french" style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-primary)' }}>French</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-1 sm:pr-2 pointer-events-none">
-              <FaCaretDown className="text-text-secondary w-3 h-3 transition-transform duration-300 group-hover:rotate-180" />
-            </div>
-          </div>
-          
-          {/* Theme Toggle Button */}
-          <button 
-            onClick={toggleTheme}
-            className="focus:outline-none p-2 sm:p-2.5 transition-all duration-300 hover:scale-110 rounded-xl text-text-primary hover:bg-bg-tertiary active:scale-95"
-            style={{ borderRadius: '12px' }}
-            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-          >
-            {isDark ? <FaSun className="w-4 h-4 sm:w-5 sm:h-5" /> : <FaMoon className="w-4 h-4 sm:w-5 sm:h-5" />}
-          </button>
-        </div>
-
-        {/* Auth Buttons */}
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          {!userProfile && (
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <button
-                className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-emov-green transition-all duration-300 px-3 py-1.5 rounded-lg hover:bg-white/5"
-                onClick={() => navigate('/login')}
-              >
-                <span>Sign In</span>
-              </button>
-              <button
-                className="flex items-center justify-center space-x-1 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 hover:scale-105 active:scale-95 min-w-[80px]"
-                style={{
-                  backgroundColor: 'var(--emov-green, #27c583)',
-                  boxShadow: '0 4px 20px rgba(39, 197, 131, 0.4)',
-                }}
-                onClick={() => navigate('/signup')}
-              >
-                <span>Sign Up</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+  {/* Header Section */}
+  <div className="relative">
+    <Header 
+      userProfile={userProfile} 
+      handleLogout={handleLogout} 
+      onSearch={false} 
+    />
   </div>
 
   {/* Navbar Section */}

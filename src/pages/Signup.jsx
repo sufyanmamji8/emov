@@ -28,7 +28,15 @@ const Signup = () => {
     specialChar: false
   });
   const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
+  const [touchedFields, setTouchedFields] = useState({
+    fullName: false,
+    email: false,
+    mobileNumber: false,
+    password: false
+  });
   const navigate = useNavigate();
+
+  const MAX_NAME_LENGTH = 50;
 
   const validatePassword = (password) => {
     const validations = {
@@ -40,7 +48,6 @@ const Signup = () => {
     };
     setPasswordValidation(validations);
     
-    // Only show error if there's some input and it's not valid
     if (password && !Object.values(validations).every(Boolean)) {
       const missingRequirements = [];
       if (!validations.length) missingRequirements.push('8-20 characters');
@@ -66,6 +73,53 @@ const Signup = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
+    // Mark field as touched when user starts typing
+    if (!touchedFields[name]) {
+      setTouchedFields(prev => ({
+        ...prev,
+        [name]: true
+      }));
+    }
+
+    // STRONG VALIDATION FOR FULL NAME FIELD - MAX 50 CHARACTERS
+    if (name === 'fullName') {
+      // Only show validation after user starts typing
+      if (value.length > 0) {
+        // Mark field as touched when user starts typing
+        if (!touchedFields.fullName) {
+          setTouchedFields(prev => ({
+            ...prev,
+            fullName: true
+          }));
+        }
+        
+        // Prevent input if already at max length (unless user is deleting)
+        if (value.length > MAX_NAME_LENGTH) {
+          setFieldErrors(prev => ({
+            ...prev,
+            fullName: `Name cannot exceed ${MAX_NAME_LENGTH} characters`
+          }));
+          return; // Stop further processing
+        }
+        
+        // Clear error if within limit
+        if (fieldErrors.fullName && fieldErrors.fullName.includes('cannot exceed')) {
+          setFieldErrors(prev => ({
+            ...prev,
+            fullName: ''
+          }));
+        }
+        
+        // Clear required error if field has content
+        if (fieldErrors.fullName === 'Full name is required') {
+          setFieldErrors(prev => ({
+            ...prev,
+            fullName: ''
+          }));
+        }
+      }
+    }
+    
     const newFormData = {
       ...formData,
       [name]: value
@@ -78,13 +132,56 @@ const Signup = () => {
         setShowPasswordRequirements(true);
       }
       validatePassword(value);
-    } else if (fieldErrors[name]) {
+      
+      // Only show password error if field is touched
+      if (touchedFields.password && !value) {
+        setFieldErrors(prev => ({
+          ...prev,
+          password: 'Password is required'
+        }));
+      }
+    } else if (fieldErrors[name] && touchedFields[name]) {
+      // Only clear error if field has been touched
       setFieldErrors({
         ...fieldErrors,
         [name]: ''
       });
     }
     setError('');
+  };
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target;
+    
+    // Mark field as touched when user leaves it
+    if (!touchedFields[name]) {
+      setTouchedFields(prev => ({
+        ...prev,
+        [name]: true
+      }));
+    }
+    
+    // Validate on blur only for touched fields
+    if (touchedFields[name] || value) {
+      if (name === 'fullName' && !value.trim()) {
+        setFieldErrors(prev => ({
+          ...prev,
+          fullName: 'Full name is required'
+        }));
+      } else if (name === 'email') {
+        if (!value.trim()) {
+          setFieldErrors(prev => ({
+            ...prev,
+            email: 'Email is required'
+          }));
+        } else if (!/\S+@\S+\.\S+/.test(value)) {
+          setFieldErrors(prev => ({
+            ...prev,
+            email: 'Please enter a valid email address'
+          }));
+        }
+      }
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -95,11 +192,16 @@ const Signup = () => {
     const errors = {};
     let isValid = true;
 
+    // Full Name validation
     if (!formData.fullName.trim()) {
       errors.fullName = 'Full name is required';
       isValid = false;
+    } else if (formData.fullName.length > MAX_NAME_LENGTH) {
+      errors.fullName = `Name cannot exceed ${MAX_NAME_LENGTH} characters`;
+      isValid = false;
     }
 
+    // Email validation
     if (!formData.email.trim()) {
       errors.email = 'Email is required';
       isValid = false;
@@ -108,11 +210,13 @@ const Signup = () => {
       isValid = false;
     }
 
+    // Mobile Number validation
     if (!formData.mobileNumber) {
       errors.mobileNumber = 'Mobile number is required';
       isValid = false;
     }
 
+    // Password validation
     if (!formData.password) {
       errors.password = 'Password is required';
       isValid = false;
@@ -130,6 +234,14 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Mark all fields as touched on submit
+    setTouchedFields({
+      fullName: true,
+      email: true,
+      mobileNumber: true,
+      password: true
+    });
     
     if (!validateForm()) {
       return;
@@ -258,19 +370,32 @@ const Signup = () => {
           <form onSubmit={handleSubmit} className="w-full space-y-4">
             {/* Full Name Field */}
             <div>
-              <label className="block text-sm font-normal text-text-primary mb-1">Full Name</label>
-              <input 
-                type="text" 
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                className={`w-full px-3 py-2 text-sm text-text-primary border ${
-                  fieldErrors.fullName ? 'border-red-500' : 'border-border-primary hover:border-border-secondary'
-                } rounded-lg focus:ring-2 focus:ring-emov-purple focus:border-transparent bg-bg-secondary transition-all duration-300`}
-                placeholder="Enter your full name"
-                disabled={loading}
-              />
-              {fieldErrors.fullName && (
+              <label className="block text-sm font-normal text-text-primary mb-1">
+                Full Name
+                <span className="text-xs text-text-tertiary ml-1">
+                  (Max {MAX_NAME_LENGTH} characters)
+                </span>
+              </label>
+              <div className="relative">
+                <input 
+                  type="text" 
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  maxLength={MAX_NAME_LENGTH}
+                  className={`w-full px-3 py-2 text-sm text-text-primary border ${
+                    fieldErrors.fullName && touchedFields.fullName ? 'border-red-500' : 'border-border-primary hover:border-border-secondary'
+                  } rounded-lg focus:ring-2 focus:ring-emov-purple focus:border-transparent bg-bg-secondary transition-all duration-300`}
+                  placeholder="Enter your full name"
+                  disabled={loading}
+                />
+                {/* Character counter */}
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 text-xs text-text-tertiary">
+                  {formData.fullName.length}/{MAX_NAME_LENGTH}
+                </div>
+              </div>
+              {fieldErrors.fullName && touchedFields.fullName && (
                 <p className="mt-1 text-xs text-red-600">{fieldErrors.fullName}</p>
               )}
             </div>
@@ -283,13 +408,14 @@ const Signup = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
+                onBlur={handleBlur}
                 className={`w-full px-3 py-2 text-sm text-text-primary border ${
-                  fieldErrors.email ? 'border-red-500' : 'border-border-primary hover:border-border-secondary'
+                  fieldErrors.email && touchedFields.email ? 'border-red-500' : 'border-border-primary hover:border-border-secondary'
                 } rounded-lg focus:ring-2 focus:ring-emov-purple focus:border-transparent bg-bg-secondary transition-all duration-300`}
                 placeholder="Enter your email"
                 disabled={loading}
               />
-              {fieldErrors.email && (
+              {fieldErrors.email && touchedFields.email && (
                 <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>
               )}
             </div>
@@ -303,6 +429,13 @@ const Signup = () => {
                   ...prev,
                   mobileNumber: value
                 }));
+                // Mark as touched when user interacts
+                if (!touchedFields.mobileNumber) {
+                  setTouchedFields(prev => ({
+                    ...prev,
+                    mobileNumber: true
+                  }));
+                }
               }}
               onCountryChange={(countryCode) => {
                 setFormData(prev => ({
@@ -310,7 +443,16 @@ const Signup = () => {
                   countryCode
                 }));
               }}
-              error={fieldErrors.mobileNumber}
+              onBlur={() => {
+                // Mark as touched when user leaves the field
+                if (!touchedFields.mobileNumber) {
+                  setTouchedFields(prev => ({
+                    ...prev,
+                    mobileNumber: true
+                  }));
+                }
+              }}
+              error={touchedFields.mobileNumber ? fieldErrors.mobileNumber : ''}
               label="Mobile Number"
               required
             />
@@ -324,8 +466,9 @@ const Signup = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
+                  onBlur={handleBlur}
                   className={`w-full px-3 py-2 pr-10 text-sm text-text-primary border ${
-                    fieldErrors.password ? 'border-red-500' : 'border-border-primary hover:border-border-secondary'
+                    fieldErrors.password && touchedFields.password ? 'border-red-500' : 'border-border-primary hover:border-border-secondary'
                   } rounded-lg focus:ring-2 focus:ring-emov-purple focus:border-transparent bg-bg-secondary transition-all duration-300`}
                   placeholder="Create a password"
                   disabled={loading}
@@ -375,7 +518,7 @@ const Signup = () => {
                 </div>
               )}
               
-              {fieldErrors.password && (
+              {fieldErrors.password && touchedFields.password && (
                 <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
               )}
             </div>

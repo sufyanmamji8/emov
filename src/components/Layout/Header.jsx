@@ -77,6 +77,8 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
             </button>
             
             {/* Enhanced Dropdown Menu */}
+        {/* Enhanced Dropdown Menu */}
+        {/* Enhanced Dropdown Menu */}
             <div 
               className={`absolute top-full mt-2 right-0 bg-bg-primary border border-border-primary rounded-xl shadow-2xl overflow-hidden min-w-[160px] transition-all duration-300 ease-out transform-gpu ${
                 showLanguageDropdown 
@@ -86,7 +88,9 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
               style={{
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)'
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+                zIndex: 99999,
+                position: 'absolute'
               }}
             >
               <div className="py-2">

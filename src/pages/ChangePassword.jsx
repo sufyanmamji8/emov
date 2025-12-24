@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext';
 import { FaSun, FaMoon, FaEye, FaEyeSlash, FaCheck } from 'react-icons/fa';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import authApi from '../services/authApi';
+import { toast } from 'react-toastify';
 
 const ChangePassword = () => {
   const [formData, setFormData] = useState({
@@ -133,7 +134,7 @@ const ChangePassword = () => {
         formData.otp
       );
       
-      if (response.message && response.message.includes('success')) {
+      if (response.message && response.message.includes('successfully')) {
         // Show success message and redirect to login
         toast.success('Password reset successfully! Please login with your new password.', {
           position: "top-right",
@@ -154,7 +155,20 @@ const ChangePassword = () => {
       }
     } catch (error) {
       console.error('Password reset error:', error);
-      setError(error.response?.data?.message || 'Failed to reset password. Please try again.');
+      const errorMessage = error.response?.data?.message || 'Failed to reset password. Please try again.';
+      
+      // Show error toast
+      toast.error(errorMessage, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -270,7 +270,7 @@ const Login = ({ onLogin }) => {
         {/* Login Card */}
         <div className="w-full max-w-md md:max-w-xl bg-white rounded-3xl -mt-40 sm:-mt-56 p-6 md:p-8 z-10 shadow-lg border border-gray-100 shadow-gray-400/30 mx-4 md:mx-auto">
           {/* Welcome Text */}
-          <div className="text-center mb-6 md:mb-8">
+          <div className="text-center mb-6 md:mb-8 mt-4 md:mt-8">
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-1">Welcome</h1>
             <p className="text-sm md:text-base text-gray-600">Drive your business forward Sign In</p>
           </div>

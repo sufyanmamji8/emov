@@ -70,8 +70,8 @@ function App() {
       localStorage.removeItem('user');
       setIsAuthenticated(false);
       
-      // Use React Router navigation instead of window.location
-      navigate('/login');
+      // Navigate to home page, not login
+      navigate('/');
     }, 2000);
   };
 
