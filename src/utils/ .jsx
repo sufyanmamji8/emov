@@ -1,190 +1,170 @@
 import { toast as toastify, ToastContainer as ToastifyContainer } from 'react-toastify';
 import { createGlobalStyle } from 'styled-components';
 
-// Global styles for toast - completely self-contained
+// Premium Global Toast Styles
 const ToastGlobalStyles = createGlobalStyle`
-  /* Toast Container */
+  /* Container */
   .Toastify__toast-container {
-    width: 100%;
-    max-width: 420px;
-    top: 1.5rem;
-    right: 1.5rem;
-    left: auto;
-    transform: none;
+    width: 400px;
+    max-width: 95vw;
     padding: 0;
+    top: 24px;
+    right: 24px;
     z-index: 9999;
   }
 
-  /* Toast Base */
+  /* Base Toast */
   .Toastify__toast {
-    border-radius: 12px !important;
+    border-radius: 9999px !important; /* True pill */
     min-height: 64px !important;
-    padding: 0 !important;
-    margin-bottom: 1rem !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    padding: 0 12px !important;
+    margin-bottom: 16px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: none !important;
+    overflow: hidden !important;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) !important;
+    position: relative;
+  }
+
+  /* Inner shine overlay */
+  .Toastify__toast::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
   }
 
   .Toastify__toast:hover {
-    transform: translateY(-2px) scale(1.02) !important;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-6px) scale(1.03) !important;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22) !important;
   }
 
+  /* Body - Centered Text */
   .Toastify__toast-body {
     margin: 0 !important;
-    padding: 16px 20px !important;
-    font-weight: 500 !important;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-    font-size: 15px !important;
+    padding: 0 32px !important;
     display: flex !important;
     align-items: center !important;
-    min-height: 64px !important;
+    justify-content: center !important;
+    height: 64px !important;
+    width: 100% !important;
+    text-align: center !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: white !important;
     line-height: 1.5 !important;
-    color: inherit !important;
+    letter-spacing: 0.3px;
   }
 
   /* Progress Bar */
   .Toastify__progress-bar {
-    height: 3px !important;
-    border-radius: 0 0 12px 12px !important;
-    background: rgba(255, 255, 255, 0.3) !important;
+    height: 4px !important;
+    border-radius: 0 0 9999px 9999px !important;
+    background: rgba(255, 255, 255, 0.4) !important;
   }
 
   /* Close Button */
   .Toastify__close-button {
-    align-self: center !important;
-    margin-right: 16px !important;
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
     color: rgba(255, 255, 255, 0.8) !important;
     opacity: 0.8 !important;
-    transition: all 0.2s ease !important;
-    width: 32px !important;
-    height: 32px !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-radius: 50% !important;
+    transition: all 0.2s ease !important;
   }
 
   .Toastify__close-button:hover {
     opacity: 1 !important;
-    background: rgba(255, 255, 255, 0.15) !important;
-    color: rgba(255, 255, 255, 1) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
   }
 
-  /* Toast Types */
+  .Toastify__close-button > svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  /* Toast Types - Beautiful Gradients */
   .Toastify__toast--success {
-    background: linear-gradient(135deg, #0DFF9A 0%, #00E69A 100%) !important;
-    border: 1px solid #0DFF9A !important;
-    color: #ffffff !important;
-  }
-
-  .Toastify__toast--success .Toastify__progress-bar {
-    background: rgba(255, 255, 255, 0.3) !important;
+    background: linear-gradient(135deg, #10B981 0%, #34D399 100%) !important; /* Emerald */
   }
 
   .Toastify__toast--error {
-    background: linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%) !important;
-    border: 1px solid #FF6B6B !important;
-    color: #ffffff !important;
-  }
-
-  .Toastify__toast--error .Toastify__progress-bar {
-    background: rgba(255, 255, 255, 0.3) !important;
+    background: linear-gradient(135deg, #EF4444 0%, #F87171 100%) !important; /* Red */
   }
 
   .Toastify__toast--warning {
-    background: linear-gradient(135deg, #FFA726 0%, #FF9800 100%) !important;
-    border: 1px solid #FFA726 !important;
-    color: #ffffff !important;
-  }
-
-  .Toastify__toast--warning .Toastify__progress-bar {
-    background: rgba(255, 255, 255, 0.3) !important;
+    background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%) !important; /* Amber */
   }
 
   .Toastify__toast--info {
-    background: linear-gradient(135deg, #7B3DFF 0%, #A67AF5 100%) !important;
-    border: 1px solid #7B3DFF !important;
-    color: #ffffff !important;
+    background: linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%) !important; /* Purple */
   }
 
-  .Toastify__toast--info .Toastify__progress-bar {
-    background: rgba(255, 255, 255, 0.3) !important;
+  .Toastify__toast--default {
+    background: linear-gradient(135deg, #06B6D4 0%, #0EA5E9 100%) !important; /* Cyan */
   }
 
   /* Animations */
   @keyframes slideInRight {
-    from {
-      transform: translateX(100%);
-      opacity: 0;
-    }
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
   }
 
   @keyframes slideOutRight {
-    from {
-      transform: translateX(0);
-      opacity: 1;
-    }
-    to {
-      transform: translateX(100%);
-      opacity: 0;
-    }
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(120%); opacity: 0; }
   }
 
-  .Toastify__toast--default {
-    animation: slideInRight 0.3s ease-out !important;
+  .Toastify__toast {
+    animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.2) forwards !important;
   }
 
-  .Toastify__toast--close {
-    animation: slideOutRight 0.3s ease-in !important;
+  .Toastify__toast--closing {
+    animation: slideOutRight 0.3s ease-in forwards !important;
   }
 
-  /* Mobile responsiveness */
+  /* Mobile */
   @media (max-width: 480px) {
     .Toastify__toast-container {
-      max-width: 90%;
-      right: 1rem;
-      left: 1rem;
+      width: calc(100% - 32px);
+      left: 16px;
+      right: 16px;
+      top: 16px;
     }
-    
-    .Toastify__toast {
-      min-height: 60px !important;
-      border-radius: 10px !important;
-    }
-    
-    .Toastify__toast-body {
-      padding: 14px 16px !important;
-      font-size: 14px !important;
-    }
-    
-    .Toastify__close-button {
-      margin-right: 12px !important;
-      width: 28px !important;
-      height: 28px !important;
-    }
-  }
 
-  /* Dark mode adjustments */
-  @media (prefers-color-scheme: dark) {
     .Toastify__toast {
-      backdrop-filter: blur(10px) !important;
-      -webkit-backdrop-filter: blur(10px) !important;
+      min-height: 58px !important;
+    }
+
+    .Toastify__toast-body {
+      height: 58px !important;
+      font-size: 15px !important;
+      padding: 0 28px !important;
+    }
+
+    .Toastify__close-button {
+      right: 10px;
+      width: 32px !important;
+      height: 32px !important;
     }
   }
 `;
 
-// Enhanced toast configuration with proper cleanup
+// Reliable config
 const toastConfig = {
   position: "top-right",
-  autoClose: 3000, // Increased to 3 seconds for better visibility
+  autoClose: 3500,
   hideProgressBar: false,
   closeOnClick: true,
   pauseOnHover: true,
@@ -193,145 +173,63 @@ const toastConfig = {
   closeButton: true,
   newestOnTop: true,
   rtl: false,
-  theme: 'light',
+  theme: "light",
 };
 
-// Custom toast methods with enhanced styling and proper cleanup
+// Enhanced custom toast - NO toastify.dismiss() to avoid autoClose issues
 export const toast = {
   success: (message, options = {}) => {
-    // Clear any existing toasts to prevent stacking issues
-    toastify.dismiss();
-    
     return toastify.success(message, {
       ...toastConfig,
       ...options,
-      autoClose: options.autoClose || 3000,
-      icon: false, // Disable default icon as we use custom styling
-      style: {
-        background: 'linear-gradient(135deg, #0DFF9A 0%, #00E69A 100%)',
-        color: '#ffffff',
-        border: '1px solid #0DFF9A',
-        borderRadius: '12px',
-        boxShadow: '0 8px 24px rgba(13, 255, 154, 0.15)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
-        margin: '0 0 1rem 0',
-        ...options.style,
-      },
+      icon: false,
     });
   },
 
   error: (message, options = {}) => {
-    toastify.dismiss();
-    
     return toastify.error(message, {
       ...toastConfig,
       ...options,
-      autoClose: options.autoClose || 4000, // Errors stay longer
+      autoClose: options.autoClose || 5000,
       icon: false,
-      style: {
-        background: 'linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%)',
-        color: '#ffffff',
-        border: '1px solid #FF6B6B',
-        borderRadius: '12px',
-        boxShadow: '0 8px 24px rgba(255, 107, 107, 0.15)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
-        margin: '0 0 1rem 0',
-        ...options.style,
-      },
     });
   },
 
   warning: (message, options = {}) => {
-    toastify.dismiss();
-    
     return toastify.warning(message, {
       ...toastConfig,
       ...options,
-      autoClose: options.autoClose || 3500,
+      autoClose: options.autoClose || 4000,
       icon: false,
-      style: {
-        background: 'linear-gradient(135deg, #FFA726 0%, #FF9800 100%)',
-        color: '#ffffff',
-        border: '1px solid #FFA726',
-        borderRadius: '12px',
-        boxShadow: '0 8px 24px rgba(255, 167, 38, 0.15)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
-        margin: '0 0 1rem 0',
-        ...options.style,
-      },
     });
   },
 
   info: (message, options = {}) => {
-    toastify.dismiss();
-    
     return toastify.info(message, {
       ...toastConfig,
       ...options,
-      autoClose: options.autoClose || 3000,
       icon: false,
-      style: {
-        background: 'linear-gradient(135deg, #7B3DFF 0%, #A67AF5 100%)',
-        color: '#ffffff',
-        border: '1px solid #7B3DFF',
-        borderRadius: '12px',
-        boxShadow: '0 8px 24px rgba(123, 61, 255, 0.15)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
-        margin: '0 0 1rem 0',
-        ...options.style,
-      },
     });
   },
 
-  // Default toast method
   default: (message, options = {}) => {
-    toastify.dismiss();
-    
     return toastify(message, {
       ...toastConfig,
       ...options,
       icon: false,
-      style: {
-        background: 'linear-gradient(135deg, #6B7280 0%, #4B5563 100%)',
-        color: '#ffffff',
-        border: '1px solid #6B7280',
-        borderRadius: '12px',
-        boxShadow: '0 8px 24px rgba(107, 114, 128, 0.15)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
-        margin: '0 0 1rem 0',
-        ...options.style,
-      },
     });
   },
 
-  // Manual dismiss method for cleanup
-  dismiss: () => {
-    toastify.dismiss();
-  }
+  dismissAll: () => toastify.dismiss(),
 };
 
-// Enhanced Toast Container component with global styles
+// Toast Container with injected styles
 export const ToastContainer = () => (
   <>
     <ToastGlobalStyles />
     <ToastifyContainer
       position="top-right"
-      autoClose={3000}
+      autoClose={3500}
       hideProgressBar={false}
       newestOnTop={true}
       closeOnClick={true}
@@ -339,14 +237,11 @@ export const ToastContainer = () => (
       pauseOnFocusLoss={false}
       draggable={true}
       pauseOnHover={true}
-      theme="light"
       closeButton={true}
       style={{ zIndex: 9999 }}
     />
   </>
 );
 
-// Export the original toastify for advanced usage if needed
 export { toastify };
-
 export default toast;

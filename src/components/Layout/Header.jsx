@@ -1,6 +1,7 @@
 // src/components/Layout/Header.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import { FaSun, FaMoon, FaBell, FaUser, FaSearch, FaFilter, FaCaretDown, FaCheck } from 'react-icons/fa';
 import { useTheme } from "../../context/ThemeContext";
 
@@ -9,6 +10,22 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
   const navigate = useNavigate();
   const [language, setLanguage] = useState('english');
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, right: 0 });
+
+  // Update dropdown position when shown
+  useEffect(() => {
+    if (showLanguageDropdown) {
+      const button = document.querySelector('.language-dropdown button');
+      if (button) {
+        const rect = button.getBoundingClientRect();
+        setDropdownPosition({
+          top: rect.bottom + 8,
+          left: rect.left,
+          right: window.innerWidth - rect.right
+        });
+      }
+    }
+  }, [showLanguageDropdown]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -75,46 +92,6 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
                 }`} 
               />
             </button>
-            
-            {/* Enhanced Dropdown Menu */}
-        {/* Enhanced Dropdown Menu */}
-        {/* Enhanced Dropdown Menu */}
-            <div 
-              className={`absolute top-full mt-2 right-0 bg-bg-primary border border-border-primary rounded-xl shadow-2xl overflow-hidden min-w-[160px] transition-all duration-300 ease-out transform-gpu ${
-                showLanguageDropdown 
-                  ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto visible' 
-                  : 'opacity-0 scale-95 -translate-y-2 pointer-events-none invisible'
-              }`}
-              style={{
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
-                zIndex: 99999,
-                position: 'absolute'
-              }}
-            >
-              <div className="py-2">
-                {languages.map((lang, index) => (
-                  <button
-                    key={lang.value}
-                    onClick={() => handleLanguageChange(lang.value)}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-all duration-200 flex items-center justify-between group/item ${
-                      language === lang.value 
-                        ? 'bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-text-primary font-medium' 
-                        : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg">{lang.flag}</span>
-                      <span>{lang.label}</span>
-                    </div>
-                    {language === lang.value && (
-                      <FaCheck className="w-3 h-3 text-emerald-500" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
           
           {/* Enhanced Theme Toggle Button */}
@@ -179,6 +156,45 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
           }
         }
       `}</style>
+      
+      {/* Portal-rendered dropdown */}
+      {showLanguageDropdown && createPortal(
+        <div 
+          className="bg-bg-primary border border-border-primary rounded-xl shadow-2xl overflow-hidden min-w-[160px] transition-all duration-300 ease-out transform-gpu"
+          style={{
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.3)',
+            zIndex: 9999999,
+            position: 'fixed',
+            top: dropdownPosition.top,
+            right: dropdownPosition.right
+          }}
+        >
+          <div className="py-2">
+            {languages.map((lang, index) => (
+              <button
+                key={lang.value}
+                onClick={() => handleLanguageChange(lang.value)}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-all duration-200 flex items-center justify-between group/item ${
+                  language === lang.value 
+                    ? 'bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-text-primary font-medium' 
+                    : 'text-text-secondary hover:bg-bg-secondary hover:text-text-primary'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <span className="text-lg">{lang.flag}</span>
+                  <span>{lang.label}</span>
+                </div>
+                {language === lang.value && (
+                  <FaCheck className="w-3 h-3 text-emerald-500" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

@@ -11,7 +11,7 @@ const injectToastStyles = () => {
     /* Toast Container */
     .Toastify__toast-container {
       width: 100%;
-      max-width: 250px;
+      max-width: 400px;
       top: 1.5rem;
       right: 1.5rem;
       left: auto;
@@ -34,6 +34,9 @@ const injectToastStyles = () => {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
       overflow: hidden !important;
       position: relative !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
     }
 
     .Toastify__toast:hover {
@@ -41,21 +44,21 @@ const injectToastStyles = () => {
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15) !important;
     }
 
+    /* Body - Perfectly Centered Text */
     .Toastify__toast-body {
       margin: 0 !important;
-      padding: 12px 20px !important;
-      font-weight: 500 !important;
+      padding: 16px 24px !important;
+      font-weight: 600 !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-      font-size: 14px !important;
+      font-size: 15px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       min-height: 48px !important;
-      line-height: 1.4 !important;
-      color: inherit !important;
+      line-height: 1.5 !important;
+      color: white !important;
       text-align: center !important;
       width: 100% !important;
-      text-align: center !important;
       position: relative !important;
       z-index: 2 !important;
     }
@@ -207,13 +210,17 @@ export const toast = {
         background: 'linear-gradient(135deg, #0DFF9A 0%, #00E69A 100%)',
         color: '#ffffff',
         border: '1px solid #0DFF9A',
-        borderRadius: '12px',
+        borderRadius: '50px',
         boxShadow: '0 8px 24px rgba(13, 255, 154, 0.15)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
+        minHeight: '48px',
+        padding: '16px 24px',
         margin: '0 0 1rem 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
         ...options.style,
       },
     });
@@ -231,13 +238,17 @@ export const toast = {
         background: 'linear-gradient(135deg, #FF6B6B 0%, #FF5252 100%)',
         color: '#ffffff',
         border: '1px solid #FF6B6B',
-        borderRadius: '12px',
+        borderRadius: '50px',
         boxShadow: '0 8px 24px rgba(255, 107, 107, 0.15)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
+        minHeight: '48px',
+        padding: '16px 24px',
         margin: '0 0 1rem 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
         ...options.style,
       },
     });
@@ -255,13 +266,17 @@ export const toast = {
         background: 'linear-gradient(135deg, #FFA726 0%, #FF9800 100%)',
         color: '#ffffff',
         border: '1px solid #FFA726',
-        borderRadius: '12px',
+        borderRadius: '50px',
         boxShadow: '0 8px 24px rgba(255, 167, 38, 0.15)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
+        minHeight: '48px',
+        padding: '16px 24px',
         margin: '0 0 1rem 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
         ...options.style,
       },
     });
@@ -279,13 +294,17 @@ export const toast = {
         background: 'linear-gradient(135deg, #7B3DFF 0%, #A67AF5 100%)',
         color: '#ffffff',
         border: '1px solid #7B3DFF',
-        borderRadius: '12px',
+        borderRadius: '50px',
         boxShadow: '0 8px 24px rgba(123, 61, 255, 0.15)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        minHeight: '64px',
-        padding: '0',
+        minHeight: '48px',
+        padding: '16px 24px',
         margin: '0 0 1rem 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
         ...options.style,
       },
     });

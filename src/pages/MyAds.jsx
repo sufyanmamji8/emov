@@ -5,13 +5,14 @@ import apiService from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useTheme } from '../context/ThemeContext';
+import { useUserProfile } from '../hooks/useUserProfile';
 import Header from '../components/Layout/Header';
 import toast from 'react-hot-toast'; // assuming you're using react-hot-toast
 
 const MyAds = () => {
   const { theme, toggleTheme } = useTheme();
   const [language, setLanguage] = useState('english');
-  const [userProfile, setUserProfile] = useState(null);
+  const { userProfile, setUserProfile } = useUserProfile();
   const navigate = useNavigate();
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,22 +24,6 @@ const MyAds = () => {
     perPage: 10,
     totalPages: 0
   });
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const response = await apiService.users.getProfile();
-        if (response.status === 200) {
-          setUserProfile(response.data);
-        }
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) setUserProfile(JSON.parse(savedUser));
-      }
-    };
-    fetchUserProfile();
-  }, []);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -152,7 +137,16 @@ const MyAds = () => {
 
   return (
     <div className="min-h-screen bg-bg-primary">
-      <Header userProfile={userProfile} handleLogout={handleLogout} onSearch={false} />
+
+       {/* Header Section */}
+        <div className="relative">
+          <Header 
+            userProfile={userProfile} 
+            handleLogout={handleLogout} 
+            onSearch={false} 
+          />
+        </div>
+      
 
       <div className="relative">
         <Navbar

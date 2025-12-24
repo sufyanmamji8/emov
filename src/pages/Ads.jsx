@@ -6,6 +6,7 @@ import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import Header from '../components/Layout/Header'; // Import Header component for consistency
 import { useTheme } from '../context/ThemeContext';
+import { useUserProfile } from '../hooks/useUserProfile';
 import toast from '../utils/toast.jsx';
 
 // Language translations
@@ -256,8 +257,9 @@ const getTranslatedData = (language) => {
 
 export default function Ads() {
   const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
   const [language, setLanguage] = useState('english');
-  const [userProfile, setUserProfile] = useState(null);
+  const { userProfile, setUserProfile } = useUserProfile();
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -333,26 +335,11 @@ const [showRecordingUI, setShowRecordingUI] = useState(false);
 const recordingInterval = useRef(null);
 
 useEffect(() => {
-  const fetchUserProfile = async () => {
-    try {
-      const response = await apiService.user.getProfile();
-        if (response.status === 200) {
-          setUserProfile(response.data);
-        } else {
-          throw new Error('Failed to fetch user profile');
-        }
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) setUserProfile(JSON.parse(savedUser));
-      }
-    };
-    fetchUserProfile();
-  }, []);
+}, [userProfile]);
 
-  const handleLogout = () => {
-    // Clear API cache to prevent showing old data
-    clearCache();
+const handleLogout = () => {
+  // Clear API cache to prevent showing old data
+  clearCache();
     
     // Clear chat cache as well
     if (typeof window !== 'undefined' && window.clearChatCache) {
@@ -397,7 +384,6 @@ useEffect(() => {
     });
   };
   
-  // Debug: Log form data changes
   useEffect(() => {
   }, [formData]);
 
@@ -465,8 +451,6 @@ useEffect(() => {
   const handleFileChange = async (e) => {
     const { name, files } = e.target;
     
-    console.log(`File input changed - ${name}:`, files);
-
     if (name === 'images' && files.length > 0) {
       // Check if total images would exceed maximum limit
       const currentImageCount = formData.Images?.length || 0;
@@ -511,7 +495,6 @@ useEffect(() => {
         }));
         
       } catch (error) {
-        console.error('Error handling file uploads:', error);
         setFormData(prev => ({
           ...prev,
           imageUploadError: error.message || 'Failed to upload images. Please try again.'
@@ -537,7 +520,6 @@ useEffect(() => {
           }));
         }
       } catch (error) {
-        console.error('Error uploading audio:', error);
         setFormData(prev => ({
           ...prev,
           audioUploadError: 'Failed to upload audio. Please try again.'
@@ -578,7 +560,6 @@ useEffect(() => {
             }));
           }
         } catch (error) {
-          console.error('Error uploading recorded audio:', error);
           setFormData(prev => ({
             ...prev,
             audioUploadError: 'Failed to upload recorded audio. Please try again.'
@@ -591,17 +572,14 @@ useEffect(() => {
         setRecordingTime(0);
       };
 
-      console.log('[Audio] MediaRecorder created, starting...');
       mediaRecorder.start();
       setMediaRecorder(mediaRecorder);
       setAudioChunks(audioChunks);
       setIsRecording(true);
       setShowRecordingUI(true);
-      console.log('[Audio] States set, starting timer...');
 
       // Start recording timer
       recordingInterval.current = setInterval(() => {
-        console.log('[Audio] Timer tick - current time:', recordingTime);
         setRecordingTime(prev => {
           if (prev >= 60) { // 60 seconds max recording time
             stopRecording();
@@ -612,7 +590,6 @@ useEffect(() => {
       }, 1000);
 
     } catch (error) {
-      console.error('Error accessing microphone:', error);
       alert('Could not access microphone. Please check permissions.');
     }
   };
@@ -653,34 +630,25 @@ useEffect(() => {
   const validateStep = (step) => {
     const errors = {};
     
-    console.log('Validating step:', step);
-    console.log('Current formData:', formData);
-    
     if (step === 1) {
       // Basic Details step validation - ONLY TRULY REQUIRED FIELDS
       if (!formData.VehicleName?.trim()) {
         errors.VehicleName = 'Vehicle name is required';
-        console.log('VehicleName missing');
       }
       if (!formData.VehiclePrice) {
         errors.VehiclePrice = 'Vehicle price is required';
-        console.log('VehiclePrice missing');
       }
       if (!formData.VehicleTypeID) {
         errors.VehicleTypeID = 'Vehicle type is required';
-        console.log('VehicleTypeID missing');
       }
       if (!formData.VehicleBrandID) {
         errors.VehicleBrandID = 'Brand is required';
-        console.log('VehicleBrandID missing');
       }
       if (!formData.VehicleModelID) {
         errors.VehicleModelID = 'Model is required';
-        console.log('VehicleModelID missing');
       }
       if (!formData.LocationName?.trim()) {
         errors.LocationName = 'Location is required';
-        console.log('LocationName missing');
       }
       
       // OPTIONAL FIELDS - Don't validate these as required
@@ -2294,6 +2262,18 @@ const renderPreview = () => {
         handleLogout={handleLogout} 
         onSearch={false} 
       />
+
+       {/* Navbar Section */}
+        <div className="relative">
+          <Navbar 
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            language={language}
+            setLanguage={setLanguage}
+            userProfile={userProfile}
+            handleLogout={handleLogout}
+          />
+        </div>
       
       {/* Main Content */}
       <div className="pt-0">

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater, FaArrowRight } from 'react-icons/fa';
+import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater, FaArrowRight, FaMapMarkerAlt } from 'react-icons/fa';
 import { FiMapPin, FiCalendar } from 'react-icons/fi';
 import { useTheme } from '../hooks/useTheme';
 import apiService, { handleUnauthorized, api } from '../services/Api';
@@ -2531,30 +2531,30 @@ function Dashboard({ handleLogout: appLogout }) {
 
         {/* Recently Added Section */}
 
-{/* Recently Added Section - Mobile Optimized */}
-<section className="w-full bg-bg-secondary py-8 sm:py-12 md:py-16 relative">
+{/* Enhanced Recently Added Section - "NEW" Badge Removed */}
+<section className="w-full bg-bg-secondary py-8 sm:py-12 md:py-16">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="mb-4 sm:mb-6">
-      <h2 className="text-xl sm:text-2xl font-bold text-text-primary">{t.recentlyAdded}</h2>
-    </div>
-    
+    <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-8">
+      {t.recentlyAdded}
+    </h2>
+
     {loadingRecentAds ? (
-      <div className="text-center py-10">
-        <div className="relative inline-block">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-emov-purple"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <FaCar className="w-6 h-6 text-emov-purple" />
+      <div className="text-center py-16">
+        <div className="relative w-24 h-24 mx-auto mb-8">
+          <div className="absolute inset-0 rounded-full border-8 border-bg-tertiary border-t-emov-purple animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <FaCar className="w-12 h-12 text-emov-purple" />
           </div>
         </div>
-        <p className="mt-6 text-text-primary font-medium text-lg">Loading vehicles...</p>
-        <p className="mt-2 text-text-secondary text-sm">Please wait a moment</p>
+        <p className="text-xl font-semibold text-text-primary">Loading latest vehicles...</p>
+        <p className="mt-2 text-text-secondary">Please wait a moment</p>
       </div>
     ) : recentAdsError ? (
-      <div className="text-center py-10 text-red-500">
-        <p>{recentAdsError}</p>
-        <button 
+      <div className="text-center py-16">
+        <p className="text-lg text-red-600 mb-6">{recentAdsError}</p>
+        <button
           onClick={() => window.location.reload()}
-          className="mt-2 px-4 py-2 bg-emov-purple text-white rounded-md hover:bg-opacity-90 transition-colors"
+          className="px-8 py-4 bg-emov-purple text-white rounded-xl hover:bg-emov-purple-dark transition-all shadow-lg font-medium"
         >
           Retry
         </button>
@@ -2568,83 +2568,57 @@ function Dashboard({ handleLogout: appLogout }) {
           canGoNext={canScrollRight('Recently Added', recentlyAddedVehicles, carouselItemsPerRow)}
           section="recently added vehicles"
         />
-        
+
         <div className="relative overflow-hidden">
-          <div 
-            className="flex transition-transform duration-300 sm:hidden"
-            style={{
-              transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
-              width: '100%',
-              transition: 'transform 0.3s ease-in-out'
-            }}
+          {/* Mobile Carousel */}
+          <div
+            className="flex transition-transform duration-500 ease-out sm:hidden"
+            style={{ transform: `translateX(-${currentSlides['Recently Added'] * 100}%)` }}
           >
-            {recentlyAddedVehicles.map((vehicle, vehicleIndex) => {
-              const vehicleImageUrl = vehicle.image || '/mockvehicle.png';
-              
+            {recentlyAddedVehicles.map((vehicle, index) => {
+              const imageUrl = vehicle.image || '/mockvehicle.png';
+
               return (
-                <div 
-                  key={`mobile-${vehicle.AdID || vehicle.id}-${vehicleIndex}`}
-                  className="w-full flex-shrink-0 px-1"
-                  style={{ minWidth: '100%' }}
-                >
-                  <div 
-                    className="group bg-bg-primary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg cursor-pointer"
+                <div key={`mobile-${vehicle.AdID || vehicle.id}-${index}`} className="w-full flex-shrink-0 px-2">
+                  <div
                     onClick={() => navigate(`/ad/${vehicle.AdID || vehicle.id}`, { state: { adData: vehicle } })}
+                    className="bg-bg-secondary rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-border-primary group"
                   >
-                    <div className="p-3">
-                      <div className="relative h-48 w-full rounded-lg overflow-hidden">
-                        <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
-                        <img 
-                          src={vehicleImageUrl} 
-                          alt={vehicle.VehicleName || vehicle.title}
-                          className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
-                          style={{
-                            border: '1px solid var(--border-primary)',
-                            boxSizing: 'border-box'
-                          }}
-                          loading="lazy"
-                          onError={(e) => {
-                            console.log('❌ Image failed to load:', vehicleImageUrl);
-                            e.target.onerror = null;
-                            e.target.src = '/mockvehicle.png';
-                          }}
-                          onLoad={(e) => {
-                            console.log('✅ Image loaded successfully:', vehicleImageUrl);
-                          }}
-                        />
-                        {vehicle.isNew && (
-                          <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
-                            {t.new}
-                          </div>
-                        )}
-                      </div>
+                    <div className="relative h-64 overflow-hidden">
+                      <img
+                        src={imageUrl}
+                        alt={vehicle.VehicleName || vehicle.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        onError={(e) => (e.target.src = '/mockvehicle.png')}
+                      />
+                      {/* Emov Check Badge */}
+                      <img
+                        src="/emovcheck.png"
+                        alt="Emov Verified"
+                        className="absolute top-3 right-3 w-12 h-12 object-contain z-10"
+                      />
+                      {/* "NEW" Badge Removed */}
                     </div>
-                    
-                    <div className="px-3 pb-3 flex-grow flex flex-col">
-                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-1">
-                        {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(0, 3).join(' ')}
+
+                    <div className="p-5">
+                      <h3 className="text-lg font-bold text-text-primary mb-2 line-clamp-1 group-hover:text-emov-purple transition-colors">
+                        {vehicle.VehicleName || vehicle.title || 'Vehicle'}
                       </h3>
-                      
-                      <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-0 leading-tight line-clamp-1">
-                        {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(3).join(' ') || vehicle.SellerComment || ''}
-                      </p>
-                      
-                      <span className="text-base sm:text-lg font-bold text-emov-purple mb-1 sm:mb-2 block">
-                        {vehicle.VehiclePrice ? `Rs ${parseInt(vehicle.VehiclePrice).toLocaleString()}` : vehicle.price}
-                      </span>
-                      
-                      <div className="flex items-center text-xs sm:text-sm text-gray-500 mb-1">
-                        <span>{vehicle.RegistrationYear || vehicle.year || '2020'}</span>
-                        <span className="mx-1 sm:mx-2">|</span>
-                        <span className="line-clamp-1">{vehicle.VehicleMileage || vehicle.mileage}</span>
+
+                      <div className="text-2xl font-bold text-emov-purple mb-3">
+                        {vehicle.VehiclePrice ? `PKR ${parseInt(vehicle.VehiclePrice).toLocaleString()}` : 'Price on call'}
                       </div>
-                      
-                      <div className="flex items-center text-xs sm:text-sm text-gray-500 mt-auto">
-                        <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        <span className="line-clamp-1">{vehicle.LocationName || vehicle.location}</span>
+
+                      <div className="space-y-2 text-sm text-text-secondary">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{vehicle.RegistrationYear || 'N/A'}</span>
+                          <span>•</span>
+                          <span>{vehicle.VehicleMileage ? `${vehicle.VehicleMileage.toLocaleString()} km` : 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <FaMapMarkerAlt className="w-4 h-4 text-emov-purple/70" />
+                          <span className="truncate">{vehicle.LocationName || vehicle.location || 'Location'}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2652,114 +2626,94 @@ function Dashboard({ handleLogout: appLogout }) {
               );
             })}
           </div>
-          
-          <div 
-            className="hidden sm:flex transition-transform duration-300"
-            style={{
-              transform: `translateX(-${currentSlides['Recently Added'] * 100}%)`,
-              width: '100%',
-              transition: 'transform 0.3s ease-in-out'
-            }}
+
+          {/* Desktop Carousel */}
+          <div
+            className="hidden sm:flex transition-transform duration-500 ease-out gap-6"
+            style={{ transform: `translateX(-${currentSlides['Recently Added'] * 100}%)` }}
           >
-            {Array(Math.ceil(recentlyAddedVehicles.length / carouselItemsPerRow)).fill().map((_, groupIndex) => (
-              <div 
-                key={groupIndex}
-                className={`w-full flex-shrink-0 gap-6 px-1 ${
-                  carouselItemsPerRow === 1 ? 'grid grid-cols-1' :
-                  carouselItemsPerRow === 2 ? 'grid grid-cols-2' :
-                  carouselItemsPerRow === 3 ? 'grid grid-cols-3' :
-                  'grid grid-cols-4'
-                }`}
-                style={{ minWidth: '100%' }}
-              >
-                {recentlyAddedVehicles.slice(groupIndex * carouselItemsPerRow, (groupIndex + 1) * carouselItemsPerRow).map((vehicle, vehicleIndex) => {
-                  const vehicleImageUrl = vehicle.image || '/mockvehicle.png';
-                  
-                  return (
-                    <div 
-                      key={`${vehicle.AdID || vehicle.id}-${vehicleIndex}`} 
-                      className="group bg-bg-primary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg cursor-pointer"
-                      onClick={() => navigate(`/ad/${vehicle.AdID || vehicle.id}`, { state: { adData: vehicle } })}
-                    >
-                      <div className="p-3">
-                        <div className="relative h-48 w-full rounded-lg overflow-hidden">
-                          <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
-                          <img 
-                            src={vehicleImageUrl} 
-                            alt={vehicle.VehicleName || vehicle.title}
-                            className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
-                            style={{
-                              border: '1px solid var(--border-primary)',
-                              boxSizing: 'border-box'
-                            }}
-                            loading="lazy"
-                            onError={(e) => {
-                              console.log('❌ Image failed to load:', vehicleImageUrl);
-                              e.target.onerror = null;
-                              e.target.src = '/mockvehicle.png';
-                            }}
-                            onLoad={(e) => {
-                              console.log('✅ Image loaded successfully:', vehicleImageUrl);
-                            }}
-                          />
-                          {vehicle.isNew && (
-                            <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
-                              {t.new}
+            {Array(Math.ceil(recentlyAddedVehicles.length / carouselItemsPerRow))
+              .fill()
+              .map((_, groupIndex) => (
+                <div
+                  key={groupIndex}
+                  className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                  style={{ minWidth: '100%' }}
+                >
+                  {recentlyAddedVehicles
+                    .slice(groupIndex * carouselItemsPerRow, (groupIndex + 1) * carouselItemsPerRow)
+                    .map((vehicle) => {
+                      const imageUrl = vehicle.image || '/mockvehicle.png';
+
+                      return (
+                        <div
+                          key={vehicle.AdID || vehicle.id}
+                          onClick={() => navigate(`/ad/${vehicle.AdID || vehicle.id}`, { state: { adData: vehicle } })}
+                          className="bg-bg-secondary rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-border-primary group"
+                        >
+                          <div className="relative h-56 overflow-hidden">
+                            <img
+                              src={imageUrl}
+                              alt={vehicle.VehicleName || vehicle.title}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                              onError={(e) => (e.target.src = '/mockvehicle.png')}
+                            />
+                            {/* Emov Check Badge */}
+                            <img
+                              src="/emovcheck.png"
+                              alt="Emov Verified"
+                              className="absolute top-3 right-3 w-12 h-12 object-contain z-10"
+                            />
+                            {/* "NEW" Badge Removed */}
+                          </div>
+
+                          <div className="p-5">
+                            <h3 className="text-lg font-bold text-text-primary mb-2 line-clamp-1 group-hover:text-emov-purple transition-colors">
+                              {vehicle.VehicleName || vehicle.title || 'Vehicle'}
+                            </h3>
+
+                            <div className="text-2xl font-bold text-emov-purple mb-3">
+                              {vehicle.VehiclePrice ? `PKR ${parseInt(vehicle.VehiclePrice).toLocaleString()}` : 'Price on call'}
                             </div>
-                          )}
+
+                            <div className="space-y-2 text-sm text-text-secondary">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{vehicle.RegistrationYear || 'N/A'}</span>
+                                <span>•</span>
+                                <span>{vehicle.VehicleMileage ? `${vehicle.VehicleMileage.toLocaleString()} km` : 'N/A'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <FaMapMarkerAlt className="w-4 h-4 text-emov-purple/70" />
+                                <span className="truncate">{vehicle.LocationName || vehicle.location || 'Location'}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      
-                      <div className="px-3 pb-3 flex-grow flex flex-col">
-                        <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-0.5 sm:mb-1 leading-tight line-clamp-1">
-                          {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(0, 3).join(' ')}
-                        </h3>
-                        
-                        <p className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-0 leading-tight line-clamp-1">
-                          {(vehicle.VehicleName || vehicle.title || '').split(' ').slice(3).join(' ') || vehicle.SellerComment || ''}
-                        </p>
-                        
-                        <span className="text-base sm:text-lg font-bold text-emov-purple mb-1 sm:mb-2 block">
-                          {vehicle.VehiclePrice ? `Rs ${parseInt(vehicle.VehiclePrice).toLocaleString()}` : vehicle.price}
-                        </span>
-                        
-                        <div className="flex items-center text-xs sm:text-sm text-gray-500 mb-1">
-                          <span>{vehicle.RegistrationYear || vehicle.year || '2020'}</span>
-                          <span className="mx-1 sm:mx-2">|</span>
-                          <span className="line-clamp-1">{vehicle.VehicleMileage || vehicle.mileage}</span>
-                        </div>
-                        
-                        <div className="flex items-center text-xs sm:text-sm text-gray-500 mt-auto">
-                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          <span className="line-clamp-1">{vehicle.LocationName || vehicle.location}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+                      );
+                    })}
+                </div>
+              ))}
           </div>
         </div>
       </div>
     ) : (
-      <div className="text-center py-10 text-text-secondary">
-        <p>No recent vehicles available</p>
+      <div className="text-center py-16">
+        <div className="mx-auto w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+          <FaCar className="w-16 h-16 text-gray-400" />
+        </div>
+        <p className="text-xl text-text-secondary">No recent vehicles available at the moment</p>
       </div>
     )}
   </div>
 </section>
 
-        {/* Featured Vehicles Section */}
-   <section className="w-full bg-bg-primary py-12 sm:py-16 relative">
+{/* Enhanced Featured Vehicles Section - "Featured" Badge Removed */}
+<section className="w-full bg-bg-primary py-12 sm:py-16">
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div className="mb-6">
-      <h2 className="text-2xl font-bold text-text-primary">{t.featuredVehicles}</h2>
-    </div>
-    
+    <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-8">
+      {t.featuredVehicles}
+    </h2>
+
     <div className="relative">
       <CarouselNavigation
         onPrev={() => scrollLeft('Featured Vehicles', featuredVehicles, carouselItemsPerRow)}
@@ -2768,16 +2722,12 @@ function Dashboard({ handleLogout: appLogout }) {
         canGoNext={canScrollRight('Featured Vehicles', featuredVehicles, carouselItemsPerRow)}
         section="featured vehicles"
       />
-      
+
       <div className="relative overflow-hidden">
-        {/* Mobile carousel - one card at a time */}
-        <div 
-          className="flex transition-transform duration-300 sm:hidden"
-          style={{
-            transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)`,
-            width: '100%',
-            transition: 'transform 0.3s ease-in-out'
-          }}
+        {/* Mobile Carousel */}
+        <div
+          className="flex transition-transform duration-500 ease-out sm:hidden"
+          style={{ transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)` }}
         >
           {[
             {
@@ -2789,7 +2739,6 @@ function Dashboard({ handleLogout: appLogout }) {
               transmission: 'Automatic',
               fuel: 'Petrol',
               location: 'New York',
-              isNew: true
             },
             {
               id: 2,
@@ -2800,7 +2749,6 @@ function Dashboard({ handleLogout: appLogout }) {
               transmission: 'Automatic',
               fuel: 'Hybrid',
               location: 'Los Angeles',
-              isNew: false
             },
             {
               id: 3,
@@ -2811,7 +2759,6 @@ function Dashboard({ handleLogout: appLogout }) {
               transmission: 'Automatic',
               fuel: 'Diesel',
               location: 'Miami',
-              isNew: true
             },
             {
               id: 4,
@@ -2822,148 +2769,130 @@ function Dashboard({ handleLogout: appLogout }) {
               transmission: 'Automatic',
               fuel: 'Petrol',
               location: 'Chicago',
-              isNew: false
-            }
-          ].map((vehicle) => (
-            <div 
-              key={`mobile-${vehicle.id}`}
-              className="w-full flex-shrink-0 px-1"
-              style={{ minWidth: '100%' }}
-            >
-              <div 
-                className="group bg-bg-secondary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
-              >
-                <div className="p-3">
-                  <div className="relative h-48 w-full rounded-lg overflow-hidden">
-                    <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
-                    <img 
-                      src="/mockvehicle.png" 
+            },
+          ].map((vehicle) => {
+            const imageUrl = '/mockvehicle.png'; // Replace with real data if available
+
+            return (
+              <div key={`mobile-${vehicle.id}`} className="w-full flex-shrink-0 px-2">
+                <div
+                  className="bg-bg-secondary rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-border-primary group"
+                >
+                  <div className="relative h-64 overflow-hidden">
+                    <img
+                      src={imageUrl}
                       alt={vehicle.title}
-                      className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
-                      style={{
-                        border: '1px solid var(--border-primary)',
-                        boxSizing: 'border-box'
-                      }}
-                      loading="lazy"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      onError={(e) => (e.target.src = '/mockvehicle.png')}
                     />
-                    {vehicle.isNew && (
-                      <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-black rounded">
-                        {t.new}
+                    {/* Emov Check Badge */}
+                    <img
+                      src="/emovcheck.png"
+                      alt="Emov Verified"
+                      className="absolute top-3 right-3 w-12 h-12 object-contain z-10"
+                    />
+                    {/* "Featured" Badge Removed */}
+                  </div>
+
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-text-primary mb-2 line-clamp-1 group-hover:text-emov-purple transition-colors">
+                      {vehicle.title}
+                    </h3>
+
+                    <div className="text-2xl font-bold text-emov-purple mb-3">
+                      {vehicle.price}
+                    </div>
+
+                    <div className="space-y-2 text-sm text-text-secondary">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{vehicle.year}</span>
+                        <span>•</span>
+                        <span>{vehicle.mileage}</span>
                       </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="px-3 pb-3 flex-grow flex flex-col">
-                  <h3 className="text-base font-semibold text-text-primary mb-1 leading-tight">
-                    {vehicle.title.split(' ').slice(0, 2).join(' ')}
-                  </h3>
-                  
-                  <p className="text-sm text-gray-600 mb-1 leading-tight">
-                    {vehicle.title.split(' ').slice(2).join(' ')}
-                  </p>
-                  
-                  <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
-                  
-                  <div className="flex items-center text-sm text-gray-500 mb-1">
-                    <span>{vehicle.year}</span>
-                    <span className="mx-2">|</span>
-                    <span>{vehicle.mileage}</span>
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>{vehicle.location}</span>
+                      <div className="flex items-center gap-2">
+                        <FaMapMarkerAlt className="w-4 h-4 text-emov-purple/70" />
+                        <span className="truncate">{vehicle.location}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Desktop carousel - 4 cards at a time */}
-        <div 
-          className="hidden sm:flex transition-transform duration-300"
-          style={{
-            transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)`,
-            width: '100%',
-            transition: 'transform 0.3s ease-in-out'
-          }}
+        {/* Desktop Carousel */}
+        <div
+          className="hidden sm:flex transition-transform duration-500 ease-out gap-6"
+          style={{ transform: `translateX(-${currentSlides['Featured Vehicles'] * 100}%)` }}
         >
-          {Array(Math.ceil(featuredVehicles.length / carouselItemsPerRow)).fill().map((_, groupIndex) => (
-            <div 
-              key={groupIndex}
-              className={`w-full flex-shrink-0 gap-6 px-1 ${
-                carouselItemsPerRow === 1 ? 'grid grid-cols-1' :
-                carouselItemsPerRow === 2 ? 'grid grid-cols-2' :
-                carouselItemsPerRow === 3 ? 'grid grid-cols-3' :
-                'grid grid-cols-4'
-              }`}
-              style={{ minWidth: '100%' }}
-            >
-              {featuredVehicles.slice(groupIndex * carouselItemsPerRow, (groupIndex + 1) * carouselItemsPerRow).map((vehicle) => (
-                <div 
-                  key={vehicle.id} 
-                  className="group bg-bg-secondary rounded-lg overflow-hidden flex flex-col h-full transition-shadow duration-300 hover:shadow-lg"
-                >
-                  <div className="p-3">
-                    <div className="relative h-48 w-full rounded-lg overflow-hidden">
-                      <div className="absolute inset-0 bg-bg-secondary border border-border-primary rounded-lg m-0.5"></div>
-                      <img 
-                        src={vehicle.image || '/mockvehicle.png'} 
-                        alt={vehicle.title}
-                        className="relative z-10 w-full h-full object-cover rounded-md transition-transform duration-500 group-hover:scale-105 bg-bg-primary"
-                        style={{
-                          border: '1px solid var(--border-primary)',
-                          boxSizing: 'border-box'
-                        }}
-                        loading="lazy"
-                      />
-                      {vehicle.isFeatured && (
-                        <div className="absolute top-2 left-2 px-2 py-1 text-xs font-semibold text-white bg-emov-purple rounded">
-                          Featured
+          {Array(Math.ceil(featuredVehicles.length / carouselItemsPerRow))
+            .fill()
+            .map((_, groupIndex) => (
+              <div
+                key={groupIndex}
+                className="w-full flex-shrink-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                style={{ minWidth: '100%' }}
+              >
+                {featuredVehicles
+                  .slice(groupIndex * carouselItemsPerRow, (groupIndex + 1) * carouselItemsPerRow)
+                  .map((vehicle) => {
+                    const imageUrl = vehicle.image || '/mockvehicle.png';
+
+                    return (
+                      <div
+                        key={vehicle.id}
+                        className="bg-bg-secondary rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer border border-border-primary group"
+                      >
+                        <div className="relative h-56 overflow-hidden">
+                          <img
+                            src={imageUrl}
+                            alt={vehicle.title}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                            onError={(e) => (e.target.src = '/mockvehicle.png')}
+                          />
+                          {/* Emov Check Badge */}
+                          <img
+                            src="/emovcheck.png"
+                            alt="Emov Verified"
+                            className="absolute top-3 right-3 w-12 h-12 object-contain z-10"
+                          />
+                          {/* "Featured" Badge Removed */}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  
-                  <div className="px-3 pb-3 flex-grow flex flex-col">
-                    <h3 className="text-base font-semibold text-text-primary mb-1 leading-tight">
-                      {vehicle.title.split(' ').slice(0, 2).join(' ')}
-                    </h3>
-                    
-                    <p className="text-sm text-gray-600 mb-1 leading-tight">
-                      {vehicle.title.split(' ').slice(2).join(' ')}
-                    </p>
-                    
-                    <span className="text-lg font-bold text-emov-purple mb-2">{vehicle.price}</span>
-                    
-                    <div className="flex items-center text-sm text-gray-500 mb-1">
-                      <span>{vehicle.year}</span>
-                      <span className="mx-2">|</span>
-                      <span>{vehicle.mileage}</span>
-                    </div>
-                    
-                    <div className="flex items-center text-sm text-gray-500">
-                      <svg className="w-4 h-4 mr-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span>{vehicle.location}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
+
+                        <div className="p-5">
+                          <h3 className="text-lg font-bold text-text-primary mb-2 line-clamp-1 group-hover:text-emov-purple transition-colors">
+                            {vehicle.title}
+                          </h3>
+
+                          <div className="text-2xl font-bold text-emov-purple mb-3">
+                            {vehicle.price}
+                          </div>
+
+                          <div className="space-y-2 text-sm text-text-secondary">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{vehicle.year}</span>
+                              <span>•</span>
+                              <span>{vehicle.mileage}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <FaMapMarkerAlt className="w-4 h-4 text-emov-purple/70" />
+                              <span className="truncate">{vehicle.location}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            ))}
         </div>
       </div>
     </div>
   </div>
 </section>
+
+
         {/* Banner 2 - Full Width */}
         <section className="w-full bg-bg-primary py-6 sm:py-8">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

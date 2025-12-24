@@ -6,6 +6,7 @@ import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import { useTheme } from '../context/ThemeContext';
 import { useChat } from '../contexts/ChatContext';
+import { useUserProfile } from '../hooks/useUserProfile';
 import chatService from '../services/chatService'; 
 import { FaTrash, FaUserSlash } from 'react-icons/fa';
 import Header from '../components/Layout/Header';
@@ -161,25 +162,31 @@ const Avatar = ({ user, size = 'md' }) => {
   };
 
   const [imageError, setImageError] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const avatarUrl = getImageUrl(user?.avatar || user?.picture, true);
   const name = user?.name || 'U';
   const firstLetter = name.charAt(0).toUpperCase();
+  
+  // Check if user has any avatar image at all
+  const hasAvatarImage = user?.avatar || user?.picture;
 
   // Reset error state when avatarUrl changes
   useEffect(() => {
     setImageError(false);
+    setImageLoaded(false);
   }, [avatarUrl]);
 
   return (
     <div className={`relative flex-shrink-0 ${sizeClasses[size]}`}>
-      {avatarUrl && !imageError ? (
+      {hasAvatarImage && !imageError ? (
         <div className="relative w-full h-full rounded-full overflow-hidden">
           <img
             src={avatarUrl}
             alt={name}
             className="w-full h-full object-cover"
             onError={() => setImageError(true)}
-            style={{ minWidth: sizeClasses[size].match(/min-w-\[([^\]]+)\]/)?.[1] || '100%' }}
+            onLoad={() => setImageLoaded(true)}
+            style={{ minWidth: sizeClasses[size].match(/min-w-\[([^\]]+)\)/)?.[1] || '100%' }}
           />
         </div>
       ) : (
@@ -209,6 +216,8 @@ export default function Chats() {
     error
   } = useChat();
   
+  const { userProfile, setUserProfile } = useUserProfile();
+  
   // Get current user info
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const currentUser = {
@@ -218,30 +227,18 @@ export default function Chats() {
     firstLetter: (user.name || 'Y').charAt(0).toUpperCase()
   };
   const [language, setLanguage] = useState('english');
-  const [userProfile, setUserProfile] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [selectedAudio, setSelectedAudio] = useState(null);
   const [selectedAudioFile, setSelectedAudioFile] = useState(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
   const audioInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   
   const [messageLoading, setMessageLoading] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [hoveredMessage, setHoveredMessage] = useState(null);
-  const [isDeleteConversationModalOpen, setIsDeleteConversationModalOpen] = useState(false);
-  const [conversationToDelete, setConversationToDelete] = useState(null);
-  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
-  const [hoveredChatId, setHoveredChatId] = useState(null);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef(null);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
@@ -249,7 +246,23 @@ export default function Chats() {
   const [isRecording, setIsRecording] = useState(false);
   const [showRecordingUI, setShowRecordingUI] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioChunks, setAudioChunks] = useState([]);
   const recordingInterval = useRef(null);
+  const [audioPlaybackStates, setAudioPlaybackStates] = useState({});
+
+  // Delete modal states
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
+  const [hoveredMessage, setHoveredMessage] = useState(null);
+  const [hoveredReceivedMessage, setHoveredReceivedMessage] = useState(null);
+  const [hoveredChatId, setHoveredChatId] = useState(null);
+  
+  // Delete conversation states
+  const [isDeleteConversationModalOpen, setIsDeleteConversationModalOpen] = useState(false);
+  const [isDeletingConversation, setIsDeletingConversation] = useState(false);
+  const [conversationToDelete, setConversationToDelete] = useState(null);
 
   // Handle deleting a conversation
   const handleDeleteConversation = async () => {
@@ -398,6 +411,50 @@ const renderImageContent = (imageUrl) => {
     </div>
   );
 };
+
+  // Audio playback helper functions
+  const updateAudioPlaybackState = (messageId, updates) => {
+    setAudioPlaybackStates(prev => ({
+      ...prev,
+      [messageId]: { ...prev[messageId], ...updates }
+    }));
+  };
+
+  const handleAudioPlay = (messageId, audioElement) => {
+    updateAudioPlaybackState(messageId, { isPlaying: true });
+    audioElement.play();
+  };
+
+  const handleAudioPause = (messageId, audioElement) => {
+    updateAudioPlaybackState(messageId, { isPlaying: false });
+    audioElement.pause();
+  };
+
+  const handleAudioTimeUpdate = (messageId, audioElement) => {
+    const currentTime = audioElement.currentTime;
+    const duration = audioElement.duration || 0;
+    const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+    
+    updateAudioPlaybackState(messageId, {
+      currentTime,
+      duration,
+      progress
+    });
+  };
+
+  const handleAudioLoadedMetadata = (messageId, audioElement) => {
+    updateAudioPlaybackState(messageId, {
+      duration: audioElement.duration || 0
+    });
+  };
+
+  const handleAudioEnded = (messageId) => {
+    updateAudioPlaybackState(messageId, {
+      isPlaying: false,
+      currentTime: 0,
+      progress: 0
+    });
+  };
 
   // Handle chat selection
   const handleChatSelect = async (chat) => {
@@ -724,30 +781,32 @@ useEffect(() => {
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
+        const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
+        
         setSelectedAudio(audioUrl);
-        setSelectedAudioFile(new File([audioBlob], 'recording.wav', { type: 'audio/wav' }));
+        setSelectedAudioFile(audioFile);
         setAudioChunks([]);
-        setRecordingTime(0);
+        console.log('[Audio] Recording stopped and processed');
       };
 
-      console.log('[Audio] MediaRecorder created, starting...');
-      mediaRecorder.start();
-      console.log('[Audio] MediaRecorder started');
       setMediaRecorder(mediaRecorder);
       setAudioChunks(audioChunks);
+      mediaRecorder.start();
       setIsRecording(true);
       setShowRecordingUI(true);
-      console.log('[Audio] States set, starting timer...');
+      setRecordingTime(0); // Reset timer
+      console.log('[Audio] Recording started, beginning timer...');
 
-      // Start recording timer
+      // Start recording timer with proper real-time updates
       recordingInterval.current = setInterval(() => {
-        console.log('[Audio] Timer tick - current time:', recordingTime);
         setRecordingTime(prev => {
-          if (prev >= 60) { // 60 seconds max recording time
+          const newTime = prev + 1;
+          console.log('[Audio] Timer tick:', newTime);
+          if (newTime >= 60) { // 60 seconds max recording time
             stopRecording();
             return 0;
           }
-          return prev + 1;
+          return newTime;
         });
       }, 1000);
 
@@ -1161,53 +1220,6 @@ const formatMessageTime = (dateString) => {
   }
 };
 
-  // Fetch user profile
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          const user = JSON.parse(savedUser);
-          const userProfileData = {
-            id: user.id || user.userId || currentUserId,
-            name: user.name || 'You',
-            avatar: user.profileImage || '/default-avatar.png',
-            firstLetter: (user.name || 'Y').charAt(0).toUpperCase()
-          };
-          setUserProfile(userProfileData);
-          return;
-        }
-
-        const token = localStorage.getItem('token');
-        if (token) {
-          const response = await axios.get('https://api.emov.com.pk/api/user/profile', {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          
-          const userData = response.data.data || response.data;
-          const formattedUser = {
-            name: userData.name || userData.username || 'User',
-            email: userData.email || '',
-            picture: userData.imageUrl ? getImageUrl(userData.imageUrl) : null,
-            username: userData.username,
-            id: userData.id || userData.userId
-          };
-          
-          localStorage.setItem('user', JSON.stringify(formattedUser));
-          setUserProfile(formattedUser);
-        }
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          setUserProfile(JSON.parse(savedUser));
-        }
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
@@ -1480,8 +1492,16 @@ const formatMessageTime = (dateString) => {
                       <div
                         key={message._id}
                         className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'} mb-3 group relative`}
-                        onMouseEnter={() => setHoveredMessage(message._id)}
-                        onMouseLeave={() => setHoveredMessage(null)}
+                        onMouseEnter={() => {
+                          setHoveredMessage(message._id);
+                          if (!isCurrentUser) {
+                            setHoveredReceivedMessage(message._id);
+                          }
+                        }}
+                        onMouseLeave={() => {
+                          setHoveredMessage(null);
+                          setHoveredReceivedMessage(null);
+                        }}
                       >
                         {/* Sender's avatar for received messages */}
                         {!isCurrentUser && senderInfo && (
@@ -1516,7 +1536,7 @@ const formatMessageTime = (dateString) => {
                               </div>
                             </div>
                             
-                            {/* Delete button - only show on hover for current user's messages */}
+                            {/* Delete button - show on hover for current user's messages, and "Delete for Me" for received messages */}
                             {isCurrentUser && hoveredMessage === message._id && (
                               <button
                                 onClick={(e) => {
@@ -1528,7 +1548,23 @@ const formatMessageTime = (dateString) => {
                                 title="Delete message"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                            )}
+                            
+                            {!isCurrentUser && hoveredReceivedMessage === message._id && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMessage(message);
+                                  setDeleteModalOpen(true);
+                                }}
+                                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all duration-200"
+                                title="Delete for Me"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                                 </svg>
                               </button>
                             )}
@@ -1689,140 +1725,148 @@ const formatMessageTime = (dateString) => {
           </div>
         )}
       </div>
-      {/* Delete Message Modal */}
+{/* Compact & Enhanced Delete Message Modal */}
 {deleteModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-xl">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Delete Message
-        </h3>
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+    <div className="bg-bg-secondary dark:bg-gray-800 rounded-2xl max-w-sm w-full shadow-2xl border border-border-primary overflow-hidden transform transition-all duration-300 scale-100 animate-modalPop">
+      {/* Header */}
+      <div className="px-6 pt-6 pb-4 text-center relative">
         <button
           onClick={handleCloseModal}
-          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           disabled={deleteLoading}
+          className="absolute top-4 right-4 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
         >
           <FaTimes className="w-5 h-5" />
         </button>
+
+        <div className="mx-auto w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+          <FaTrash className="w-7 h-7 text-red-600 dark:text-red-400" />
+        </div>
+
+        <h3 className="text-xl font-bold text-text-primary mb-2">
+          {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId) 
+            ? 'Delete Message?' 
+            : 'Delete for Me?'}
+        </h3>
+        <p className="text-sm text-text-secondary">
+          {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId)
+            ? 'Choose an option below'
+            : 'This message will only be deleted for you'}
+        </p>
       </div>
-      
-      <p className="text-gray-600 dark:text-gray-300 mb-6">
-        Are you sure you want to delete this message?
-      </p>
-      
-      <div className="space-y-3">
+
+      {/* Options */}
+      <div className="px-6 pb-6 space-y-3">
+        {/* Delete for Me - Always show */}
         <button
           onClick={() => handleDeleteMessage("me")}
           disabled={deleteLoading}
-          className="w-full flex items-center justify-center space-x-3 p-3 text-left border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          className="w-full flex items-center gap-4 p-4 bg-bg-tertiary hover:bg-bg-secondary dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl border border-border-primary transition-all duration-300 disabled:opacity-60 group"
         >
-          <FaUserSlash className="w-5 h-5 text-blue-500" />
-          <div className="flex-1">
-            <div className="font-medium text-gray-900 dark:text-white">Delete for Me</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Remove this message from your chat only
-            </div>
+          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+            <FaUserSlash className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div className="text-left">
+            <div className="font-semibold text-text-primary">Delete for Me</div>
+            <div className="text-xs text-text-secondary mt-1">Only you will no longer see it</div>
           </div>
         </button>
-        
-        <button
-          onClick={() => handleDeleteMessage("everyone")}
-          disabled={deleteLoading}
-          className="w-full flex items-center justify-center space-x-3 p-3 text-left border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
-        >
-          <FaTrash className="w-5 h-5 text-red-500" />
-          <div className="flex-1">
-            <div className="font-medium text-gray-900 dark:text-white">Delete for Everyone</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Remove this message for everyone
+
+        {/* Delete for Everyone - Only show for current user's messages */}
+        {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId) && (
+          <button
+            onClick={() => handleDeleteMessage("everyone")}
+            disabled={deleteLoading}
+            className="w-full flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl border border-red-400/50 transition-all duration-300 disabled:opacity-60 group"
+          >
+            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+              <FaTrash className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
-          </div>
-        </button>
+            <div className="text-left">
+              <div className="font-semibold text-text-primary">Delete for Everyone</div>
+              <div className="text-xs text-text-secondary mt-1">Removes message for all</div>
+            </div>
+          </button>
+        )}
       </div>
-      
+
+      {/* Loading State */}
       {deleteLoading && (
-        <div className="mt-4 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
-          <span className="ml-2 text-sm text-gray-500">Deleting...</span>
+        <div className="px-6 pb-5 flex items-center justify-center gap-3">
+          <div className="animate-spin rounded-full h-7 w-7 border-3 border-emov-purple border-t-transparent"></div>
+          <span className="text-text-primary font-medium">Deleting...</span>
         </div>
       )}
     </div>
   </div>
 )}
-
-      {/* Delete Conversation Confirmation Modal */}
-      {isDeleteConversationModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Delete Conversation
-              </h3>
-              <button
-                onClick={() => {
-                  setIsDeleteConversationModalOpen(false);
-                  setConversationToDelete(null);
-                }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                disabled={isDeletingConversation}
-              >
-                <FaTimes className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Are you sure you want to delete this conversation? This action cannot be undone.
-            </p>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setIsDeleteConversationModalOpen(false);
-                  setConversationToDelete(null);
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
-                disabled={isDeletingConversation}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteConversation}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 flex items-center"
-                disabled={isDeletingConversation}
-              >
-                {isDeletingConversation ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </button>
-            </div>
-          </div>
+   {/* Enhanced Delete Conversation Modal */}
+{isDeleteConversationModalOpen && (
+  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+    <div className="bg-bg-secondary dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl border border-border-primary overflow-hidden transform transition-all duration-300 scale-100 animate-modalPop">
+      {/* Header */}
+      <div className="px-8 pt-8 pb-6 text-center">
+        <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-5">
+          <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
         </div>
-        )}
+        <h3 className="text-2xl font-bold text-text-primary mb-3">
+          Delete Conversation?
+        </h3>
+        <p className="text-text-secondary leading-relaxed">
+          This action <span className="font-semibold text-red-600 dark:text-red-400">cannot be undone</span>. The entire conversation will be permanently removed.
+        </p>
+      </div>
 
-      {/* Message Sending Loader Overlay */}
-      {sendingMessage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center space-y-4">
-            <div className="relative w-16 h-16">
-              <div className="absolute inset-0 border-4 border-emov-purple/20 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-emov-purple rounded-full border-t-transparent animate-spin"></div>
-            </div>
-            <p className="text-lg font-medium text-gray-900 dark:text-white">
-              Sending message...
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Please wait while we deliver your message</p>
-          </div>
-        </div>
-      )}
-      
+      {/* Actions */}
+      <div className="px-8 pb-8 flex flex-col sm:flex-row-reverse gap-4">
+        <button
+          onClick={handleDeleteConversation}
+          disabled={isDeletingConversation}
+          className="w-full sm:w-auto px-8 py-4 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 disabled:cursor-not-allowed"
+        >
+          {isDeletingConversation ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+              <span>Deleting...</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Yes, Delete</span>
+            </>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            setIsDeleteConversationModalOpen(false);
+            setConversationToDelete(null);
+          }}
+          disabled={isDeletingConversation}
+          className="w-full sm:w-auto px-8 py-4 bg-bg-tertiary hover:bg-bg-secondary dark:bg-gray-700 dark:hover:bg-gray-600 text-text-primary font-medium rounded-xl border border-border-primary transition-all duration-300 disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+
+      {/* Close Button (Top Right) */}
+      <button
+        onClick={() => {
+          setIsDeleteConversationModalOpen(false);
+          setConversationToDelete(null);
+        }}
+        disabled={isDeletingConversation}
+        className="absolute top-6 right-6 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
+      >
+        <FaTimes className="w-6 h-6" />
+      </button>
+    </div>
+  </div>
+)}
       {!currentChat && <MobileBottomNav activePage="chats" />}
     </div>
   );
