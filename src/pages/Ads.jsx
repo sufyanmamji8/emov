@@ -5,7 +5,8 @@ import apiService, { clearCache } from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import Header from '../components/Layout/Header'; // Import Header component for consistency
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 import { useUserProfile } from '../hooks/useUserProfile';
 import toast from '../utils/toast.jsx';
 
@@ -71,7 +72,6 @@ const translations = {
     selectCondition: "Select condition",
     enterInspectionStatus: "e.g., Certified, Pre-inspected",
     enterElectricRange: "e.g., 300 km",
-    
     enterBatteryCapacity: "e.g., 60 kWh",
     enterLoadCapacity: "e.g., 60,000 kg",
     addComments: "Add any additional comments about your vehicle...",
@@ -257,8 +257,7 @@ const getTranslatedData = (language) => {
 
 export default function Ads() {
   const { theme, toggleTheme } = useTheme();
-  const isDark = theme === 'dark';
-  const [language, setLanguage] = useState('english');
+  const { language } = useLanguage();
   const { userProfile, setUserProfile } = useUserProfile();
   const [pagination, setPagination] = useState({
     total: 0,
@@ -2266,10 +2265,8 @@ const renderPreview = () => {
        {/* Navbar Section */}
         <div className="relative">
           <Navbar 
-            isDark={isDark}
+            isDark={theme === 'dark'}
             toggleTheme={toggleTheme}
-            language={language}
-            setLanguage={setLanguage}
             userProfile={userProfile}
             handleLogout={handleLogout}
           />

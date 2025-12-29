@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 import toast from '../utils/toast.jsx';
 import authApi from '../services/authApi';
 import CustomPhoneInput from './CustomPhoneInput';
@@ -19,8 +20,167 @@ import {
   FaCalendarAlt
 } from 'react-icons/fa';
 
+// Language translations
+const translations = {
+  english: {
+    profile: "Profile",
+    editProfile: "Edit Profile",
+    personalInfo: "Personal Information",
+    fullName: "Full Name",
+    email: "Email",
+    phone: "Phone",
+    gender: "Gender",
+    dateOfBirth: "Date of Birth",
+    male: "Male",
+    female: "Female",
+    other: "Other",
+    saveChanges: "Save Changes",
+    cancel: "Cancel",
+    changePassword: "Change Password",
+    currentPassword: "Current Password",
+    newPassword: "New Password",
+    confirmPassword: "Confirm Password",
+    updatePassword: "Update Password",
+    deleteAccount: "Delete Account",
+    deleteAccountWarning: "This action cannot be undone. All your data will be permanently deleted.",
+    confirmDelete: "Confirm Delete",
+    back: "Back",
+    loading: "Loading...",
+    error: "Error",
+    success: "Success",
+    profileUpdated: "Profile updated successfully!",
+    passwordUpdated: "Password updated successfully!",
+    accountDeleted: "Account deleted successfully!",
+    passwordsNotMatch: "Passwords do not match",
+    passwordTooShort: "Password must be at least 8 characters",
+    invalidEmail: "Invalid email address",
+    nameRequired: "Name is required",
+    emailRequired: "Email is required",
+    phoneRequired: "Phone is required",
+    showPassword: "Show Password",
+    hidePassword: "Hide Password",
+    updatePersonalDetails: "Update your personal details here",
+    selectGender: "Select gender",
+    notEditable: "Not editable",
+    saving: "Saving...",
+    savePassword: "Save Password",
+    contactSupport: "Contact Support",
+    warningDeleteAccount: "Warning: This will permanently delete your account and all associated data.",
+    enterPasswordToDelete: "Enter your password to confirm deletion",
+    enterCurrentPassword: "Enter your current password",
+    enterNewPassword: "Enter new password",
+    confirmNewPassword: "Confirm new password",
+    deleting: "Deleting...",
+    edit: "Edit"
+  },
+  urdu: {
+    profile: "پروفائل",
+    editProfile: "پروفائل میں ترمیم کریں",
+    personalInfo: "ذاتی معلومات",
+    fullName: "پورا نام",
+    email: "ای میل",
+    phone: "فون",
+    gender: "جنس",
+    dateOfBirth: "پیدائش کی تاریخ",
+    male: "مرد",
+    female: "عورت",
+    other: "دیگر",
+    saveChanges: "تبدیلیاں محفوظ کریں",
+    cancel: "منسوخ کریں",
+    changePassword: "پاس ورڈ تبدیل کریں",
+    currentPassword: "موجودہ پاس ورڈ",
+    newPassword: "نیا پاس ورڈ",
+    confirmPassword: "پاس ورڈ کی تصدیق کریں",
+    updatePassword: "پاس ورڈ اپ ڈیٹ کریں",
+    deleteAccount: "کھاتہ حذف کریں",
+    deleteAccountWarning: "یہ عمل واپس نہیں کیا جا سکتا۔ آپ کا سب ڈیٹا ہمیشہ حذف ہو جائے گا۔",
+    confirmDelete: "حذف کی تصدیق کریں",
+    back: "پیچھے",
+    loading: "لوڈ ہو رہا ہے...",
+    error: "خرابی",
+    success: "کامیابی",
+    profileUpdated: "پروفائل کامیابی سے اپ ڈیٹ ہو گئی!",
+    passwordUpdated: "پاس ورڈ کامیابی سے اپ ڈیٹ ہو گا!",
+    accountDeleted: "کھاتہ کامیابی سے حذف ہو گا!",
+    passwordsNotMatch: "پاس ورڈز مماثل نہیں ہیں",
+    passwordTooShort: "پاس ورڈ کم از کم 8 حروف کا ہونا چاہیے",
+    invalidEmail: "غلط ای میل پتہ",
+    nameRequired: "نام درکار ہے",
+    emailRequired: "ای میل درکار ہے",
+    phoneRequired: "فون درکار ہے",
+    showPassword: "پاس ورڈ دکھائیں",
+    hidePassword: "پاس ورڈ چھپائیں",
+    updatePersonalDetails: "اپنی ذاتی معلومات یہاں اپ ڈیٹ کریں",
+    selectGender: "جنس منتخب کریں",
+    notEditable: "ترمیم نہیں ہو سکتی",
+    saving: "محفوظ ہو رہا ہے...",
+    savePassword: "پاس ورڈ محفوظ کریں",
+    contactSupport: "سپورٹ سے رابطہ کریں",
+    warningDeleteAccount: "انتباہ: یہ آپ کا کھاتہ اور تمام متعلقہ ڈیٹا ہمیشہ کے لیے حذف کر دے گا۔",
+    enterPasswordToDelete: "حذف کرنے کی تصدیق کے لیے اپنا پاس ورڈ درج کریں",
+    enterCurrentPassword: "اپنا موجودہ پاس ورڈ درج کریں",
+    enterNewPassword: "نیا پاس ورڈ درج کریں",
+    confirmNewPassword: "نئے پاس ورڈ کی تصدیق کریں",
+    deleting: "حذف ہو رہا ہے...",
+    edit: "ترمیم"
+  },
+  french: {
+    profile: "Profil",
+    editProfile: "Modifier le Profil",
+    personalInfo: "Informations Personnelles",
+    fullName: "Nom Complet",
+    email: "Email",
+    phone: "Téléphone",
+    gender: "Genre",
+    dateOfBirth: "Date de Naissance",
+    male: "Homme",
+    female: "Femme",
+    other: "Autre",
+    saveChanges: "Enregistrer les Modifications",
+    cancel: "Annuler",
+    changePassword: "Changer le Mot de Passe",
+    currentPassword: "Mot de Passe Actuel",
+    newPassword: "Nouveau Mot de Passe",
+    confirmPassword: "Confirmer le Mot de Passe",
+    updatePassword: "Mettre à Jour le Mot de Passe",
+    deleteAccount: "Supprimer le Compte",
+    deleteAccountWarning: "Cette action ne peut pas être annulée. Toutes vos données seront définitivement supprimées.",
+    confirmDelete: "Confirmer la Suppression",
+    back: "Retour",
+    loading: "Chargement...",
+    error: "Erreur",
+    success: "Succès",
+    profileUpdated: "Profil mis à jour avec succès!",
+    passwordUpdated: "Mot de passe mis à jour avec succès!",
+    accountDeleted: "Compte supprimé avec succès!",
+    passwordsNotMatch: "Les mots de passe ne correspondent pas",
+    passwordTooShort: "Le mot de passe doit contenir au moins 8 caractères",
+    invalidEmail: "Adresse email invalide",
+    nameRequired: "Le nom est requis",
+    emailRequired: "L'email est requis",
+    phoneRequired: "Le téléphone est requis",
+    showPassword: "Afficher le Mot de Passe",
+    hidePassword: "Masquer le Mot de Passe",
+    updatePersonalDetails: "Mettez à jour vos informations personnelles ici",
+    selectGender: "Sélectionner le genre",
+    notEditable: "Non modifiable",
+    saving: "Enregistrement...",
+    savePassword: "Enregistrer le Mot de Passe",
+    contactSupport: "Contacter le Support",
+    warningDeleteAccount: "Attention: Cela supprimera définitivement votre compte et toutes les données associées.",
+    enterPasswordToDelete: "Entrez votre mot de passe pour confirmer la suppression",
+    enterCurrentPassword: "Entrez votre mot de passe actuel",
+    enterNewPassword: "Entrez un nouveau mot de passe",
+    confirmNewPassword: "Confirmer le nouveau mot de passe",
+    deleting: "Suppression...",
+    edit: "Modifier"
+  }
+};
+
 const Profile = () => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const t = translations[language];
 
   const MAX_NAME_LENGTH = 50;
 
@@ -525,12 +685,12 @@ const Profile = () => {
   };
 
   const fields = [
-    { key: 'name', label: 'Name', editable: true },
-    { key: 'email', label: 'Email', editable: false },
-    { key: 'gender', label: 'Gender', editable: true },
-    { key: 'mobileNo', label: 'Mobile Number', editable: true },
-    { key: 'secondaryMobileNo', label: 'Secondary Mobile Number', editable: true },
-    { key: 'dateOfBirth', label: 'Date of Birth', editable: true },
+    { key: 'name', label: t.fullName, editable: true },
+    { key: 'email', label: t.email, editable: false },
+    { key: 'gender', label: t.gender, editable: true },
+    { key: 'mobileNo', label: t.phone, editable: true },
+    { key: 'secondaryMobileNo', label: t.phone, editable: true },
+    { key: 'dateOfBirth', label: t.dateOfBirth, editable: true },
   ];
 
   return (
@@ -562,7 +722,7 @@ const Profile = () => {
           <FaArrowLeft className="w-5 h-5" />
         </button>
         <div className="absolute left-1/2 transform -translate-x-1/2">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">My Profile</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t.profile}</h1>
         </div>
         <div className="w-9"></div>
       </div>
@@ -574,6 +734,7 @@ const Profile = () => {
             <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex flex-col items-center">
                 {/* Avatar with Edit Icon */}
+                
                 <div className="relative w-36 h-36 mb-6">
                   <div className="w-36 h-36 rounded-full overflow-hidden bg-gradient-to-br from-emov-purple/20 to-emov-green/20 flex items-center justify-center ring-4 ring-white dark:ring-gray-800 shadow-lg">
                     {getAvatarSrc() ? (
@@ -635,7 +796,7 @@ const Profile = () => {
                     disabled={isUpdating || isSavingAvatar}
                   >
                     <FaKey className="w-4 h-4" />
-                    <span>Change Password</span>
+                    <span>{t.changePassword}</span>
                   </button>
                   <button
                     onClick={() => navigate('/service')}
@@ -643,7 +804,7 @@ const Profile = () => {
                     disabled={isUpdating || isSavingAvatar}
                   >
                     <FaHeadset className="w-4 h-4" />
-                    <span>Contact Support</span>
+                    <span>{t.contactSupport}</span>
                   </button>
                   <button
                     onClick={openDeleteModal}
@@ -662,8 +823,8 @@ const Profile = () => {
           <div className="lg:col-span-2">
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-8">
               <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Personal Information</h2>
-                <p className="text-gray-600 dark:text-gray-400">Update your personal details here</p>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t.personalInfo}</h2>
+                <p className="text-gray-600 dark:text-gray-400">{t.updatePersonalDetails}</p>
               </div>
 
               <div className="space-y-6">
@@ -689,10 +850,10 @@ const Profile = () => {
                               onChange={(e) => setFieldValue(e.target.value)}
                               disabled={isDisabled}
                             >
-                              <option value="">Select gender</option>
-                              <option value="Male">Male</option>
-                              <option value="Female">Female</option>
-                              <option value="Other">Other</option>
+                              <option value="">{t.selectGender}</option>
+                              <option value="Male">{t.male}</option>
+                              <option value="Female">{t.female}</option>
+                              <option value="Other">{t.other}</option>
                             </select>
                           ) : field.key === 'mobileNo' || field.key === 'secondaryMobileNo' ? (
                             <div className="space-y-1">
@@ -766,7 +927,7 @@ const Profile = () => {
                                 ) : (
                                   <FaCheck className="w-4 h-4" />
                                 )}
-                                <span>{isUpdating ? 'Saving...' : 'Save'}</span>
+                                <span>{isUpdating ? t.saving : t.saveChanges}</span>
                               </button>
                               <button
                                 onClick={cancelEdit}
@@ -774,7 +935,7 @@ const Profile = () => {
                                 disabled={isDisabled}
                               >
                                 <FaTimes className="w-4 h-4" />
-                                <span>Cancel</span>
+                                <span>{t.cancel}</span>
                               </button>
                             </div>
                           ) : (
@@ -784,11 +945,11 @@ const Profile = () => {
                               disabled={isDisabled}
                             >
                               <FaEdit className="w-4 h-4" />
-                              <span>Edit</span>
+                              <span>{t.edit}</span>
                             </button>
                           )
                         ) : (
-                          <span className="text-sm text-gray-400 dark:text-gray-500 italic">Not editable</span>
+                          <span className="text-sm text-gray-400 dark:text-gray-500 italic">{t.notEditable}</span>
                         )}
                       </div>
                     </div>
@@ -806,7 +967,7 @@ const Profile = () => {
           <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Change Password</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.changePassword}</h2>
                 <button
                   onClick={() => setShowPasswordModal(false)}
                   className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -815,12 +976,12 @@ const Profile = () => {
                   <FaTimes className="w-5 h-5" />
                 </button>
               </div>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Update your account password</p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{t.updatePassword}</p>
             </div>
             
             <form onSubmit={handleSubmitPasswordChange} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Password</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.currentPassword}</label>
                 <div className="relative">
                   <input
                     type={showOldPassword ? "text" : "password"}
@@ -830,7 +991,7 @@ const Profile = () => {
                     className={`w-full px-4 py-3 pr-12 rounded-lg border bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent ${
                       passwordErrors.oldPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
-                    placeholder="Enter your current password"
+                    placeholder={t.enterCurrentPassword}
                     disabled={passwordLoading}
                   />
                   <button
@@ -852,7 +1013,7 @@ const Profile = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">New Password</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.newPassword}</label>
                 <div className="relative">
                   <input
                     type={showNewPassword ? "text" : "password"}
@@ -862,7 +1023,7 @@ const Profile = () => {
                     className={`w-full px-4 py-3 pr-12 rounded-lg border bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent ${
                       passwordErrors.newPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
-                    placeholder="Enter new password"
+                    placeholder={t.enterNewPassword}
                     disabled={passwordLoading}
                   />
                   <button
@@ -884,7 +1045,7 @@ const Profile = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirm New Password</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t.confirmPassword}</label>
                 <div className="relative">
                   <input
                     type={showConfirmPassword ? "text" : "password"}
@@ -894,7 +1055,7 @@ const Profile = () => {
                     className={`w-full px-4 py-3 pr-12 rounded-lg border bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emov-purple focus:border-transparent ${
                       passwordErrors.confirmPassword ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
-                    placeholder="Confirm new password"
+                    placeholder={t.confirmNewPassword}
                     disabled={passwordLoading}
                   />
                   <button
@@ -929,7 +1090,7 @@ const Profile = () => {
                   disabled={passwordLoading}
                 >
                   <FaTimes className="w-4 h-4" />
-                  <span>Cancel</span>
+                  <span>{t.cancel}</span>
                 </button>
                 <button
                   type="submit"
@@ -942,12 +1103,12 @@ const Profile = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      <span>Saving...</span>
+                      <span>{t.saving}</span>
                     </>
                   ) : (
                     <>
                       <FaLock className="w-4 h-4" />
-                      <span>Save Password</span>
+                      <span>{t.savePassword}</span>
                     </>
                   )}
                 </button>
@@ -963,7 +1124,7 @@ const Profile = () => {
           <div className="w-full max-w-md bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transform transition-all duration-300 ease-in-out scale-95 opacity-0 animate-fade-in">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Delete Account</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.deleteAccount}</h2>
                 <button
                   onClick={closeDeleteModal}
                   className="text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -972,9 +1133,7 @@ const Profile = () => {
                   <FaTimes className="w-5 h-5" />
                 </button>
               </div>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                This action cannot be undone. All your data will be permanently removed.
-              </p>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{t.deleteAccountWarning}</p>
             </div>
             
             <div className="p-6 space-y-4">
@@ -982,14 +1141,14 @@ const Profile = () => {
                 <div className="flex items-center space-x-2">
                   <FaExclamationTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
                   <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                    Warning: This will permanently delete your account and all associated data.
+                    {t.warningDeleteAccount}
                   </p>
                 </div>
               </div>
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Enter your password to confirm deletion
+                  {t.enterPasswordToDelete}
                 </label>
                 <div className="relative">
                   <input
@@ -1002,7 +1161,7 @@ const Profile = () => {
                     className={`w-full px-4 py-3 pr-12 rounded-lg border bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${
                       deletePasswordError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
                     }`}
-                    placeholder="Enter your password"
+                    placeholder={t.enterPasswordToDelete}
                     disabled={deleteLoading}
                   />
                   <button
@@ -1031,7 +1190,7 @@ const Profile = () => {
                   disabled={deleteLoading}
                 >
                   <FaTimes className="w-4 h-4" />
-                  <span>Cancel</span>
+                  <span>{t.cancel}</span>
                 </button>
                 
                 <button
@@ -1046,12 +1205,12 @@ const Profile = () => {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
-                      <span>Deleting...</span>
+                      <span>{t.deleting}</span>
                     </>
                   ) : (
                     <>
                       <FaTrashAlt className="w-4 h-4" />
-                      <span>Delete Account</span>
+                    <span>{t.deleteAccount}</span>
                     </>
                   )}
                 </button>

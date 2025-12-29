@@ -1,58 +1,85 @@
 // src/components/Layout/Header.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { FaSun, FaMoon, FaBell, FaUser, FaSearch, FaFilter, FaCaretDown, FaCheck } from 'react-icons/fa';
 import { useTheme } from "../../context/ThemeContext";
+import { useLanguage } from "../../context/LanguageContext";
+
+// Language translations for Header
+const translations = {
+  english: {
+    downloadApp: "Download App",
+    signIn: "Sign In",
+    signUp: "Sign Up",
+    switchToLightMode: "Switch to light mode",
+    switchToDarkMode: "Switch to dark mode"
+  },
+  urdu: {
+    downloadApp: "ایپ ڈاؤن لوڈ کریں",
+    signIn: "سائن ان کریں",
+    signUp: "سائن اپ کریں",
+    switchToLightMode: "لائٹ موڈ میں سوئچ کریں",
+    switchToDarkMode: "ڈارک موڈ میں سوئچ کریں"
+  },
+  french: {
+    downloadApp: "Télécharger l'App",
+    signIn: "Se Connecter",
+    signUp: "S'inscrire",
+    switchToLightMode: "Basculer en mode clair",
+    switchToDarkMode: "Basculer en mode sombre"
+  }
+};
 
 const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQuery }) => {
   const { theme, toggleTheme } = useTheme();
+  const { language, setLanguage, languages, currentLanguage } = useLanguage();
   const navigate = useNavigate();
-  const [language, setLanguage] = useState('english');
+  const t = translations[language] || translations.english;
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, right: 0 });
+  const dropdownRef = useRef(null);
+  const buttonRef = useRef(null);
 
   // Update dropdown position when shown
   useEffect(() => {
-    if (showLanguageDropdown) {
-      const button = document.querySelector('.language-dropdown button');
-      if (button) {
-        const rect = button.getBoundingClientRect();
-        setDropdownPosition({
-          top: rect.bottom + 8,
-          left: rect.left,
-          right: window.innerWidth - rect.right
-        });
-      }
+    if (showLanguageDropdown && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 8,
+        left: rect.left,
+        right: window.innerWidth - rect.right
+      });
     }
   }, [showLanguageDropdown]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside - FIXED VERSION
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showLanguageDropdown && !event.target.closest('.language-dropdown')) {
+      // Check if click is outside both the button and dropdown
+      if (
+        showLanguageDropdown && 
+        buttonRef.current && 
+        !buttonRef.current.contains(event.target) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target)
+      ) {
         setShowLanguageDropdown(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    // Use 'click' instead of 'mousedown' to allow onClick to fire first
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [showLanguageDropdown]);
-
-  const languages = [
-    { value: 'english', label: 'English', flag: '🇬🇧' },
-    { value: 'urdu', label: 'اردو', flag: '🇵🇰' },
-    { value: 'french', label: 'Français', flag: '🇫🇷' }
-  ];
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
     setShowLanguageDropdown(false);
   };
 
-  const currentLanguage = languages.find(lang => lang.value === language);
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-8 sm:h-10 py-6 border-b border-border-primary backdrop-blur-sm bg-bg-primary/80">
@@ -70,7 +97,7 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
           </svg>
         </div>
         <span className="text-sm font-medium text-text-primary group-hover:text-text-secondary transition-colors duration-300">
-          Download App
+          {t.downloadApp}
         </span>
       </div>
 
@@ -81,6 +108,7 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
           {/* Enhanced Language Selector */}
           <div className="relative language-dropdown">
             <button
+              ref={buttonRef}
               onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
               className="flex items-center space-x-2 bg-bg-secondary/50 hover:bg-bg-secondary text-text-primary px-3 py-2 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all duration-300 border border-border-primary/50 hover:border-emerald-500/30 group"
             >
@@ -98,7 +126,7 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
           <button 
             onClick={toggleTheme}
             className="relative focus:outline-none p-2.5 transition-all duration-300 hover:scale-110 rounded-xl text-text-primary hover:bg-bg-secondary border border-border-primary/50 hover:border-emerald-500/30 group overflow-hidden"
-            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? t.switchToLightMode : t.switchToDarkMode}
           >
             {/* Background glow effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/0 to-green-500/0 group-hover:from-emerald-400/10 group-hover:to-green-500/10 transition-all duration-300 rounded-xl"></div>
@@ -122,7 +150,7 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
                 className="flex items-center space-x-1 text-sm font-medium text-text-primary hover:text-text-secondary transition-all duration-300 px-4 py-2 rounded-lg hover:bg-bg-secondary"
                 onClick={() => navigate('/login')}
               >
-                <span>Sign In</span>
+                <span>{t.signIn}</span>
               </button>
               
               {/* Sign Up Button */}
@@ -136,7 +164,7 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
                 {/* Hover effect overlay */}
                 <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-green-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <span className="relative z-10">Sign Up</span>
+                <span className="relative z-10">{t.signUp}</span>
               </button>
             </div>
           )}
@@ -160,6 +188,7 @@ const Header = ({ userProfile, handleLogout, onSearch, searchQuery, setSearchQue
       {/* Portal-rendered dropdown */}
       {showLanguageDropdown && createPortal(
         <div 
+          ref={dropdownRef}
           className="bg-bg-primary border border-border-primary rounded-xl shadow-2xl overflow-hidden min-w-[160px] transition-all duration-300 ease-out transform-gpu"
           style={{
             backdropFilter: 'blur(12px)',

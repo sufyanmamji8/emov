@@ -1,22 +1,66 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaUser, FaCog, FaSignOutAlt, FaArrowLeft, FaSun, FaMoon, FaGlobe } from 'react-icons/fa';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
+
+// Language translations
+const translations = {
+  english: {
+    more: "More",
+    myProfile: "My Profile",
+    settings: "Settings",
+    theme: "Theme",
+    language: "Language",
+    signOut: "Sign out",
+    selectLanguage: "Select Language",
+    english: "English",
+    urdu: "Urdu",
+    french: "French",
+    light: "Light",
+    dark: "Dark",
+    user: "User",
+    noEmail: "No email"
+  },
+  urdu: {
+    more: "مزید",
+    myProfile: "میری پروفائل",
+    settings: "ترتیبات",
+    theme: "تھیم",
+    language: "زبان",
+    signOut: "باہر ہوں",
+    selectLanguage: "زبان منتخب کریں",
+    english: "انگریزی",
+    urdu: "اردو",
+    french: "فرانسیسی",
+    light: "روشنی",
+    dark: "اندھیری",
+    user: "صارف",
+    noEmail: "کوئی ای میل نہیں"
+  },
+  french: {
+    more: "Plus",
+    myProfile: "Mon Profil",
+    settings: "Paramètres",
+    theme: "Thème",
+    language: "Langue",
+    signOut: "Se Déconnecter",
+    selectLanguage: "Sélectionner la Langue",
+    english: "Anglais",
+    urdu: "Ourdou",
+    french: "Français",
+    light: "Clair",
+    dark: "Sombre",
+    user: "Utilisateur",
+    noEmail: "Aucun e-mail"
+  }
+};
 
 function More({ handleLogout }) {
   const { isDark, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  
-  // Language state
-  const [language, setLanguage] = React.useState(() => {
-    try {
-      const savedLanguage = localStorage.getItem('language');
-      return savedLanguage || 'english';
-    } catch {
-      return 'english';
-    }
-  });
+  const { language, setLanguage } = useLanguage();
   
   // Modal state
   const [showLanguageModal, setShowLanguageModal] = React.useState(false);
@@ -24,10 +68,7 @@ function More({ handleLogout }) {
   // Language change handler
   const handleLanguageChange = (newLanguage) => {
     setLanguage(newLanguage);
-    localStorage.setItem('language', newLanguage);
     setShowLanguageModal(false);
-    // You can add additional logic here for language switching
-    // For example, updating a global language context or reloading the page
   };
   
   // Get user profile from localStorage
@@ -93,7 +134,7 @@ function More({ handleLogout }) {
             >
               <FaArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-semibold text-text-primary">More</h1>
+            <h1 className="text-xl font-semibold text-text-primary">{t.more}</h1>
           </div>
         </div>
       </div>
@@ -132,10 +173,10 @@ function More({ handleLogout }) {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-lg font-semibold text-text-primary truncate">
-                  {userProfile?.name || 'User'}
+                  {userProfile?.name || t.user}
                 </h2>
                 <p className="text-sm text-text-tertiary truncate">
-                  {userProfile?.email || 'No email'}
+                  {userProfile?.email || t.noEmail}
                 </p>
               </div>
             </div>
@@ -152,7 +193,7 @@ function More({ handleLogout }) {
             className="w-full flex items-center space-x-3 px-4 py-4 text-left transition-colors text-text-primary hover:bg-bg-tertiary border-b border-border-primary"
           >
             <FaUser className="w-5 h-5 flex-shrink-0 text-text-secondary" />
-            <span className="text-base font-medium">My Profile</span>
+            <span className="text-base font-medium">{t.myProfile}</span>
           </button>
 
           {/* Settings */}
@@ -161,7 +202,7 @@ function More({ handleLogout }) {
             className="w-full flex items-center space-x-3 px-4 py-4 text-left transition-colors text-text-primary hover:bg-bg-tertiary border-b border-border-primary"
           >
             <FaCog className="w-5 h-5 flex-shrink-0 text-text-secondary" />
-            <span className="text-base font-medium">Settings</span>
+            <span className="text-base font-medium">{t.settings}</span>
           </button>
 
           {/* Theme Toggle */}
@@ -171,10 +212,10 @@ function More({ handleLogout }) {
           >
             <div className="flex items-center space-x-3">
               {isDark ? <FaSun className="w-5 h-5 flex-shrink-0 text-text-secondary" /> : <FaMoon className="w-5 h-5 flex-shrink-0 text-text-secondary" />}
-              <span className="text-base font-medium">Theme</span>
+              <span className="text-base font-medium">{t.theme}</span>
             </div>
             <span className="text-sm text-text-tertiary">
-              {isDark ? 'Light' : 'Dark'}
+              {isDark ? t.light : t.dark}
             </span>
           </button>
 
@@ -185,7 +226,7 @@ function More({ handleLogout }) {
           >
             <div className="flex items-center space-x-3">
               <FaGlobe className="w-5 h-5 flex-shrink-0 text-text-secondary" />
-              <span className="text-base font-medium">Language</span>
+              <span className="text-base font-medium">{t.language}</span>
             </div>
             <span className="text-sm text-text-tertiary capitalize">
               {language}
@@ -198,7 +239,7 @@ function More({ handleLogout }) {
             className="w-full flex items-center space-x-3 px-4 py-4 text-left transition-colors text-text-primary hover:bg-bg-tertiary"
           >
             <FaSignOutAlt className="w-5 h-5 flex-shrink-0 text-text-secondary" />
-            <span className="text-base font-medium">Sign out</span>
+            <span className="text-base font-medium">{t.signOut}</span>
           </button>
         </div>
       </div>
@@ -222,7 +263,7 @@ function More({ handleLogout }) {
               animation: 'slideUp 0.3s ease-in-out'
             }}
           >
-            <h3 className="text-lg font-semibold text-text-primary mb-4">Select Language</h3>
+            <h3 className="text-lg font-semibold text-text-primary mb-4">{t.selectLanguage}</h3>
             <div className="space-y-3">
               <label className="flex items-center space-x-3 cursor-pointer transition-colors duration-200 hover:bg-bg-tertiary p-2 rounded-lg">
                 <input
@@ -233,7 +274,7 @@ function More({ handleLogout }) {
                   onChange={() => handleLanguageChange('english')}
                   className="w-4 h-4 text-emov-green focus:ring-emov-green transition-colors duration-200"
                 />
-                <span className="text-text-primary transition-colors duration-200">English</span>
+                <span className="text-text-primary transition-colors duration-200">{t.english}</span>
               </label>
               <label className="flex items-center space-x-3 cursor-pointer transition-colors duration-200 hover:bg-bg-tertiary p-2 rounded-lg">
                 <input
@@ -244,7 +285,7 @@ function More({ handleLogout }) {
                   onChange={() => handleLanguageChange('urdu')}
                   className="w-4 h-4 text-emov-green focus:ring-emov-green transition-colors duration-200"
                 />
-                <span className="text-text-primary transition-colors duration-200">Urdu</span>
+                <span className="text-text-primary transition-colors duration-200">{t.urdu}</span>
               </label>
               <label className="flex items-center space-x-3 cursor-pointer transition-colors duration-200 hover:bg-bg-tertiary p-2 rounded-lg">
                 <input
@@ -255,7 +296,7 @@ function More({ handleLogout }) {
                   onChange={() => handleLanguageChange('french')}
                   className="w-4 h-4 text-emov-green focus:ring-emov-green transition-colors duration-200"
                 />
-                <span className="text-text-primary transition-colors duration-200">French</span>
+                <span className="text-text-primary transition-colors duration-200">{t.french}</span>
               </label>
             </div>
             <button

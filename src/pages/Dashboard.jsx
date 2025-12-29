@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaCar, FaMotorcycle, FaTruck, FaBus, FaShuttleVan, FaSun, FaMoon, FaGlobe, FaChevronLeft, FaChevronRight, FaUser, FaSignOutAlt, FaCaretDown, FaImage, FaCarBattery, FaCrown, FaMoneyBillWave, FaShieldAlt, FaTools, FaCog, FaWater, FaArrowRight, FaMapMarkerAlt } from 'react-icons/fa';
 import { FiMapPin, FiCalendar } from 'react-icons/fi';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 import apiService, { handleUnauthorized, api } from '../services/Api';
 import Navbar from '../components/Layout/Navbar'; // Import Navbar component from correct path
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
@@ -65,7 +66,7 @@ const SearchResultItem = ({ ad, isDark, handleAdClick}) => {
             {ad.BrandName} {ad.ModelName} • {ad.VehicleType}
           </p>
           <p className="text-xs text-emov-purple font-semibold">
-            {ad.VehiclePrice ? `Rs ${parseFloat(ad.VehiclePrice).toLocaleString()}` : 'Price not available'}
+            {ad.VehiclePrice ? `Rs ${parseFloat(ad.VehiclePrice).toLocaleString()}` : t.priceNotAvailable}
           </p>
         </div>
       </div>
@@ -135,8 +136,9 @@ const CarouselNavigation = ({ onPrev, onNext, canGoPrev, canGoNext, section }) =
 
 
 function Dashboard({ handleLogout: appLogout }) {
-      const { isDark, toggleTheme } = useTheme();
-      const { navigateToFilteredAds } = useFilterNavigation(); 
+      const { theme, toggleTheme } = useTheme();
+  const { language } = useLanguage();
+  const { navigateToFilteredAds } = useFilterNavigation(); 
 
       // Ensure navigateToFilteredAds exists; provide safe fallback
       const safeNavigateToFilteredAds = (tab, item) => {
@@ -168,7 +170,6 @@ function Dashboard({ handleLogout: appLogout }) {
       return 'Category';
     }
   });
-  const [language, setLanguage] = useState('english');
   const [scrollPositions, setScrollPositions] = useState({
     Category: 0,
     Budget: 0,
@@ -1362,6 +1363,47 @@ function Dashboard({ handleLogout: appLogout }) {
       sellVehicle: "Sell Your Vehicle with Confidence",
       sellDescription: "List your vehicle for free and reach thousands of buyers",
       postAd: "Post Free Ad Now",
+      myAds: "My Ads",
+      manageAds: "Manage your posted vehicle listings",
+      noAdsYet: "No ads yet",
+      startSelling: "Start selling your vehicle by creating your first ad today.",
+      createFirstAd: "Create Your First Ad",
+      createNewAd: "Create New Ad",
+      loadingAds: "Loading your ads...",
+      tryAgain: "Try Again",
+      confirmDeletion: "Confirm Deletion",
+      deleteAdMessage: "Are you sure you want to delete this ad? This action cannot be undone.",
+      deleteAd: "Delete Ad",
+      cancel: "Cancel",
+      previous: "Previous",
+      next: "Next",
+      searching: "Searching...",
+      noVehiclesFound: "No vehicles found",
+      tryAdjustingSearch: "Try adjusting your search terms",
+      foundResults: "Found {count} result{count !== 1 ? 's' : ''}",
+      recentSearches: "Recent Searches",
+      clear: "Clear",
+      priceNotAvailable: "Price not available",
+      myProfile: "My Profile",
+      settings: "Settings",
+      theme: "Theme",
+      language: "Language",
+      signOut: "Sign out",
+      more: "More",
+      dashboard: "Dashboard",
+      noEmail: "No email",
+      // Footer translations
+      findYourNextVehicle: "Find your next vehicle with confidence",
+      company: "Company",
+      support: "Support", 
+      legal: "Legal",
+      aboutUs: "About Us",
+      careers: "Careers",
+      blog: "Blog",
+      allRightsReserved: "© {year} Emov. All rights reserved.",
+      facebook: "Facebook",
+      twitter: "Twitter",
+      instagram: "Instagram",
       tabs: {
         category: "Category",
         budget: "Budget",
@@ -1392,6 +1434,47 @@ function Dashboard({ handleLogout: appLogout }) {
       sellVehicle: "اعتماد کے ساتھ اپنی گاڑی فروخت کریں",
       sellDescription: "مفت میں اپنی گاڑی درج کریں اور ہزاروں خریداروں تک پہنچیں",
       postAd: "مشتہر مفت پوسٹ کریں",
+      myAds: "میرے اشتہار",
+      manageAds: "اپنے پوسٹ شدہ گاڑیوں کی فہرست کریں",
+      noAdsYet: "ابھی تک کوئی اشتہار نہیں",
+      startSelling: "آج اپنی پہلی گاڑی بنانے کے ساتھ اپنی گاڑی فروختنا شروع کریں",
+      createFirstAd: "اپنا پہلا اشتہار بنائیں",
+      createNewAd: "نیا اشتہار بنائیں",
+      loadingAds: "آپ کے اشتہار لوڈ ہو رہے ہیں...",
+      tryAgain: "دوبارہ کوشش کریں",
+      confirmDeletion: "حذف کی تصدیق",
+      deleteAdMessage: "کیا آپ یقینی طور پر اس اشتہار کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں کیا جا سکتا۔",
+      deleteAd: "اشتہار حذف کریں",
+      cancel: "منسوخ کریں",
+      previous: "پچھلا",
+      next: "اگلا",
+      searching: "تلاش ہو رہا ہے...",
+      noVehiclesFound: "کوئی گاڑی نہیں ملی",
+      tryAdjustingSearch: "اپنی تلاش کی اصطلاح کریں",
+      foundResults: "{count} نتیجہ{count !== 1 ? 'یں' : ''} ملیا",
+      recentSearches: "حالیہ تلاشیں",
+      clear: "صاف کریں",
+      priceNotAvailable: "قیمت دستیاب نہیں",
+      myProfile: "میری پروفائل",
+      settings: "ترتیبات",
+      theme: "تھیم",
+      language: "زبان",
+      signOut: "باہر ہوں",
+      more: "مزید",
+      dashboard: "ڈیش بورڈ",
+      noEmail: "کوئی ای میل نہیں",
+      // Footer translations
+      findYourNextVehicle: "اعتماد کے ساتھ اپنی اگلی گاڑی تلاش کریں",
+      company: "کمپنی",
+      support: "سپورٹ",
+      legal: "قانونی",
+      aboutUs: "ہمارے بارے میں",
+      careers: "ملازمتیں",
+      blog: "بلاگ",
+      allRightsReserved: "© {year} ایموو۔ جملہ حقوق محفوظ ہیں۔",
+      facebook: "فیس بک",
+      twitter: "ٹویٹر",
+      instagram: "انسٹاگرام",
       tabs: {
         category: "زمرہ",
         budget: "بجٹ",
@@ -1422,6 +1505,47 @@ function Dashboard({ handleLogout: appLogout }) {
       sellVehicle: "Vendez Votre Véhicule en Toute Confiance",
       sellDescription: "Annoncez votre véhicule gratuitement et atteignez des milliers d'acheteurs",
       postAd: "Publier une Annonce Gratuite",
+      myAds: "Mes Annonces",
+      manageAds: "Gérez vos annonces de véhicules publiées",
+      noAdsYet: "Aucune annonce encore",
+      startSelling: "Commencez à vendre votre véhicule en créant votre première annonce aujourd'hui",
+      createFirstAd: "Créer Votre Première Annonce",
+      createNewAd: "Créer une Nouvelle Annonce",
+      loadingAds: "Chargement de vos annonces...",
+      tryAgain: "Réessayer",
+      confirmDeletion: "Confirmer la Suppression",
+      deleteAdMessage: "Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action ne peut pas être annulée.",
+      deleteAd: "Supprimer l'Annonce",
+      cancel: "Annuler",
+      previous: "Précédent",
+      next: "Suivant",
+      searching: "Recherche en cours...",
+      noVehiclesFound: "Aucun véhicule trouvé",
+      tryAdjustingSearch: "Essayez d'ajuster vos termes de recherche",
+      foundResults: "{count} résultat{count !== 1 ? 's' : ''} trouvé{count !== 1 ? 's' : ''}",
+      recentSearches: "Recherches Récentes",
+      clear: "Effacer",
+      priceNotAvailable: "Prix non disponible",
+      myProfile: "Mon Profil",
+      settings: "Paramètres",
+      theme: "Thème",
+      language: "Langue",
+      signOut: "Se Déconnecter",
+      more: "Plus",
+      dashboard: "Tableau de Bord",
+      noEmail: "Aucun e-mail",
+      // Footer translations
+      findYourNextVehicle: "Trouvez votre prochain véhicule en toute confiance",
+      company: "Entreprise",
+      support: "Support",
+      legal: "Légal",
+      aboutUs: "À Propos de Nous",
+      careers: "Carrières",
+      blog: "Blog",
+      allRightsReserved: "© {year} Emov. Tous droits réservés.",
+      facebook: "Facebook",
+      twitter: "Twitter",
+      instagram: "Instagram",
       tabs: {
         category: "Catégorie",
         budget: "Budget",
@@ -1696,10 +1820,8 @@ function Dashboard({ handleLogout: appLogout }) {
   {/* Navbar Section */}
   <div className="relative">
     <Navbar 
-      isDark={isDark}
+      isDark={theme === 'dark'}
       toggleTheme={toggleTheme}
-      language={language}
-      setLanguage={setLanguage}
       userProfile={userProfile}
       handleLogout={handleLogout}
     />
@@ -1713,7 +1835,7 @@ function Dashboard({ handleLogout: appLogout }) {
       <div 
         className="absolute left-0 top-0 bottom-0 w-1/3 opacity-40 transition-opacity duration-700"
         style={{
-          background: isDark 
+          background: theme === 'dark'
             ? 'radial-gradient(ellipse at left, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0.08) 30%, transparent 70%)'
             : 'radial-gradient(ellipse at left, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 30%, transparent 70%)',
         }}
@@ -1723,7 +1845,7 @@ function Dashboard({ handleLogout: appLogout }) {
       <div 
         className="absolute right-0 top-0 bottom-0 w-1/3 opacity-40 transition-opacity duration-700"
         style={{
-          background: isDark 
+          background: theme === 'dark' 
             ? 'radial-gradient(ellipse at right, rgba(0, 255, 169, 0.12) 0%, rgba(0, 255, 169, 0.06) 30%, transparent 70%)'
             : 'radial-gradient(ellipse at right, rgba(0, 255, 169, 0.08) 0%, rgba(0, 255, 169, 0.04) 30%, transparent 70%)',
         }}
@@ -1736,7 +1858,7 @@ function Dashboard({ handleLogout: appLogout }) {
         <div className="w-full text-center max-w-4xl sm:max-w-5xl lg:max-w-6xl mx-auto">
           <h1 className="text-text-primary font-bold text-2xl sm:text-2xl md:text-3xl lg:text-4xl mb-2 sm:mb-3 md:mb-4 leading-tight tracking-tight"
             style={{
-              textShadow: isDark 
+              textShadow: theme === 'dark' 
                 ? '0 2px 20px rgba(0, 0, 0, 0.3)' 
                 : '0 2px 10px rgba(0, 0, 0, 0.05)',
               lineHeight: '1.2'
@@ -1761,13 +1883,13 @@ function Dashboard({ handleLogout: appLogout }) {
     <div 
       className="relative w-full h-14 rounded-2xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-2 focus-within:ring-emov-purple/30 group"
       style={{
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.3)',
-        background: isDark 
+        borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.3)',
+        background: theme === 'dark' 
           ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%)'
           : 'linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%)',
         backdropFilter: 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        boxShadow: isDark
+        boxShadow: theme === 'dark'
           ? `
             0 8px 32px rgba(0, 0, 0, 0.3),
             0 2px 8px rgba(0, 0, 0, 0.2),
@@ -1793,7 +1915,7 @@ function Dashboard({ handleLogout: appLogout }) {
       {/* Search Icon */}
       <div className="absolute left-4 z-10 flex items-center h-full">
         <svg 
-          className={`w-5 h-5 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}
+          className={`w-5 h-5 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"
@@ -1817,7 +1939,7 @@ function Dashboard({ handleLogout: appLogout }) {
             setShowSearchResults(true);
           }
         }}
-        className={`w-full h-full pl-12 pr-16 bg-transparent ${isDark ? 'text-white placeholder-gray-300' : 'text-gray-900 placeholder-gray-600'} text-base font-medium focus:outline-none z-10 transition-all duration-300`}
+        className={`w-full h-full pl-12 pr-16 bg-transparent ${theme === 'dark' ? 'text-white placeholder-gray-300' : 'text-gray-900 placeholder-gray-600'} text-base font-medium focus:outline-none z-10 transition-all duration-300`}
       />
 
       {/* Right Side Icons */}
@@ -1830,7 +1952,7 @@ function Dashboard({ handleLogout: appLogout }) {
               setSearchResults([]);
               setShowSearchResults(false);
             }}
-            className={`p-2 rounded-full transition-all duration-200 ${isDark ? 'hover:bg-white/10 text-gray-300' : 'hover:bg-gray-100 text-gray-600'}`}
+            className={`p-2 rounded-full transition-all duration-200 ${theme === 'dark' ? 'hover:bg-white/10 text-gray-300' : 'hover:bg-gray-100 text-gray-600'}`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1845,8 +1967,8 @@ function Dashboard({ handleLogout: appLogout }) {
       <div 
         className="absolute left-4 right-4 mt-2 rounded-2xl border overflow-hidden transition-all duration-300 z-50"
         style={{
-          borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-          boxShadow: isDark 
+          borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+          boxShadow: theme === 'dark' 
             ? '0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.3)'
             : '0 20px 60px rgba(0, 0, 0, 0.12), 0 8px 20px rgba(0, 0, 0, 0.08)'
         }}
@@ -1854,7 +1976,7 @@ function Dashboard({ handleLogout: appLogout }) {
         <div 
           className="max-h-[400px] overflow-y-auto"
           style={{
-            background: isDark 
+            background: theme === 'dark' 
               ? 'linear-gradient(135deg, rgba(35, 35, 40, 0.98) 0%, rgba(25, 25, 30, 0.96) 100%)'
               : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 252, 0.96) 100%)',
             backdropFilter: 'blur(28px) saturate(180%)',
@@ -1863,14 +1985,14 @@ function Dashboard({ handleLogout: appLogout }) {
         >
           {/* Recent Searches */}
           {!searchQuery.trim() && recentSearches.length > 0 && (
-            <div className={`p-4 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+            <div className={`p-4 border-b ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
               <div className="flex items-center justify-between mb-3">
-                <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Recent Searches</h3>
+                <h3 className={`text-sm font-semibold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t.recentSearches}</h3>
                 <button
                   onClick={clearRecentSearches}
-                  className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-200`}
+                  className={`text-xs ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-200`}
                 >
-                  Clear
+                  {t.clear}
                 </button>
               </div>
               <div className="space-y-2">
@@ -1882,13 +2004,13 @@ function Dashboard({ handleLogout: appLogout }) {
                       handleSearch(search);
                     }}
                     className={`w-full text-left px-3 py-2 rounded-lg transition-colors duration-200 flex items-center space-x-3 ${
-                      isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100'
+                      theme === 'dark' ? 'hover:bg-gray-700/50' : 'hover:bg-gray-100'
                     }`}
                   >
-                    <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{search}</span>
+                    <span className={`text-sm ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{search}</span>
                   </button>
                 ))}
               </div>
@@ -1902,25 +2024,25 @@ function Dashboard({ handleLogout: appLogout }) {
             </div>
           ) : searchResults.length > 0 ? (
             <div className="p-4 space-y-2">
-              <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
-                Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+              <h3 className={`text-sm font-semibold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-3`}>
+                {t.foundResults.replace('{count}', searchResults.length).replace('{count !== 1 ? \'s\' : \'\'}', searchResults.length !== 1 ? 's' : '')}
               </h3>
               {searchResults.map((ad) => (
                 <SearchResultItem 
                   key={ad.AdID || ad.id || ad.adId || ad._id}
                   ad={ad}
-                  isDark={isDark}
+                  isDark={theme === 'dark'}
                   handleAdClick={handleAdClick}
                 />
               ))}
             </div>
           ) : searchQuery.trim() ? (
             <div className="text-center py-8">
-              <svg className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`w-12 h-12 mx-auto mb-3 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
-              <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Try adjusting your search terms</p>
+              <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
+              <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Try adjusting your search terms</p>
             </div>
           ) : null}
         </div>
@@ -1934,13 +2056,13 @@ function Dashboard({ handleLogout: appLogout }) {
             <div 
               className="relative w-full h-16 sm:h-18 md:h-20 rounded-3xl border transition-all duration-300 hover:border-white/60 focus-within:border-emov-purple focus-within:ring-4 focus-within:ring-emov-purple/20 group"
               style={{
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)',
-                background: isDark 
+                borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)',
+                background: theme === 'dark' 
                   ? 'linear-gradient(135deg, rgba(40, 40, 45, 0.95) 0%, rgba(25, 25, 30, 0.92) 100%)'
                   : 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(250, 250, 252, 0.92) 100%)',
                 backdropFilter: 'blur(28px) saturate(180%)',
                 WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-                boxShadow: isDark
+                boxShadow: theme === 'dark'
                   ? `
                     0 10px 40px rgba(0, 0, 0, 0.4),
                     0 4px 12px rgba(0, 0, 0, 0.3),
@@ -1976,7 +2098,7 @@ function Dashboard({ handleLogout: appLogout }) {
               {/* Search Icon */}
               <div className="absolute left-5 sm:left-6 md:left-7 z-10 flex items-center h-full">
                 <svg 
-                  className={`w-6 h-6 sm:w-7 sm:h-7 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                  className={`w-6 h-6 sm:w-7 sm:h-7 transition-all duration-300 ${searchQuery ? 'scale-110' : ''} ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24"
@@ -2000,9 +2122,9 @@ function Dashboard({ handleLogout: appLogout }) {
                     setShowSearchResults(true);
                   }
                 }}
-                className={`w-full h-full pl-14 sm:pl-16 md:pl-20 pr-20 sm:pr-24 md:pr-28 bg-transparent ${isDark ? 'text-white placeholder-gray-400' : 'text-gray-800 placeholder-gray-500'} text-base sm:text-lg md:text-xl font-medium focus:outline-none z-10 transition-all duration-300`}
+                className={`w-full h-full pl-14 sm:pl-16 md:pl-20 pr-20 sm:pr-24 md:pr-28 bg-transparent ${theme === 'dark' ? 'text-white placeholder-gray-400' : 'text-gray-800 placeholder-gray-500'} text-base sm:text-lg md:text-xl font-medium focus:outline-none z-10 transition-all duration-300`}
                 style={{
-                  textShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none'
+                  textShadow: theme === 'dark' ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none'
                 }}
               />
 
@@ -2017,9 +2139,9 @@ function Dashboard({ handleLogout: appLogout }) {
                       setShowSearchResults(false);
                     }}
                     className="p-2 hover:bg-white/10 rounded-full transition-all duration-200 active:scale-90 flex items-center justify-center"
-                    aria-label="Clear search"
+                    aria-label={t.clear}
                   >
-                    <svg className={`w-5 h-5 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className={`w-5 h-5 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -2031,8 +2153,8 @@ function Dashboard({ handleLogout: appLogout }) {
             <div 
               className={`absolute top-full left-0 right-0 mt-4 rounded-2xl border overflow-hidden transition-all duration-300 ${showSearchResults ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'} z-50`}
               style={{
-                borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-                boxShadow: isDark 
+                borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                boxShadow: theme === 'dark' 
                   ? '0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.3)'
                   : '0 20px 60px rgba(0, 0, 0, 0.12), 0 8px 20px rgba(0, 0, 0, 0.08)'
               }}
@@ -2040,7 +2162,7 @@ function Dashboard({ handleLogout: appLogout }) {
               <div 
                 className="max-h-[500px] overflow-y-auto"
                 style={{
-                  background: isDark 
+                  background: theme === 'dark' 
                     ? 'linear-gradient(135deg, rgba(35, 35, 40, 0.98) 0%, rgba(25, 25, 30, 0.96) 100%)'
                     : 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(250, 250, 252, 0.96) 100%)',
                   backdropFilter: 'blur(28px) saturate(180%)',
@@ -2049,14 +2171,14 @@ function Dashboard({ handleLogout: appLogout }) {
               >
                 {/* Recent Searches */}
                 {!searchQuery.trim() && recentSearches.length > 0 && (
-                  <div className={`p-5 sm:p-6 border-b ${isDark ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
+                  <div className={`p-5 sm:p-6 border-b ${theme === 'dark' ? 'border-gray-700/50' : 'border-gray-200/50'}`}>
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Recent Searches</h3>
+                      <h3 className={`text-sm font-semibold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{t.recentSearches}</h3>
                       <button
                         onClick={clearRecentSearches}
-                        className={`text-xs ${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-200`}
+                        className={`text-xs ${theme === 'dark' ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'} transition-colors duration-200`}
                       >
-                        Clear
+                        {t.clear}
                       </button>
                     </div>
                     <div className="space-y-2">
@@ -2064,9 +2186,9 @@ function Dashboard({ handleLogout: appLogout }) {
                         <button
                           key={index}
                           onClick={() => handleSearchSubmit(search)}
-                          className={`w-full text-left px-4 py-3 text-sm ${isDark ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-700 hover:bg-gray-100/70'} rounded-xl transition-all duration-200 flex items-center space-x-3 group`}
+                          className={`w-full text-left px-4 py-3 text-sm ${theme === 'dark' ? 'text-gray-300 hover:bg-gray-700/50' : 'text-gray-700 hover:bg-gray-100/70'} rounded-xl transition-all duration-200 flex items-center space-x-3 group`}
                         >
-                          <svg className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-400'} group-hover:scale-110 transition-transform duration-200`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={`w-4 h-4 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400'} group-hover:scale-110 transition-transform duration-200`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span>{search}</span>
@@ -2082,29 +2204,29 @@ function Dashboard({ handleLogout: appLogout }) {
                     {isSearching ? (
                       <div className="text-center py-8">
                         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emov-purple mx-auto"></div>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} mt-3`}>Searching...</p>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mt-3`}>{t.searching}</p>
                     </div>
                     ) : searchResults.length > 0 ? (
                       <div className="space-y-2">
-                        <h3 className={`text-sm font-semibold ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-4`}>
-                          Found {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}
+                        <h3 className={`text-sm font-semibold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-4`}>
+                          {t.foundResults.replace('{count}', searchResults.length).replace('{count !== 1 ? \'s\' : \'\'}', searchResults.length !== 1 ? 's' : '')}
                         </h3>
                         {searchResults.map((ad) => (
                           <SearchResultItem 
                             key={ad.AdID || ad.id || ad.adId || ad._id}
                             ad={ad}
-                            isDark={isDark}
+                            isDark={theme === 'dark'}
                             handleAdClick={handleAdClick}
                           />
                         ))}
                       </div>
                     ) : (
                       <div className="text-center py-8">
-                        <svg className={`w-12 h-12 mx-auto mb-3 ${isDark ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className={`w-12 h-12 mx-auto mb-3 ${theme === 'dark' ? 'text-gray-600' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>No vehicles found</p>
-                        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'} mt-1`}>Try adjusting your search terms</p>
+                        <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>{t.noVehiclesFound}</p>
+                        <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} mt-1`}>{t.tryAdjustingSearch}</p>
                       </div>
                     )}
                   </div>
@@ -2153,18 +2275,18 @@ function Dashboard({ handleLogout: appLogout }) {
   }
 
   .search-container ::-webkit-scrollbar-track {
-    background: ${isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+    background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
     border-radius: 10px;
   }
 
   .search-container ::-webkit-scrollbar-thumb {
-    background: ${isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+    background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
     border-radius: 10px;
     transition: background 0.3s ease;
   }
 
   .search-container ::-webkit-scrollbar-thumb:hover {
-    background: ${isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+    background: ${theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
   }
 
   /* Smooth scrolling */
@@ -2220,37 +2342,57 @@ function Dashboard({ handleLogout: appLogout }) {
         <div className="w-full pb-1">
           {/* Mobile: Enhanced tabs */}
           <div className="md:hidden flex space-x-1 overflow-x-auto pb-1 no-scrollbar">
-            {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
+            {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tabKey) => {
+              const keyMap = {
+                'Category': 'category',
+                'Budget': 'budget', 
+                'Brand': 'brand',
+                'Model': 'model',
+                'Body Type': 'bodytype'
+              };
+              const tabLabel = t.tabs[keyMap[tabKey]];
+              return (
               <button
-                key={tab}
+                key={tabKey}
                 className={`px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-200 ${
-                  activeTab === tab
+                  activeTab === tabKey
                     ? 'text-emov-purple border-b-2 border-emov-purple'
                     : 'text-text-secondary hover:text-text-primary border-b-2 border-transparent'
                 }`}
-                onClick={() => handleTabChange(tab)}
+                onClick={() => handleTabChange(tabKey)}
               >
-                {tab}
+                {tabLabel}
               </button>
-            ))}
+            );
+            })}
           </div>
 
           {/* Desktop: Original tab layout */}
           <div className="hidden md:block overflow-x-auto pb-1">
             <div style={{ fontSize: '20px' }} className="flex space-x-1 border-b border-gray-600 w-max min-w-full">
-              {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tab) => (
+              {['Category', 'Budget', 'Brand', 'Model', 'Body Type'].map((tabKey) => {
+                const keyMap = {
+                  'Category': 'category',
+                  'Budget': 'budget',
+                  'Brand': 'brand', 
+                  'Model': 'model',
+                  'Body Type': 'bodytype'
+                };
+                const tabLabel = t.tabs[keyMap[tabKey]];
+                return (
                 <button
-                  key={tab}
+                  key={tabKey}
                   className={`px-4 py-3 text-sm sm:text-base whitespace-nowrap relative ${
-                    activeTab === tab
+                    activeTab === tabKey
                       ? 'text-emov-purple after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emov-purple'
                       : 'text-text-secondary hover:text-text-primary'
                   }`}
-                  onClick={() => handleTabChange(tab)}
+                  onClick={() => handleTabChange(tabKey)}
                 >
-                  {tab}
+                  {tabLabel}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -2454,7 +2596,7 @@ function Dashboard({ handleLogout: appLogout }) {
                           <div
                             key={`${item.id || index}-${activeTab}`}
                             className={`flex flex-col rounded-lg cursor-pointer transition-all duration-200 ${
-                              isDark
+                              theme === 'dark'
                                 ? 'bg-bg-card border border-gray-600'
                                 : 'bg-white border border-gray-300'
                             } hover:border-purple-400 hover:shadow-md`}
@@ -2908,19 +3050,49 @@ function Dashboard({ handleLogout: appLogout }) {
           </div>
         </section>
 
-               {/* Other Services Section */}
+                     {/* Other Services Section */}
         <section className="w-full bg-bg-primary py-12 sm:py-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2  style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
+            <h2 style={{ fontSize: '24px' }} className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">{t.otherServices}</h2>
             
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
               {otherServices.map((service, index) => (
                 <div 
                   key={index}
-                  className="overflow-hidden rounded-lg border border-border-primary p-4 sm:p-5 text-center cursor-pointer bg-bg-secondary hover:border-border-secondary transition-colors"
+                  className="group relative overflow-hidden rounded-lg border border-border-primary bg-bg-secondary shadow-md hover:shadow-xl hover:border-border-secondary transition-all duration-300"
                 >
-                  <div className="text-2xl sm:text-3xl mb-3 text-emov-purple">{service.icon}</div>
-                  <span className="text-sm sm:text-base font-medium text-text-primary">{service.name}</span>
+                  {/* Subtle beautiful car background - reliable Pexels URLs */}
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center opacity-25 group-hover:opacity-35 transition-opacity duration-300"
+                    style={{
+                      backgroundImage: `url(${
+                        [
+                          'https://images.pexels.com/photos/337909/pexels-photo-337909.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/3764984/pexels-photo-3764984.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/2127033/pexels-photo-2127033.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/164634/pexels-photo-164634.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/1545743/pexels-photo-1545743.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/6894429/pexels-photo-6894429.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/909907/pexels-photo-909907.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/3972755/pexels-photo-3972755.jpeg?auto=compress&cs=tinysrgb',
+                          'https://images.pexels.com/photos/358070/pexels-photo-358070.jpeg?auto=compress&cs=tinysrgb'
+                        ][index % 10]
+                      })`,
+                    }}
+                  />
+
+                  {/* Removed the dark overlay as requested */}
+
+                  {/* Content - now with black text for clarity on light/subtle background */}
+                  <div className="relative p-6 sm:p-8 flex flex-col items-center justify-center h-48 sm:h-56 text-center">
+                    <div className="text-4xl sm:text-5xl mb-4 text-emov-purple">
+                      {service.icon}
+                    </div>
+                    <span className="text-base sm:text-lg font-semibold text-gray-900">
+                      {service.name}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -3009,7 +3181,7 @@ function Dashboard({ handleLogout: appLogout }) {
       {/* Close the min-h-screen container */}
 
       {/* Enhanced Footer */}
-      <footer className={`py-8 sm:py-12 w-full ${isDark ? 'bg-gray-800' : 'bg-gray-900'} text-white`}>
+      <footer className={`py-8 sm:py-12 w-full ${theme === 'dark' ? 'bg-gray-800' : 'bg-gray-900'} text-white`}>
         <div className="container mx-auto px-3 sm:px-4 lg:px-6 max-w-7xl">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 sm:mb-8 gap-6 lg:gap-0">
             <div className="mb-4 lg:mb-0">
@@ -3029,14 +3201,14 @@ function Dashboard({ handleLogout: appLogout }) {
                   />
                 </div>
               </div>
-              <p className="text-gray-400 text-sm sm:text-base">Find your next vehicle with confidence</p>
+              <p className="text-gray-400 text-sm sm:text-base">{t.findYourNextVehicle}</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 md:gap-12 w-full lg:w-auto">
-              {['Company', 'Support', 'Legal'].map((section) => (
+              {[t.company, t.support, t.legal].map((section) => (
                 <div key={section}>
                   <h3 className="font-bold mb-3 sm:mb-4 text-sm sm:text-base" style={{ color: colors.green }}>{section}</h3>
                   <ul className="space-y-2 sm:space-y-3">
-                    {['About Us', 'Careers', 'Blog'].map((item) => (
+                    {[t.aboutUs, t.careers, t.blog].map((item) => (
                       <li key={item}>
                         <a href="#" className="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm">
                           {item}
@@ -3051,10 +3223,10 @@ function Dashboard({ handleLogout: appLogout }) {
           <div className="pt-6 sm:pt-8 border-t border-gray-700">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
               <p className="text-gray-400 text-xs sm:text-sm text-center md:text-left">
-                © {new Date().getFullYear()} Emov. All rights reserved.
+                {t.allRightsReserved.replace('{year}', new Date().getFullYear())}
               </p>
               <div className="flex space-x-4 sm:space-x-6">
-                {['Facebook', 'Twitter', 'Instagram'].map((social) => (
+                {[t.facebook, t.twitter, t.instagram].map((social) => (
                   <a 
                     key={social} 
                     href="#" 

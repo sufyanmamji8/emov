@@ -270,13 +270,14 @@ const CustomPhoneInput = ({
       >
         <PhoneInput
           international
+          withCountryCallingCode
+          countryCallingCodeEditable={false}
           defaultCountry={defaultCountry}
           value={value}
           onChange={handleChange}
           onCountryChange={handleCountryChange}
           limitMaxLength={false}
           addInternationalOption={false}
-          countries={['PK', 'US', 'GB', 'IN', 'AE', 'SA']}
           inputProps={{
             onBeforeInput: handleBeforeInput,
             onPaste: handlePaste,

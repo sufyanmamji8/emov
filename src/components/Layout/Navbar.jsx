@@ -2,7 +2,60 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FaSun, FaMoon, FaGlobe, FaCaretDown, FaSignOutAlt, FaBars, FaTimes, FaCog, FaUser } from 'react-icons/fa';
 import { useTheme } from '../../hooks/useTheme';
+import { useLanguage } from '../../context/LanguageContext';
 import axios from 'axios';
+
+// Language translations
+const translations = {
+  english: {
+    home: "Home",
+    chats: "Chats",
+    myAds: "My Ads",
+    more: "More",
+    settings: "Settings",
+    profile: "Profile",
+    signOut: "Sign out",
+    theme: "Theme",
+    language: "Language",
+    english: "English",
+    urdu: "Urdu",
+    french: "French",
+    notifications: "Notifications",
+    user: "User"
+  },
+  urdu: {
+    home: "ہوم",
+    chats: " چیٹیں",
+    myAds: "میرے اشتہار",
+    more: "مزید",
+    settings: "ترتیبات",
+    profile: "پروفائل",
+    signOut: "باہر ہوں",
+    theme: "تھیم",
+    language: "زبان",
+    english: "انگریزی",
+    urdu: "اردو",
+    french: "فرانسیسی",
+    notifications: "اطلاعات",
+    user: "صارف"
+  },
+  french: {
+    home: "Accueil",
+    chats: "Discussions",
+    myAds: "Mes Annonces",
+    more: "Plus",
+    settings: "Paramètres",
+    profile: "Profil",
+    signOut: "Se Déconnecter",
+    theme: "Thème",
+    language: "Langue",
+    english: "Anglais",
+    urdu: "Ourdou",
+    french: "Français",
+    notifications: "Notifications",
+    user: "Utilisateur"
+  }
+};
 
 // Image URL processing function
 const getImageUrl = (imagePath, isAvatar = false) => {
@@ -26,7 +79,9 @@ const getImageUrl = (imagePath, isAvatar = false) => {
   return imageUrl;
 };
 
-function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handleLogout }) {
+function Navbar({ isDark, toggleTheme, userProfile, handleLogout }) {
+  const { language, setLanguage } = useLanguage();
+  const t = translations[language];
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -127,28 +182,28 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               to="/dashboard" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
-              Home
+              {t.home}
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/dashboard' ? 'w-full' : ''}`}></span>
             </Link>
             <Link 
               to="/chats" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
-              Chats
+              {t.chats}
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/chats' ? 'w-full' : ''}`}></span>
             </Link>
             <Link 
               to="/my-ads-list" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
-              My Ads
+              {t.myAds}
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/my-ads-list' ? 'w-full' : ''}`}></span>
             </Link>
             {/* <Link 
               to="/" 
               className="relative text-base font-medium text-text-primary hover:text-text-secondary group transition-colors duration-300"
             >
-              More
+              {t.more}
               <span className={`absolute left-0 -bottom-1 w-0 h-0.5 bg-[var(--emov-purple)] transition-all duration-300 group-hover:w-full ${window.location.pathname === '/' ? 'w-full' : ''}`}></span>
             </Link> */}
           </div>
@@ -161,7 +216,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
           <button className="md:hidden p-2 mr-2 text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white focus:outline-none transition-colors">
             <img 
               src="/bell.png" 
-              alt="Notifications" 
+              alt={t.notifications} 
               className="w-6 h-6 object-contain"
             />
           </button>
@@ -247,21 +302,21 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
                 >
                   <FaUser className="w-4 h-4 flex-shrink-0" />
-                  <span>My Profile</span>
+                  <span>{t.profile}</span>
                 </Link>
                 <Link
                   to="/settings"
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md"
                 >
                   <FaCog className="w-4 h-4 flex-shrink-0" />
-                  <span>Settings</span>
+                  <span>{t.settings}</span>
                 </Link>
                 <button
                   onClick={handleSignOut}
                   className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm transition-colors text-text-primary hover:bg-bg-tertiary rounded-md text-left"
                 >
                   <FaSignOutAlt className="w-4 h-4 flex-shrink-0" />
-                  <span>Sign out</span>
+                  <span>{t.signOut}</span>
                 </button>
               </div>
             </div>
@@ -318,28 +373,28 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
-                  Home
+                  {t.home}
                 </Link>
                 <Link 
                   to="/chats" 
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
-                  Chats
+                  {t.chats}
                 </Link>
                 <Link 
                   to="/my-ads-list" 
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
-                  My Ads
+                  {t.myAds}
                 </Link>
                  <Link 
                   to="/" 
                   className="block py-3 px-4 text-lg font-medium text-text-primary hover:bg-bg-secondary rounded-lg transition-colors"
                   onClick={handleNavLinkClick}
                 >
-                  More
+                  {t.more}
                 </Link>
               </div>
 
@@ -347,16 +402,16 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
               <div className="space-y-4 border-t border-border-primary pt-6">
                 {/* Language Selector */}
                 <div className="flex items-center justify-between">
-                  <span className="text-text-primary font-medium">Language</span>
+                  <span className="text-text-primary font-medium">{t.language}</span>
                   <div className="relative w-32">
                     <select 
                       value={language}
                       onChange={(e) => setLanguage(e.target.value)}
                       className="w-full pl-3 pr-10 py-2 text-base focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all duration-200 border rounded-md bg-bg-secondary text-text-primary border-border-primary focus:ring-[var(--emov-purple)] appearance-none"
                     >
-                      <option value="english">English</option>
-                      <option value="urdu">Urdu</option>
-                      <option value="french">French</option>
+                      <option value="english">{t.english}</option>
+                      <option value="urdu">{t.urdu}</option>
+                      <option value="french">{t.french}</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
                       <FaGlobe className="text-text-tertiary w-4 h-4" />
@@ -367,7 +422,7 @@ function Navbar({ isDark, toggleTheme, language, setLanguage, userProfile, handl
 
                 {/* Theme Toggle */}
                 <div className="flex items-center justify-between">
-                  <span className="text-text-primary font-medium">Theme</span>
+                  <span className="text-text-primary font-medium">{t.theme}</span>
                   <button 
                     onClick={toggleTheme}
                     className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors bg-bg-tertiary text-text-primary"

@@ -4,13 +4,117 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 import { useChat } from '../contexts/ChatContext';
 import { useUserProfile } from '../hooks/useUserProfile';
 import chatService from '../services/chatService'; 
 import { FaTrash, FaUserSlash } from 'react-icons/fa';
 import Header from '../components/Layout/Header';
 import axios from 'axios';
+
+// Language translations
+const translations = {
+  english: {
+    messages: "Messages",
+    noChatsFound: "No chats found",
+    startConversation: "Start a conversation by contacting a seller",
+    searching: "Searching...",
+    noVehiclesFound: "No vehicles found",
+    tryAdjustingSearch: "Try adjusting your search terms",
+    foundResults: "Found {count} result{count !== 1 ? 's' : ''}",
+    recentSearches: "Recent Searches",
+    clear: "Clear",
+    deleteConversation: "Delete conversation",
+    deleteMessage: "Delete message",
+    image: "Image",
+    audio: "Audio",
+    file: "File",
+    text: "text",
+    send: "Send",
+    typeMessage: "Type a message",
+    seller: "Seller",
+    online: "Online",
+    recording: "Recording",
+    stopRecording: "Stop Recording",
+    you: "You",
+    sent: "Sent",
+    received: "Received",
+    read: "Read",
+    sending: "Sending...",
+    imageNotAvailable: "Image not available",
+    audioNotAvailable: "Audio not available",
+    fileNotAvailable: "File not available",
+    cancel: "Cancel",
+    delete: "Delete"
+  },
+  urdu: {
+    messages: "پیغامات",
+    noChatsFound: "کوئی چیٹ نہیں ملی",
+    startConversation: "بیچنے سے رابطہ کر کے گفتگو شروع کریں",
+    searching: "تلاش ہو رہا ہے...",
+    noVehiclesFound: "کوئی گاڑی نہیں ملی",
+    tryAdjustingSearch: "اپنی تلاش کی اصطلاح کریں",
+    foundResults: "{count} نتیجہ{count !== 1 ? 'یں' : ''} ملیا",
+    recentSearches: "حالیہ تلاشیں",
+    clear: "صاف کریں",
+    deleteConversation: "گفتگو حذف کریں",
+    deleteMessage: "پیغام حذف کریں",
+    image: "تصویر",
+    audio: "آڈیو",
+    file: "فائل",
+    text: "متن",
+    send: "بھیجیں",
+    typeMessage: "پیغام لکھیں",
+    seller: "بیچنے",
+    online: "آن لائن",
+    recording: "ریکارڈنگ ہو رہا ہے",
+    stopRecording: "ریکارڈنگ روکیں",
+    you: "آپ",
+    sent: "بھیج دیا",
+    received: "ملا",
+    read: "پڑھا",
+    sending: "بھیجا جا رہا ہے...",
+    imageNotAvailable: "تصویر دستیاب نہیں",
+    audioNotAvailable: "آڈیو دستیاب نہیں",
+    fileNotAvailable: "فائل دستیاب نہیں",
+    cancel: "منسوخ کریں",
+    delete: "حذف کریں"
+  },
+  french: {
+    messages: "Messages",
+    noChatsFound: "Aucune discussion trouvée",
+    startConversation: "Commencez une conversation en contactant un vendeur",
+    searching: "Recherche en cours...",
+    noVehiclesFound: "Aucun véhicule trouvé",
+    tryAdjustingSearch: "Essayez d'ajuster vos termes de recherche",
+    foundResults: "{count} résultat{count !== 1 ? 's' : ''} trouvé{count !== 1 ? 's' : ''}",
+    recentSearches: "Recherches Récentes",
+    clear: "Effacer",
+    deleteConversation: "Supprimer la conversation",
+    deleteMessage: "Supprimer le message",
+    image: "Image",
+    audio: "Audio",
+    file: "Fichier",
+    text: "texte",
+    send: "Envoyer",
+    typeMessage: "Tapez un message",
+    seller: "Vendeur",
+    online: "En ligne",
+    recording: "Enregistrement en cours",
+    stopRecording: "Arrêter l'enregistrement",
+    you: "Vous",
+    sent: "Envoyé",
+    received: "Reçu",
+    read: "Lu",
+    sending: "Envoi en cours...",
+    imageNotAvailable: "Image non disponible",
+    audioNotAvailable: "Audio non disponible",
+    fileNotAvailable: "Fichier non disponible",
+    cancel: "Annuler",
+    delete: "Supprimer"
+  }
+};
 
 // Convert date to Pakistan time (UTC+5)
 const toPakistanTime = (dateString) => {
@@ -186,7 +290,7 @@ const Avatar = ({ user, size = 'md' }) => {
             className="w-full h-full object-cover"
             onError={() => setImageError(true)}
             onLoad={() => setImageLoaded(true)}
-            style={{ minWidth: sizeClasses[size].match(/min-w-\[([^\]]+)\)/)?.[1] || '100%' }}
+            style={{ minWidth: sizeClasses[size].match(/min-w-\[([^\]]+)\]/)?.[1] || '100%' }}
           />
         </div>
       ) : (
@@ -200,6 +304,8 @@ const Avatar = ({ user, size = 'md' }) => {
 
 export default function Chats() {
   const { theme, toggleTheme } = useTheme();
+  const { language } = useLanguage();
+  const t = translations[language];
   const { 
     chats, 
     currentChat, 
@@ -226,7 +332,6 @@ export default function Chats() {
     avatar: user.profileImage || '/default-avatar.png',
     firstLetter: (user.name || 'Y').charAt(0).toUpperCase()
   };
-  const [language, setLanguage] = useState('english');
   const [newMessage, setNewMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
@@ -1245,8 +1350,6 @@ const formatMessageTime = (dateString) => {
         <Navbar 
           isDark={theme === 'dark'}
           toggleTheme={toggleTheme}
-          language={language}
-          setLanguage={setLanguage}
           userProfile={userProfile}
           handleLogout={handleLogout}
         />

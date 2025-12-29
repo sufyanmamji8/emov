@@ -4,6 +4,7 @@ import { FaCar } from 'react-icons/fa';
 import { ToastContainer } from './utils/toast.jsx';
 import toast from './utils/toast.jsx';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 import { ChatProvider } from './contexts/ChatContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -91,18 +92,20 @@ function App() {
   }
 
   return (
-    <ThemeProvider>
-      <Router>
-        <ChatProvider>
-          <AppRoutes 
-            isAuthenticated={isAuthenticated}
-            handleLogin={handleLogin}
-            handleLogout={handleLogout}
-          />
-          <ToastContainer />
-        </ChatProvider>
-      </Router>
-    </ThemeProvider>
+    <LanguageProvider>
+      <ThemeProvider>
+        <Router>
+          <ChatProvider>
+            <AppRoutes 
+              isAuthenticated={isAuthenticated}
+              handleLogin={handleLogin}
+              handleLogout={handleLogout}
+            />
+            <ToastContainer />
+          </ChatProvider>
+        </Router>
+      </ThemeProvider>
+    </LanguageProvider>
   );
 }
 

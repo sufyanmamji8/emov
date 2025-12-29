@@ -40,7 +40,7 @@ const MobileBottomNav = ({ activePage, isVisible = true }) => {
         {/* Sell Button - Large Centered */}
         <button 
           className="flex flex-col items-center justify-center p-1 transition-all duration-200 hover:scale-105 active:scale-95"
-          onClick={() => navigate('/my-ads-list')}
+          onClick={() => navigate('/my-ads')}
           style={{
             background: 'linear-gradient(to right, #00C9FF, #92FE9D)',
             borderRadius: '50%',

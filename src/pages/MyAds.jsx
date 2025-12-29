@@ -4,16 +4,71 @@ import { FaArrowLeft, FaTrash, FaCar, FaCalendar, FaMapMarkerAlt, FaMoneyBillWav
 import apiService from '../services/Api';
 import Navbar from '../components/Layout/Navbar';
 import MobileBottomNav from '../components/Layout/MobileBottomNav';
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from "../context/ThemeContext";
+import { useLanguage } from "../context/LanguageContext";
 import { useUserProfile } from '../hooks/useUserProfile';
 import Header from '../components/Layout/Header';
 import toast from 'react-hot-toast'; // assuming you're using react-hot-toast
 
+// Language translations
+const translations = {
+  english: {
+    myAds: "My Ads",
+    manageAds: "Manage your posted vehicle listings",
+    noAdsYet: "No ads yet",
+    startSelling: "Start selling your vehicle by creating your first ad today.",
+    createFirstAd: "Create Your First Ad",
+    createNewAd: "Create New Ad",
+    loadingAds: "Loading your ads...",
+    tryAgain: "Try Again",
+    confirmDeletion: "Confirm Deletion",
+    deleteAdMessage: "Are you sure you want to delete this ad? This action cannot be undone.",
+    deleteAd: "Delete Ad",
+    cancel: "Cancel",
+    adDeletedSuccessfully: "Ad deleted successfully!",
+    failedToDeleteAd: "Failed to delete ad. Please try again."
+  },
+  urdu: {
+    myAds: "میرے اشتہار",
+    manageAds: "اپنے پوسٹ شدہ گاڑیوں کی فہرست کریں",
+    noAdsYet: "ابھی تک کوئی اشتہار نہیں",
+    startSelling: "آج اپنی پہلی گاڑی بنانے کے ساتھ اپنی گاڑی فروختنا شروع کریں",
+    createFirstAd: "اپنا پہلا اشتہار بنائیں",
+    createNewAd: "نیا اشتہار بنائیں",
+    loadingAds: "آپ کے اشتہار لوڈ ہو رہے ہیں...",
+    tryAgain: "دوبارہ کوشش کریں",
+    confirmDeletion: "حذف کی تصدیق",
+    deleteAdMessage: "کیا آپ یقینی طور پر اس اشتہار کو حذف کرنا چاہتے ہیں؟ یہ عمل واپس نہیں کیا جا سکتا۔",
+    deleteAd: "اشتہار حذف کریں",
+    cancel: "منسوخ کریں",
+    adDeletedSuccessfully: "اشتہار کامیابی سے حذف ہو گیا!",
+    failedToDeleteAd: "اشتہار حذف کرنے میں ناکام رہا۔ براہر کوشش کریں۔"
+  },
+  french: {
+    myAds: "Mes Annonces",
+    manageAds: "Gérez vos annonces de véhicules publiées",
+    noAdsYet: "Aucune annonce encore",
+    startSelling: "Commencez à vendre votre véhicule en créant votre première annonce aujourd'hui",
+    createFirstAd: "Créer Votre Première Annonce",
+    createNewAd: "Créer une Nouvelle Annonce",
+    loadingAds: "Chargement de vos annonces...",
+    tryAgain: "Réessayer",
+    confirmDeletion: "Confirmer la Suppression",
+    deleteAdMessage: "Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action ne peut pas être annulée.",
+    deleteAd: "Supprimer l'Annonce",
+    cancel: "Annuler",
+    adDeletedSuccessfully: "Annonce supprimée avec succès!",
+    failedToDeleteAd: "Échec de la suppression de l'annonce. Veuillez réessayer."
+  }
+};
+
 const MyAds = () => {
   const { theme, toggleTheme } = useTheme();
-  const [language, setLanguage] = useState('english');
+  const { language } = useLanguage();
   const { userProfile, setUserProfile } = useUserProfile();
   const navigate = useNavigate();
+  
+  const t = translations[language];
   const [ads, setAds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -87,10 +142,10 @@ const MyAds = () => {
       await apiService.ads.delete(deleteModal.ad.AdID);
       setDeleteModal({ isOpen: false, ad: null });
       await fetchMyAds(1);
-      toast.success('Ad deleted successfully!');
+      toast.success(t.adDeletedSuccessfully);
     } catch (error) {
       console.error('Failed to delete ad:', error);
-      toast.error('Failed to delete ad. Please try again.');
+      toast.error(t.failedToDeleteAd);
       setDeleteModal({ isOpen: false, ad: null });
     }
   };
@@ -113,7 +168,7 @@ const MyAds = () => {
           <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-emov-purple"></div>
           <FaCar className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-emov-purple" />
         </div>
-        <p className="mt-8 text-xl font-semibold text-text-primary">Loading your ads...</p>
+        <p className="mt-8 text-xl font-semibold text-text-primary">{t.loadingAds}</p>
         <p className="mt-2 text-text-secondary">This won't take long</p>
       </div>
     );
@@ -128,7 +183,7 @@ const MyAds = () => {
             onClick={() => fetchMyAds()}
             className="px-6 py-3 bg-emov-purple text-white rounded-xl hover:bg-emov-purple-dark transition-colors font-medium"
           >
-            Try Again
+            {t.tryAgain}
           </button>
         </div>
       </div>
@@ -152,8 +207,6 @@ const MyAds = () => {
         <Navbar
           isDark={theme === 'dark'}
           toggleTheme={toggleTheme}
-          language={language}
-          setLanguage={setLanguage}
           userProfile={userProfile}
           handleLogout={handleLogout}
         />
@@ -161,8 +214,8 @@ const MyAds = () => {
 
       {/* Page Header */}
       <div className="max-w-7xl mx-auto px-6 pt-8 pb-6">
-        <h1 className="text-3xl font-bold text-text-primary">My Ads</h1>
-        <p className="mt-2 text-text-secondary">Manage your posted vehicle listings</p>
+        <h1 className="text-3xl font-bold text-text-primary">{t.myAds}</h1>
+        <p className="mt-2 text-text-secondary">{t.manageAds}</p>
       </div>
 
       {/* Main Content */}
@@ -171,15 +224,15 @@ const MyAds = () => {
           <div className="text-center py-20">
             <div className="mx-auto w-32 h-32 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
             </div>
-            <h3 className="text-2xl font-semibold text-text-primary mb-3">No ads yet</h3>
+            <h3 className="text-2xl font-semibold text-text-primary mb-3">{t.noAdsYet}</h3>
             <p className="text-lg text-text-secondary mb-8 max-w-md mx-auto">
-              Start selling your vehicle by creating your first ad today.
+              {t.startSelling}
             </p>
             <button
               onClick={() => navigate('/my-ads')}
               className="px-8 py-4 bg-emov-purple text-white text-lg font-medium rounded-xl hover:bg-emov-purple-dark transition-colors shadow-md"
             >
-              Create Your First Ad
+              {t.createFirstAd}
             </button>
           </div>
         ) : (
@@ -191,7 +244,7 @@ const MyAds = () => {
                 className="px-6 py-3 bg-emov-purple text-white font-medium rounded-xl hover:bg-emov-purple-dark transition-colors shadow-md flex items-center gap-2"
               >
                 <FaCar className="w-5 h-5" />
-                Create New Ad
+                {t.createNewAd}
               </button>
             </div>
 
@@ -290,9 +343,9 @@ const MyAds = () => {
       {deleteModal.isOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4 transition-opacity duration-300">
           <div className="bg-bg-secondary rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all duration-300 ease-out scale-100 opacity-100 animate-in fade-in zoom-in duration-300">
-            <h3 className="text-2xl font-bold text-text-primary mb-4">Confirm Deletion</h3>
+            <h3 className="text-2xl font-bold text-text-primary mb-4">{t.confirmDeletion}</h3>
             <p className="text-text-secondary mb-6 leading-relaxed">
-              Are you sure you want to delete this ad? This action <strong>cannot be undone</strong>.
+              {t.deleteAdMessage}
             </p>
             {deleteModal.ad && (
               <p className="text-lg font-semibold text-text-primary mb-8">
@@ -304,13 +357,13 @@ const MyAds = () => {
                 onClick={cancelDelete}
                 className="px-6 py-3 rounded-xl border border-border-primary text-text-primary hover:bg-bg-tertiary transition-colors font-medium"
               >
-                Cancel
+                {t.cancel}
               </button>
               <button
                 onClick={confirmDelete}
                 className="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-medium"
               >
-                Delete Ad
+                {t.deleteAd}
               </button>
             </div>
           </div>

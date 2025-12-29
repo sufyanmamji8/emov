@@ -1,31 +1,110 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
 import { FaArrowLeft, FaShieldAlt, FaLock, FaFileAlt, FaExclamationTriangle, FaQuestionCircle, FaUserShield } from 'react-icons/fa';
+
+// Language translations
+const translations = {
+  english: {
+    settings: "Settings",
+    back: "Back",
+    security: "Security",
+    securityDescription: "Manage your account security and authentication settings",
+    privacy: "Privacy",
+    privacyDescription: "Control your privacy settings and data sharing preferences",
+    policy: "Policy",
+    policyDescription: "View our terms of service and privacy policy",
+    help: "Help",
+    helpDescription: "Get help and support",
+    about: "About",
+    aboutDescription: "Learn more about Emov",
+    account: "Account",
+    accountDescription: "Manage your account settings and preferences",
+    notifications: "Notifications",
+    notificationsDescription: "Control your notification preferences",
+    appearance: "Appearance",
+    appearanceDescription: "Customize the app appearance",
+    language: "Language",
+    languageDescription: "Change your preferred language",
+    theme: "Theme",
+    themeDescription: "Switch between light and dark mode"
+  },
+  urdu: {
+    settings: "ترتیبات",
+    back: "پیچھے",
+    security: "سیکیورٹی",
+    securityDescription: "اپنے اکاؤنٹ سیکیورٹی اور تصدیق کی ترتیبات کریں",
+    privacy: "رازداری",
+    privacyDescription: "اپنی رازداری کی ترتیبات اور ڈیٹا شیئرنگ کی ترجیحات کنٹرول کریں",
+    policy: "پالیسی",
+    policyDescription: "ہماری سروس کی شرائط اور رازداری پالیسی دیکھیں",
+    help: "مدد",
+    helpDescription: "مدد اور سپورٹ حاصل کریں",
+    about: "کے بارے میں",
+    aboutDescription: "ایموو کے بارے میں زیادہ جانیں",
+    account: "کھاتہ",
+    accountDescription: "اپنے کھاتے کی ترتیبات اور ترجیحات کریں",
+    notifications: "اطلاعات",
+    notificationsDescription: "اپنی اطلاعات کی ترجیحات کنٹرول کریں",
+    appearance: "ظہر",
+    appearanceDescription: "ایپ کی ظاہر کسٹمائز کریں",
+    language: "زبان",
+    languageDescription: "اپنی پسندیدہ زبان تبدیل کریں",
+    theme: "تھیم",
+    themeDescription: "لائٹ اور ڈارک موڈ کے درمیان سوئچ کریں"
+  },
+  french: {
+    settings: "Paramètres",
+    back: "Retour",
+    security: "Sécurité",
+    securityDescription: "Gérez les paramètres de sécurité et d'authentification de votre compte",
+    privacy: "Confidentialité",
+    privacyDescription: "Contrôlez vos paramètres de confidentialité et de partage de données",
+    policy: "Politique",
+    policyDescription: "Voir nos conditions d'utilisation et politique de confidentialité",
+    help: "Aide",
+    helpDescription: "Obtenir de l'aide et du support",
+    about: "À propos",
+    aboutDescription: "En savoir plus sur Emov",
+    account: "Compte",
+    accountDescription: "Gérez les paramètres et préférences de votre compte",
+    notifications: "Notifications",
+    notificationsDescription: "Contrôlez vos préférences de notification",
+    appearance: "Apparence",
+    appearanceDescription: "Personnalisez l'apparence de l'application",
+    language: "Langue",
+    languageDescription: "Changez votre langue préférée",
+    theme: "Thème",
+    themeDescription: "Basculer entre le mode clair et sombre"
+  }
+};
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { language } = useLanguage();
+  const t = translations[language];
 
   const settingsOptions = [
     {
       id: 'security',
-      title: 'Security',
-      description: 'Manage your account security and authentication settings',
+      title: t.security,
+      description: t.securityDescription,
       icon: FaShieldAlt,
       color: 'bg-blue-500',
       action: () => console.log('Navigate to Security settings')
     },
     {
       id: 'privacy',
-      title: 'Privacy',
-      description: 'Control your privacy settings and data sharing preferences',
+      title: t.privacy,
+      description: t.privacyDescription,
       icon: FaLock,
       color: 'bg-purple-500',
       action: () => console.log('Navigate to Privacy settings')
     },
     {
       id: 'policy',
-      title: 'Policy',
-      description: 'View our terms of service and privacy policy',
+      title: t.policy,
+      description: t.policyDescription,
       icon: FaFileAlt,
       color: 'bg-green-500',
       action: () => console.log('Navigate to Policy settings')
@@ -75,7 +154,7 @@ const Settings = () => {
           <FaArrowLeft className="w-5 h-5" />
         </button>
         <div className="absolute left-1/2 transform -translate-x-1/2">
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Settings</h1>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">{t.settings}</h1>
         </div>
         <div className="w-9"></div> {/* Spacer to balance the layout */}
       </div>
