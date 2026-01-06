@@ -42,21 +42,15 @@ export const ChatProvider = ({ children }) => {
   // Get current user ID from localStorage
   useEffect(() => {
     const user = localStorage.getItem('user');
-    console.log('[ChatContext] Raw user data from localStorage:', user);
     if (user) {
       try {
         const userData = JSON.parse(user);
-        console.log('[ChatContext] Parsed user data:', userData);
         const userId = userData.id || userData.userId || '19';
-        console.log('[ChatContext] Setting currentUserId to:', userId);
         setCurrentUserId(userId);
       } catch (error) {
-        console.error('Error parsing user data:', error);
-        console.log('[ChatContext] Using default user ID: 19');
         setCurrentUserId('19');
       }
     } else {
-      console.log('[ChatContext] No user data found, using default ID: 19');
       setCurrentUserId('19');
     }
   }, []);
@@ -77,8 +71,6 @@ export const ChatProvider = ({ children }) => {
       await chatService.deleteMessage([messageId], deleteType);
       
     } catch (error) {
-      console.error('❌ Error deleting message:', error);
-      
       // Reload messages to restore the deleted message if API call failed
       if (currentChat) {
         const chatId = currentChat.conversation_id || currentChat._id;
@@ -294,7 +286,6 @@ export const ChatProvider = ({ children }) => {
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to load chats';
       setError(errorMsg);
-      console.error('Error loading chats:', err);
       return [];
     } finally {
       setLoading(false);
@@ -344,7 +335,6 @@ export const ChatProvider = ({ children }) => {
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to start chat';
       setError(errorMsg);
-      console.error('Error in startNewChat:', err);
       throw err;
     } finally {
       setLoading(false);
@@ -354,7 +344,6 @@ export const ChatProvider = ({ children }) => {
   // Load messages with caching and retry logic
   const loadMessages = useCallback(async (chatId, retryCount = 0, forceRefresh = false) => {
     if (!chatId) {
-      console.error('No chat ID provided to loadMessages');
       return [];
     }
     
@@ -387,7 +376,7 @@ export const ChatProvider = ({ children }) => {
       // Transform messages with proper image URL handling
       const transformedMessages = transformMessages(messagesArray, currentUserId);
       
-      // Cache the transformed messages
+      // Cache transformed messages
       messageCache.set(chatId, transformedMessages);
       
       return transformedMessages;
@@ -451,11 +440,11 @@ export const ChatProvider = ({ children }) => {
       setUnreadCount(prev => Math.max(0, prev - messageIds.length));
       
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      // Silently handle read marking errors
     }
   }, [currentChat]);
 
-  // Send message function - OPTIMIZED: No longer reloads all messages
+  // Send message function - Enhanced with better error handling
   const sendMessage = async (content, messageType = 'text') => {
     if (!currentChat) {
       throw new Error('No active chat selected');
@@ -530,7 +519,7 @@ export const ChatProvider = ({ children }) => {
         message_type: messageType
       };
       
-      // Update the temporary message with the actual server response
+      // Update temporary message with actual server response
       setMessages(prev => 
         prev.map(msg => 
           msg._id === tempId ? newMessage : msg
@@ -546,7 +535,7 @@ export const ChatProvider = ({ children }) => {
         messageCache.set(chatId, updatedCache);
       }
       
-      // Update the chat's last message
+      // Update chat's last message
       setChats(prevChats => 
         prevChats.map(chat => {
           const currentChatId = chat.conversation_id || chat._id;
@@ -580,7 +569,7 @@ export const ChatProvider = ({ children }) => {
         })
       );
       
-      // Update the current chat in state if needed
+      // Update current chat in state if needed
       setCurrentChat(prev => {
         if (!prev) return null;
         let lastMessageContent = messageContent;
@@ -609,8 +598,6 @@ export const ChatProvider = ({ children }) => {
       
       return newMessage;
     } catch (error) {
-      console.error('Error sending message:', error);
-      
       // Update message status to failed
       setMessages(prev => 
         prev.map(msg => 
@@ -627,7 +614,16 @@ export const ChatProvider = ({ children }) => {
         messageCache.set(chatId, updatedCache);
       }
       
-      throw new Error('Failed to send message. Please try again.');
+      // Show user-friendly error message
+      const userFriendlyError = error.message.includes('401') ? 
+        'Authentication failed. Please log in again.' :
+        error.message.includes('404') ? 
+        'Chat not found. Please try again.' :
+        error.message.includes('Network') ? 
+        'Network error. Please check your connection and try again.' :
+        'Failed to send message. Please try again.';
+      
+      throw new Error(userFriendlyError);
     }
   };
 
@@ -662,7 +658,7 @@ export const ChatProvider = ({ children }) => {
             await markMessagesAsRead(unreadMsgs);
           }
         } catch (error) {
-          console.error('Error loading messages for chat:', error);
+          // Handle loading errors silently
           setMessages([]);
         }
       }
@@ -671,46 +667,45 @@ export const ChatProvider = ({ children }) => {
     }
   }, [loadMessages, markMessagesAsRead]);
 
-// Load chats when user ID changes (disabled here; chat screens load explicitly)
-useEffect(() => {
-  if (currentUserId && !hasLoaded) {
-    loadChats();
-  }
-}, [currentUserId, hasLoaded]);
+  // Load chats when user ID changes (disabled here; chat screens load explicitly)
+  useEffect(() => {
+    if (currentUserId && !hasLoaded) {
+      loadChats();
+    }
+  }, [currentUserId, hasLoaded]);
 
-// Delete a conversation
-const deleteConversation = async (chatId) => {
-  try {
-    await chatService.deleteConversation(chatId);
-    
-    // Clear from cache - both message cache and chats cache
-    messageCache.delete(chatId);
-    
-    // Clear the service cache completely
-    const userId = currentUserId;
-    if (userId) {
-      chatService.cache.clearAll();
+  // Delete a conversation
+  const deleteConversation = async (chatId) => {
+    try {
+      await chatService.deleteConversation(chatId);
+      
+      // Clear from cache - both message cache and chats cache
+      messageCache.delete(chatId);
+      
+      // Clear the service cache completely
+      const userId = currentUserId;
+      if (userId) {
+        chatService.cache.clearAll();
+      }
+      
+      // Remove from UI state immediately
+      setChats(prev => prev.filter(chat => chat._id !== chatId && chat.conversation_id !== chatId));
+      if (currentChat?._id === chatId || currentChat?.conversation_id === chatId) {
+        setCurrentChat(null);
+        setMessages([]);
+      }
+      
+      // Force reload chats from server after deletion with forceRefresh
+      setTimeout(() => {
+        loadChats(true); // Pass forceRefresh=true to bypass cache
+      }, 500);
+      
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to delete conversation';
+      setError(errorMsg);
+      throw err;
     }
-    
-    // Remove from UI state immediately
-    setChats(prev => prev.filter(chat => chat._id !== chatId && chat.conversation_id !== chatId));
-    if (currentChat?._id === chatId || currentChat?.conversation_id === chatId) {
-      setCurrentChat(null);
-      setMessages([]);
-    }
-    
-    // Force reload chats from server after deletion with forceRefresh
-    setTimeout(() => {
-      loadChats(true); // Pass forceRefresh=true to bypass cache
-    }, 500);
-    
-  } catch (err) {
-    console.error('Error deleting conversation:', err);
-    const errorMsg = err.response?.data?.message || err.message || 'Failed to delete conversation';
-    setError(errorMsg);
-    throw err;
-  }
-};
+  };
 
   // Optional: Clear cache function (can be called when needed)
   const clearCache = useCallback(() => {

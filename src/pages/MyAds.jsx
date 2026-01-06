@@ -230,7 +230,8 @@ const MyAds = () => {
             </p>
             <button
               onClick={() => navigate('/my-ads')}
-              className="px-8 py-4 bg-emov-purple text-white text-lg font-medium rounded-xl hover:bg-emov-purple-dark transition-colors shadow-md"
+              className="px-8 py-4 text-white text-lg font-medium rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              style={{ background: 'linear-gradient(135deg, #2bd6a8 0%, #bda8e9 100%)' }}
             >
               {t.createFirstAd}
             </button>
@@ -241,7 +242,8 @@ const MyAds = () => {
             <div className="mb-8 flex justify-end">
               <button
                 onClick={() => navigate('/my-ads')}
-                className="px-6 py-3 bg-emov-purple text-white font-medium rounded-xl hover:bg-emov-purple-dark transition-colors shadow-md flex items-center gap-2"
+                className="px-6 py-3 text-white font-medium rounded-xl transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center gap-2"
+                style={{ background: 'linear-gradient(135deg, #2bd6a8 0%, #bda8e9 100%)' }}
               >
                 <FaCar className="w-5 h-5" />
                 {t.createNewAd}

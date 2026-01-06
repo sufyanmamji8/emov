@@ -389,11 +389,11 @@ const chatService = {
     return data;
   },
 
-  // Send a message - Optimized
+  // Send a message - Enhanced with better error handling
   async sendMessage(conversationId, content, senderId = null, messageType = "text") {
     const token = AuthManager.getToken();
     const sid = senderId || AuthManager.getUserId();
-
+    
     const payload = {
       conversation_id: parseInt(conversationId),
       sender_id: parseInt(sid),
@@ -405,33 +405,64 @@ const chatService = {
       payload.media_url = content;
     }
 
-    const response = await fetch('/v2/send-message', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
-      },
-      body: JSON.stringify(payload)
-    });
+    // Try multiple endpoints with better error handling
+    const endpoints = [
+      '/v2/send-message',
+      '/v1/send-message',
+      '/send-message'
+      
+    ];
 
-    if (!response.ok) {
-      throw new Error(`Send failed: ${response.status}`);
+    let lastError;
+    for (let i = 0; i < endpoints.length; i++) {
+      const endpoint = endpoints[i];
+      
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : ''
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          return {
+            id: data.message_id || data.id,
+            conversation_id: parseInt(conversationId),
+            sender_id: parseInt(sid),
+            message_type: messageType,
+            message_text: payload.message_text,
+            media_url: payload.media_url || null,
+            created_at: data.created_at || new Date().toISOString()
+          };
+        } else {
+          const errorText = await response.text();
+          lastError = `Failed to send message: ${response.status} - ${errorText}`;
+          
+          // If it's a 401, clear auth and don't try other endpoints
+          if (response.status === 401) {
+            AuthManager.clearAuth();
+            window.dispatchEvent(new Event('unauthorized'));
+            throw new Error('Authentication failed');
+          }
+          
+          continue; // Try next endpoint
+        }
+      } catch (error) {
+        lastError = `Network error: ${error.message}`;
+        continue; // Try next endpoint
+      }
     }
-
-    const data = await response.json();
-    return {
-      id: data.message_id,
-      conversation_id: parseInt(conversationId),
-      sender_id: parseInt(sid),
-      message_type: messageType,
-      message_text: payload.message_text,
-      media_url: payload.media_url || null,
-      created_at: new Date().toISOString()
-    };
+    
+    throw new Error(lastError || 'All endpoints failed to send message');
   },
 
-  // Get all conversations - WITH CACHING
+  // Get all conversations - Enhanced with better error handling
   async getChats(userId, forceRefresh = false) {
     // Clear cache for this user to ensure fresh data
     if (forceRefresh) {
@@ -446,28 +477,27 @@ const chatService = {
     
     // If forceRefresh is true, don't return cached data
     if (cachedData && !forceRefresh) {
-            return cachedData;
+      return cachedData;
     }
 
     const token = AuthManager.getToken();
     if (!token) {
-      console.error('[ChatService] No token found');
       throw new Error('Authentication required');
     }
 
-        
     // Try multiple endpoints in case one doesn't work (using proxy)
     const endpoints = [
       `/v2/get-user-conversations/${userId}`,
       `/v2/get-user-conversation/${userId}`, // singular version
-      `/v1/get-user-conversations/${userId}` // v1 fallback
+      `/v1/get-user-conversations/${userId}`, // v1 fallback
+      `/get-user-conversations/${userId}` // no version fallback
     ];
 
     let lastError;
     
     for (let i = 0; i < endpoints.length; i++) {
       const endpoint = endpoints[i];
-            
+      
       try {
         const response = await fetch(endpoint, {
           method: 'GET',
@@ -477,7 +507,6 @@ const chatService = {
             'Authorization': `Bearer ${token}`
           }
         });
-
                 
         if (response.ok) {
           const data = await response.json();
@@ -486,21 +515,18 @@ const chatService = {
           return data;
         } else {
           if (response.status === 401) {
-            console.error('[ChatService] Unauthorized - clearing auth');
             AuthManager.clearAuth();
             window.dispatchEvent(new Event('unauthorized'));
             throw new Error('Authentication failed');
           }
           
           const errorText = await response.text();
-          console.error(`[ChatService] Error response from endpoint ${i + 1}:`, errorText);
           lastError = `Failed to fetch chats from endpoint ${i + 1}: ${response.status} - ${errorText}`;
           
           // Try next endpoint
           continue;
         }
       } catch (error) {
-        console.error(`[ChatService] Error with endpoint ${i + 1}:`, error);
         lastError = `Network error with endpoint ${i + 1}: ${error.message}`;
         
         // Try next endpoint
@@ -513,7 +539,7 @@ const chatService = {
     throw new Error(lastError || 'All endpoints failed to fetch chats');
   },
 
-  // Get messages for a conversation - WITH CACHING
+  // Get messages for a conversation - Enhanced with better error handling
   async getMessages(conversationId) {
     if (!conversationId) throw new Error('Conversation ID required');
 
@@ -522,74 +548,94 @@ const chatService = {
     const cachedData = ChatApiCache.get(cacheKey);
     
     if (cachedData) {
-            return cachedData;
+      return cachedData;
     }
 
     const token = AuthManager.getToken();
     if (!token) throw new Error('Authentication required');
 
-    const response = await fetch('/v2/get-messages', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        conversation_id: parseInt(conversationId),
-        user_id: parseInt(userId)
-      })
-    });
+    // Try multiple endpoints
+    const endpoints = [
+      { url: '/v2/get-messages', method: 'POST' },
+      { url: '/v1/get-messages', method: 'POST' },
+      { url: '/get-messages', method: 'POST' },
+      { url: `/v2/get-messages/${conversationId}`, method: 'GET' },
+      { url: `/v1/get-messages/${conversationId}`, method: 'GET' }
+    ];
 
-    // Handle 204 No Content
-    if (response.status === 204) {
-      const emptyData = [];
-      ChatApiCache.set(cacheKey, emptyData);
-      return emptyData;
-    }
+    let lastError;
+    
+    for (let i = 0; i < endpoints.length; i++) {
+      const endpoint = endpoints[i];
+      
+      try {
+        const response = await fetch(endpoint.url, {
+          method: endpoint.method,
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: endpoint.method === 'POST' ? JSON.stringify({
+            conversation_id: parseInt(conversationId),
+            user_id: parseInt(userId)
+          }) : undefined
+        });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        AuthManager.clearAuth();
-        window.dispatchEvent(new Event('unauthorized'));
-        throw new Error('Session expired. Please log in again.');
+        // Handle 204 No Content
+        if (response.status === 204) {
+          const emptyData = [];
+          ChatApiCache.set(cacheKey, emptyData);
+          return emptyData;
+        }
+
+        if (response.ok) {
+          const responseText = await response.text();
+          
+          let data;
+          try {
+            data = responseText ? JSON.parse(responseText) : [];
+          } catch (parseError) {
+            lastError = `Invalid JSON response from ${endpoint.url}`;
+            continue;
+          }
+          
+          // Extract messages array
+          const messages = Array.isArray(data) ? data : 
+                          (data.messages || data.data || []);
+          
+          // Pre-cache all images in background
+          if (messages.length > 0) {
+            this._precacheImages(messages);
+          }
+
+          ChatApiCache.set(cacheKey, messages);
+          return messages;
+        } else {
+          if (response.status === 401) {
+            AuthManager.clearAuth();
+            window.dispatchEvent(new Event('unauthorized'));
+            throw new Error('Session expired. Please log in again.');
+          }
+          if (response.status === 404) {
+            const emptyData = [];
+            ChatApiCache.set(cacheKey, emptyData);
+            return emptyData;
+          }
+          
+          const errorText = await response.text();
+          lastError = `Failed to load messages: ${response.status} - ${errorText}`;
+          continue;
+        }
+      } catch (error) {
+        lastError = `Network error: ${error.message}`;
+        continue;
       }
-      if (response.status === 404) {
-        throw new Error('Chat not found.');
-      }
-      throw new Error(`Failed to load messages: ${response.status}`);
     }
-
-    const responseText = await response.text();
-    if (!responseText) {
-      const emptyData = [];
-      ChatApiCache.set(cacheKey, emptyData);
-      return emptyData;
-    }
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (error) {
-      if (response.ok) {
-        const emptyData = [];
-        ChatApiCache.set(cacheKey, emptyData);
-        return emptyData;
-      }
-      throw new Error('Invalid server response');
-    }
-
-    // Extract messages array
-    const messages = Array.isArray(data) ? data : 
-                    (data.messages || data.data || []);
-
-    // Pre-cache all images in background
-    if (messages.length > 0) {
-      this._precacheImages(messages);
-    }
-
-    ChatApiCache.set(cacheKey, messages);
-    return messages;
+    
+    // Clear cache on error to force refresh next time
+    ChatApiCache.clear(cacheKey);
+    throw new Error(lastError || 'All endpoints failed to fetch messages');
   },
 
   // Pre-cache images in background (non-blocking)

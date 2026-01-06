@@ -8,7 +8,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useChat } from '../contexts/ChatContext';
 import { useUserProfile } from '../hooks/useUserProfile';
-import chatService from '../services/chatService'; 
+import chatService from '../services/chatService';
 import { FaTrash, FaUserSlash } from 'react-icons/fa';
 import Header from '../components/Layout/Header';
 import axios from 'axios';
@@ -119,7 +119,7 @@ const translations = {
 // Convert date to Pakistan time (UTC+5)
 const toPakistanTime = (dateString) => {
   if (!dateString) return new Date();
-  
+
   const date = new Date(dateString);
   // For messages sent by current user, add 5 hours to compensate for server being 5 hours behind
   // This ensures the message shows the correct Pakistan time when sent
@@ -130,20 +130,20 @@ const toPakistanTime = (dateString) => {
 // Utility function for time formatting
 const formatTimeAgo = (dateString) => {
   if (!dateString) return 'Just now';
-  
+
   try {
     const date = toPakistanTime(dateString);
     const now = toPakistanTime();
-    
+
     // For messages that are being sent (future dates)
     if (date > now) {
       const hours = date.getHours().toString().padStart(2, '0');
       const minutes = date.getMinutes().toString().padStart(2, '0');
       return `${hours}:${minutes}`;
     }
-    
+
     const seconds = Math.floor((now - date) / 1000);
-    
+
     if (seconds < 60) return 'Just now';
     if (seconds < 3600) {
       const minutes = Math.floor(seconds / 60);
@@ -157,7 +157,7 @@ const formatTimeAgo = (dateString) => {
       const days = Math.floor(seconds / 86400);
       return `${days}d`;
     }
-    
+
     // For older dates, return a formatted date in Pakistan time
     return date.toLocaleDateString('en-PK', {
       month: 'short',
@@ -180,7 +180,7 @@ const formatTime = (seconds) => {
 // Fixed: Correct image URL handling used across chats (avatars and message images)
 const getImageUrl = (imagePath, isAvatar = false) => {
   console.log('🖼️ Processing image URL:', imagePath, 'isAvatar:', isAvatar);
-  
+
   // Handle null/undefined/empty cases
   if (!imagePath || ['N/A', 'null', 'undefined', ''].includes(String(imagePath))) {
     console.log('⚠️ No valid image path provided, using default avatar');
@@ -189,7 +189,7 @@ const getImageUrl = (imagePath, isAvatar = false) => {
 
   // Convert to string and trim
   let url = String(imagePath).trim();
-  
+
   // Check if it's already a full URL
   if (url.startsWith('http')) {
     // Convert /writable/uploads/ to /image/ for consistency
@@ -200,14 +200,14 @@ const getImageUrl = (imagePath, isAvatar = false) => {
     }
     return url;
   }
-  
+
   // Handle avatar images (like profile photos)
   if (isAvatar) {
     const avatarUrl = `https://api.emov.com.pk/image/${url}`;
     console.log('👤 Avatar URL:', avatarUrl);
     return avatarUrl;
   }
-  
+
   // For regular images, use the standard format
   const imageUrl = `https://api.emov.com.pk/image/${url}`;
   console.log('🌅 Regular image URL:', imageUrl);
@@ -270,7 +270,7 @@ const Avatar = ({ user, size = 'md' }) => {
   const avatarUrl = getImageUrl(user?.avatar || user?.picture, true);
   const name = user?.name || 'U';
   const firstLetter = name.charAt(0).toUpperCase();
-  
+
   // Check if user has any avatar image at all
   const hasAvatarImage = user?.avatar || user?.picture;
 
@@ -306,12 +306,12 @@ export default function Chats() {
   const { theme, toggleTheme } = useTheme();
   const { language } = useLanguage();
   const t = translations[language];
-  const { 
-    chats, 
-    currentChat, 
-    messages, 
-    sendMessage, 
-    setActiveChat, 
+  const {
+    chats,
+    currentChat,
+    messages,
+    sendMessage,
+    setActiveChat,
     loadChats,
     unreadCount,
     markMessagesAsRead,
@@ -321,9 +321,9 @@ export default function Chats() {
     currentUserId,
     error
   } = useChat();
-  
+
   const { userProfile, setUserProfile } = useUserProfile();
-  
+
   // Get current user info
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const currentUser = {
@@ -342,7 +342,7 @@ export default function Chats() {
   const fileInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const [messageLoading, setMessageLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const messagesEndRef = useRef(null);
@@ -363,7 +363,7 @@ export default function Chats() {
   const [hoveredMessage, setHoveredMessage] = useState(null);
   const [hoveredReceivedMessage, setHoveredReceivedMessage] = useState(null);
   const [hoveredChatId, setHoveredChatId] = useState(null);
-  
+
   // Delete conversation states
   const [isDeleteConversationModalOpen, setIsDeleteConversationModalOpen] = useState(false);
   const [isDeletingConversation, setIsDeletingConversation] = useState(false);
@@ -443,23 +443,23 @@ export default function Chats() {
   // Handle delete message
   const handleDeleteMessage = async (deleteType) => {
     if (!selectedMessage || deleteLoading) return;
-    
+
     try {
       setDeleteLoading(true);
       console.log(`🗑️ Deleting message for: ${deleteType}`);
-      
+
       await deleteMessage(selectedMessage._id, deleteType);
-      
+
       // Refresh the chat list to update the last message
       if (currentChat) {
         // Use loadChats from useChat hook to refresh the chat list
         await loadChats();
       }
-      
+
       setDeleteModalOpen(false);
       setSelectedMessage(null);
       setHoveredMessage(null);
-      
+
     } catch (error) {
       console.error('❌ Error deleting message:', error);
       toast.error('Failed to delete message. Please try again.', {
@@ -483,39 +483,39 @@ export default function Chats() {
   };
 
   // Add this helper function for consistent image rendering
- // Update the renderImageContent function
-const renderImageContent = (imageUrl) => {
-  console.log('🎨 Rendering image content with URL:', imageUrl);
-  
-  // Ensure we have a valid URL before rendering
-  const finalUrl = getImageUrl(imageUrl);
-  
-  return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium text-gray-500 dark:text-gray-400">📸 Image</div>
-      <div className="relative">
-        <img 
-          src={finalUrl} 
-          alt="Shared content" 
-          className="max-w-full h-auto rounded-lg max-h-60 object-contain border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
-          onError={(e) => {
-            console.error('❌ Image failed to load:', finalUrl);
-            e.target.style.display = 'none';
-            // Show fallback text
-            const fallback = e.target.parentElement.querySelector('.image-fallback');
-            if (fallback) fallback.style.display = 'block';
-          }}
-          onLoad={() => {
-            console.log('✅ Image loaded successfully:', finalUrl);
-          }}
-        />
-        <div className="image-fallback hidden text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
-          📸 Image not available
+  // Update the renderImageContent function
+  const renderImageContent = (imageUrl) => {
+    console.log('🎨 Rendering image content with URL:', imageUrl);
+
+    // Ensure we have a valid URL before rendering
+    const finalUrl = getImageUrl(imageUrl);
+
+    return (
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-gray-500 dark:text-gray-400">📸 Image</div>
+        <div className="relative">
+          <img
+            src={finalUrl}
+            alt="Shared content"
+            className="max-w-full h-auto rounded-lg max-h-60 object-contain border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
+            onError={(e) => {
+              console.error('❌ Image failed to load:', finalUrl);
+              e.target.style.display = 'none';
+              // Show fallback text
+              const fallback = e.target.parentElement.querySelector('.image-fallback');
+              if (fallback) fallback.style.display = 'block';
+            }}
+            onLoad={() => {
+              console.log('✅ Image loaded successfully:', finalUrl);
+            }}
+          />
+          <div className="image-fallback hidden text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+            📸 Image not available
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
   // Audio playback helper functions
   const updateAudioPlaybackState = (messageId, updates) => {
@@ -539,7 +539,7 @@ const renderImageContent = (imageUrl) => {
     const currentTime = audioElement.currentTime;
     const duration = audioElement.duration || 0;
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
-    
+
     updateAudioPlaybackState(messageId, {
       currentTime,
       duration,
@@ -565,13 +565,13 @@ const renderImageContent = (imageUrl) => {
   const handleChatSelect = async (chat) => {
     console.log('💬 Chat selected:', chat);
     if (!chat) return;
-    
+
     try {
       setMessageLoading(true);
       console.log('🔄 Setting active chat...');
       await setActiveChat(chat);
       console.log('✅ Active chat set successfully');
-      
+
       // Clear any URL state after setting the chat
       if (location.state?.activeChatId) {
         navigate(location.pathname, { replace: true, state: {} });
@@ -584,43 +584,43 @@ const renderImageContent = (imageUrl) => {
   };
 
   // Debug effect to see what's in the chats
-useEffect(() => {
-  console.log('📋 Chat List Debug - Total Chats:', chats.length);
-  
-  if (chats.length > 0) {
-    console.log('🔍 Detailed Chat Data:', JSON.stringify(chats, null, 2));
-    
-    // Log the first chat's structure for debugging
-    const firstChat = chats[0];
-    console.log('🔍 First Chat Structure:', {
-      id: firstChat._id,
-      lastMessage: firstChat.lastMessage || 'No lastMessage',
-      otherUser: firstChat.otherUser || 'No otherUser',
-      messages: firstChat.messages ? `Array(${firstChat.messages.length})` : 'No messages array',
-      allKeys: Object.keys(firstChat).filter(key => !['messages', 'lastMessage'].includes(key)),
-      hasLastMessage: !!firstChat.lastMessage,
-      lastMessageKeys: firstChat.lastMessage ? Object.keys(firstChat.lastMessage) : 'No lastMessage',
-      lastMessageContent: firstChat.lastMessage?.content || 'No content',
-      lastMessageType: firstChat.lastMessage?.message_type || 'No type'
-    });
-    
-    // Log all chat IDs and their last message content
-    console.log('📝 All Chats Summary:', chats.map(chat => ({
-      id: chat._id,
-      otherUser: chat.otherUser?.name || 'Unknown',
-      lastMessage: chat.lastMessage ? {
-        content: chat.lastMessage.content || 'No content',
-        type: chat.lastMessage.message_type || 'unknown',
-        sender: chat.lastMessage.sender_id === currentUser?.id ? 'me' : 'other',
-        timestamp: chat.lastMessage.createdAt || 'No timestamp'
-      } : 'No last message',
-      unreadCount: chat.unreadCount || 0,
-      hasMessages: Array.isArray(chat.messages) ? chat.messages.length > 0 : false
-    })));
-  } else {
-    console.log('ℹ️ No chats available in the state');
-  }
-}, [chats, currentUser]);
+  useEffect(() => {
+    console.log('📋 Chat List Debug - Total Chats:', chats.length);
+
+    if (chats.length > 0) {
+      console.log('🔍 Detailed Chat Data:', JSON.stringify(chats, null, 2));
+
+      // Log the first chat's structure for debugging
+      const firstChat = chats[0];
+      console.log('🔍 First Chat Structure:', {
+        id: firstChat._id,
+        lastMessage: firstChat.lastMessage || 'No lastMessage',
+        otherUser: firstChat.otherUser || 'No otherUser',
+        messages: firstChat.messages ? `Array(${firstChat.messages.length})` : 'No messages array',
+        allKeys: Object.keys(firstChat).filter(key => !['messages', 'lastMessage'].includes(key)),
+        hasLastMessage: !!firstChat.lastMessage,
+        lastMessageKeys: firstChat.lastMessage ? Object.keys(firstChat.lastMessage) : 'No lastMessage',
+        lastMessageContent: firstChat.lastMessage?.content || 'No content',
+        lastMessageType: firstChat.lastMessage?.message_type || 'No type'
+      });
+
+      // Log all chat IDs and their last message content
+      console.log('📝 All Chats Summary:', chats.map(chat => ({
+        id: chat._id,
+        otherUser: chat.otherUser?.name || 'Unknown',
+        lastMessage: chat.lastMessage ? {
+          content: chat.lastMessage.content || 'No content',
+          type: chat.lastMessage.message_type || 'unknown',
+          sender: chat.lastMessage.sender_id === currentUser?.id ? 'me' : 'other',
+          timestamp: chat.lastMessage.createdAt || 'No timestamp'
+        } : 'No last message',
+        unreadCount: chat.unreadCount || 0,
+        hasMessages: Array.isArray(chat.messages) ? chat.messages.length > 0 : false
+      })));
+    } else {
+      console.log('ℹ️ No chats available in the state');
+    }
+  }, [chats, currentUser]);
 
   // Set active chat from URL state when component mounts
   useEffect(() => {
@@ -635,12 +635,12 @@ useEffect(() => {
       }
     }
   }, [chats, location.state]);
-  
+
   // Scroll to bottom of messages
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-  
+
   // Mark messages as read when chat is opened
   useEffect(() => {
     if (currentChat && messages.length > 0) {
@@ -672,141 +672,141 @@ useEffect(() => {
       window.removeEventListener('chatsRefresh', handleChatsRefresh);
     };
   }, [loadChats]);
-  
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
-  
+
   // Fixed: Handle send message with better media handling
- const handleSendMessage = async (e) => {
-  e.preventDefault();
-  
-  // Prevent sending if no content
-  if (!newMessage.trim() && !selectedImage && !selectedAudio) {
-    console.log('🚫 No content to send');
-    return;
-  }
-  
-  if (!currentChat || sendingMessage) return;
-  
-  try {
-    setSendingMessage(true);
-    
-    let messageType = 'text';
-    let messageContent = newMessage.trim();
-    
-    // Handle image upload and send
-    if (selectedImage && selectedImageFile) {
-      console.log('🖼️ Starting image upload and send process');
-      try {
-        const imageUrl = await handleSendImage();
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
 
-        if (imageUrl) {
-          console.log('✅ Image uploaded successfully, URL:', imageUrl);
+    // Prevent sending if no content
+    if (!newMessage.trim() && !selectedImage && !selectedAudio) {
+      console.log('🚫 No content to send');
+      return;
+    }
 
-          // Send the full image URL so it can be rendered directly
-          console.log(`📤 Sending image message with URL: ${imageUrl}`);
-          await sendMessage(imageUrl, 'image');
+    if (!currentChat || sendingMessage) return;
 
-          // Clear the image selection and input
+    try {
+      setSendingMessage(true);
+
+      let messageType = 'text';
+      let messageContent = newMessage.trim();
+
+      // Handle image upload and send
+      if (selectedImage && selectedImageFile) {
+        console.log('🖼️ Starting image upload and send process');
+        try {
+          const imageUrl = await handleSendImage();
+
+          if (imageUrl) {
+            console.log('✅ Image uploaded successfully, URL:', imageUrl);
+
+            // Send the full image URL so it can be rendered directly
+            console.log(`📤 Sending image message with URL: ${imageUrl}`);
+            await sendMessage(imageUrl, 'image');
+
+            // Clear the image selection and input
+            setSelectedImage(null);
+            setSelectedImageFile(null);
+            setNewMessage('');
+
+            console.log('✅ Image message sent successfully');
+            return;
+          } else {
+            throw new Error('Image upload was successful but no URL was returned');
+          }
+        } catch (error) {
+          console.error('❌ Error during image upload/send:', {
+            error: error.message,
+            stack: error.stack,
+            response: error.response?.data
+          });
+
+          // Reset the image selection on error
           setSelectedImage(null);
           setSelectedImageFile(null);
-          setNewMessage('');
 
-          console.log('✅ Image message sent successfully');
+          // Show a more specific error message if available
+          const errorMessage = error.response?.data?.message ||
+            error.message ||
+            'Failed to send image. Please try again.';
+
+          toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
           return;
-        } else {
-          throw new Error('Image upload was successful but no URL was returned');
         }
-      } catch (error) {
-        console.error('❌ Error during image upload/send:', {
-          error: error.message,
-          stack: error.stack,
-          response: error.response?.data
-        });
-
-        // Reset the image selection on error
-        setSelectedImage(null);
-        setSelectedImageFile(null);
-
-        // Show a more specific error message if available
-        const errorMessage = error.response?.data?.message || 
-                           error.message || 
-                           'Failed to send image. Please try again.';
-
-        toast.error(errorMessage, {
-         position: "top-right",
-         autoClose: 5000,
-         hideProgressBar: false,
-         closeOnClick: true,
-         pauseOnHover: true,
-         draggable: true,
-         progress: undefined,
-       });
-        return;
       }
-    }
-    
-    // Handle audio upload and send
-    if (selectedAudio && selectedAudioFile) {
-      console.log('🎵 Handling audio upload and send');
-      try {
-        const audioUrl = await handleSendAudio();
-        if (audioUrl) {
-          messageType = 'audio';
-          messageContent = audioUrl;
-          console.log('✅ Audio ready to send:', messageContent);
-          
-          // Send the audio message
-          console.log(`📤 Sending ${messageType} message with URL:`, messageContent);
-          await sendMessage(messageContent, messageType);
-          
-          // Clear all states
-          setNewMessage('');
-          clearMediaSelection();
-          console.log('✅ Audio message sent successfully');
+
+      // Handle audio upload and send
+      if (selectedAudio && selectedAudioFile) {
+        console.log('🎵 Handling audio upload and send');
+        try {
+          const audioUrl = await handleSendAudio();
+          if (audioUrl) {
+            messageType = 'audio';
+            messageContent = audioUrl;
+            console.log('✅ Audio ready to send:', messageContent);
+
+            // Send the audio message
+            console.log(`📤 Sending ${messageType} message with URL:`, messageContent);
+            await sendMessage(messageContent, messageType);
+
+            // Clear all states
+            setNewMessage('');
+            clearMediaSelection();
+            console.log('✅ Audio message sent successfully');
+            return;
+          } else {
+            throw new Error('Audio upload returned no URL');
+          }
+        } catch (error) {
+          console.error('❌ Audio upload failed:', error);
+          toast.error('Failed to upload audio. Please try again.', {
+            position: "top-right",
+            autoClose: 5000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          });
           return;
-        } else {
-          throw new Error('Audio upload returned no URL');
         }
-      } catch (error) {
-        console.error('❌ Audio upload failed:', error);
-        toast.error('Failed to upload audio. Please try again.', {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-        return;
       }
+
+      // Handle text message (no media)
+      if (messageContent) {
+        console.log(`📤 Sending text message:`, messageContent);
+        await sendMessage(messageContent, messageType);
+        setNewMessage('');
+        console.log('✅ Text message sent successfully');
+      }
+
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
+      toast.error('Failed to send message. Please try again.', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      });
+    } finally {
+      setSendingMessage(false);
     }
-    
-    // Handle text message (no media)
-    if (messageContent) {
-      console.log(`📤 Sending text message:`, messageContent);
-      await sendMessage(messageContent, messageType);
-      setNewMessage('');
-      console.log('✅ Text message sent successfully');
-    }
-    
-  } catch (error) {
-    console.error('❌ Error sending message:', error);
-    toast.error('Failed to send message. Please try again.', {
-      position: "top-right",
-      autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
-  } finally {
-    setSendingMessage(false);
-  }
-};
+  };
 
   // Fixed: Handle image selection properly
   const handleImageSelect = (e) => {
@@ -816,7 +816,7 @@ useEffect(() => {
       if (file.type.startsWith('image/')) {
         // Clear any existing audio selection
         clearAudioSelection();
-        
+
         setSelectedImage(URL.createObjectURL(file));
         setSelectedImageFile(file);
         console.log('📸 Image selected:', file.name);
@@ -846,7 +846,7 @@ useEffect(() => {
       if (file.type.startsWith('audio/')) {
         // Clear any existing image selection
         clearImageSelection();
-        
+
         setSelectedAudio(URL.createObjectURL(file));
         setSelectedAudioFile(file);
         console.log(' Audio selected:', file.name);
@@ -887,7 +887,7 @@ useEffect(() => {
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
         const audioUrl = URL.createObjectURL(audioBlob);
         const audioFile = new File([audioBlob], 'recording.wav', { type: 'audio/wav' });
-        
+
         setSelectedAudio(audioUrl);
         setSelectedAudioFile(audioFile);
         setAudioChunks([]);
@@ -998,85 +998,85 @@ useEffect(() => {
   }, [mediaRecorder]);
 
   // Fixed: Better time formatting for messages (Pakistan time)
- // In Chats.jsx - replace the entire formatMessageTime function
-const formatMessageTime = (dateString) => {
-  if (!dateString) return '';
-  try {
-    const date = toPakistanTime(dateString);
-    const now = toPakistanTime();
-    
-    // Check if it's a temporary message (still sending)
-    if (dateString.includes('temp-') || dateString.includes('sending')) {
-      return 'Sending...';
-    }
-    
-    const diffInMilliseconds = now - date;
-    const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60));
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    const diffInDays = Math.floor(diffInHours / 24);
-    
-    // Messages within the last minute
-    if (diffInMinutes < 1) {
-      return 'Just now';
-    }
-    
-    // Messages within the last hour
-    if (diffInMinutes < 60) {
-      return `${diffInMinutes}m ago`;
-    }
-    
-    // Messages within the last 24 hours
-    if (diffInHours < 24) {
-      // Show time in 12-hour format with AM/PM
-      const timeStr = date.toLocaleTimeString('en-PK', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      }).replace(' ', '');
-      return timeStr.toLowerCase();
-    }
-    
-    // Messages within the last 7 days
-    if (diffInDays < 7) {
-      if (diffInDays === 1) return 'Yesterday';
-      return `${diffInDays}d ago`;
-    }
-    
-    // Older messages - show date
-    const currentYear = now.getFullYear();
-    const messageYear = date.getFullYear();
-    
-    if (messageYear === currentYear) {
-      // Same year: Show month and day
-      return date.toLocaleDateString('en-PK', { 
-        month: 'short', 
-        day: 'numeric'
-      });
-    } else {
-      // Different year: Show month, day, and year
-      return date.toLocaleDateString('en-PK', { 
-        month: 'short', 
-        day: 'numeric',
-        year: 'numeric'
-      });
-    }
-    
-  } catch (error) {
-    console.error('Error formatting message time:', error, dateString);
-    
-    // If it looks like an ISO string, try to extract time
-    if (typeof dateString === 'string' && dateString.includes('T')) {
-      try {
-        const timePart = dateString.split('T')[1]?.substring(0, 5);
-        if (timePart) return timePart;
-      } catch (e) {
-        // Ignore
+  // In Chats.jsx - replace the entire formatMessageTime function
+  const formatMessageTime = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = toPakistanTime(dateString);
+      const now = toPakistanTime();
+
+      // Check if it's a temporary message (still sending)
+      if (dateString.includes('temp-') || dateString.includes('sending')) {
+        return 'Sending...';
       }
+
+      const diffInMilliseconds = now - date;
+      const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60));
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      const diffInDays = Math.floor(diffInHours / 24);
+
+      // Messages within the last minute
+      if (diffInMinutes < 1) {
+        return 'Just now';
+      }
+
+      // Messages within the last hour
+      if (diffInMinutes < 60) {
+        return `${diffInMinutes}m ago`;
+      }
+
+      // Messages within the last 24 hours
+      if (diffInHours < 24) {
+        // Show time in 12-hour format with AM/PM
+        const timeStr = date.toLocaleTimeString('en-PK', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }).replace(' ', '');
+        return timeStr.toLowerCase();
+      }
+
+      // Messages within the last 7 days
+      if (diffInDays < 7) {
+        if (diffInDays === 1) return 'Yesterday';
+        return `${diffInDays}d ago`;
+      }
+
+      // Older messages - show date
+      const currentYear = now.getFullYear();
+      const messageYear = date.getFullYear();
+
+      if (messageYear === currentYear) {
+        // Same year: Show month and day
+        return date.toLocaleDateString('en-PK', {
+          month: 'short',
+          day: 'numeric'
+        });
+      } else {
+        // Different year: Show month, day, and year
+        return date.toLocaleDateString('en-PK', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
+
+    } catch (error) {
+      console.error('Error formatting message time:', error, dateString);
+
+      // If it looks like an ISO string, try to extract time
+      if (typeof dateString === 'string' && dateString.includes('T')) {
+        try {
+          const timePart = dateString.split('T')[1]?.substring(0, 5);
+          if (timePart) return timePart;
+        } catch (e) {
+          // Ignore
+        }
+      }
+
+      return '';
     }
-    
-    return '';
-  }
-};
+  };
 
   // Fixed: Get other user info with better avatar handling
   const getOtherUser = (chat) => {
@@ -1112,7 +1112,7 @@ const formatMessageTime = (dateString) => {
   };
 
   // Filter chats based on search term
-  const filteredChats = chats.filter(chat => 
+  const filteredChats = chats.filter(chat =>
     getOtherUser(chat).name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (chat.adTitle && chat.adTitle.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -1124,25 +1124,25 @@ const formatMessageTime = (dateString) => {
     // Safe extraction with defaults
     const content = message?.content || '';
     const messageType = message?.message_type || 'text';
-    
+
     // Ensure content is a string
     const safeContent = String(content);
 
     try {
       if (messageType === 'image') {
         // Check multiple possible locations for the image URL
-        let imageUrl = safeContent || 
-                      message?.media_url || 
-                      message?.image_url || 
-                      message?.message_text ||
-                      message?._original?.media_url || 
-                      message?._original?.image_url || 
-                      message?._original?.message_text ||
-                      message?.image ||
-                      message?._original?.image ||
-                      message?.file_url ||
-                      message?._original?.file_url;
-        
+        let imageUrl = safeContent ||
+          message?.media_url ||
+          message?.image_url ||
+          message?.message_text ||
+          message?._original?.media_url ||
+          message?._original?.image_url ||
+          message?._original?.message_text ||
+          message?.image ||
+          message?._original?.image ||
+          message?.file_url ||
+          message?._original?.file_url;
+
         console.log('🖼️ Found image URL in message object:', {
           content: message?.content,
           media_url: message?.media_url,
@@ -1151,7 +1151,7 @@ const formatMessageTime = (dateString) => {
           _original: message?._original,
           final_url: imageUrl
         });
-        
+
         // Final check if we have a valid URL
         if (!imageUrl || imageUrl === 'undefined' || imageUrl === 'null' || imageUrl === '') {
           console.log('❌ No valid image URL found in message:', message);
@@ -1164,10 +1164,10 @@ const formatMessageTime = (dateString) => {
             </div>
           );
         }
-        
+
         // Format the URL properly
         let formattedUrl;
-        
+
         // If we have a full URL that includes '/image/' but not in the correct format
         if (imageUrl.includes('/image/') && !imageUrl.endsWith('.jpg') && !imageUrl.endsWith('.jpeg') && !imageUrl.endsWith('.png')) {
           // Extract the image ID from the path
@@ -1177,7 +1177,7 @@ const formatMessageTime = (dateString) => {
           } else {
             formattedUrl = imageUrl;
           }
-        } 
+        }
         // If backend stored just the filename (ID without any slash)
         else if (!imageUrl.includes('/') && !imageUrl.includes('.')) {
           formattedUrl = `https://api.emov.com.pk/image/${imageUrl}`;
@@ -1196,13 +1196,13 @@ const formatMessageTime = (dateString) => {
           const cleanPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
           formattedUrl = `https://api.emov.com.pk/image/${cleanPath}`;
         }
-        
+
         console.log('🖼️ Rendering image with URL:', formattedUrl);
-        
+
         // Return the image with error handling
         return (
 
-          
+
           <div className="relative group">
             <div className="relative w-64 h-48 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">
               {imageLoadingStates[message._id] && (
@@ -1225,105 +1225,105 @@ const formatMessageTime = (dateString) => {
             </div>
           </div>
         );
-      
-    } else if (messageType === 'audio') {
-      // Similar fix for audio messages if needed
-      let audioUrl = safeContent;
-      
-      if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
-        audioUrl = message?._original?.media_url || 
-                   message?._original?.audio_url || 
-                   message?._original?.message_text || // ADDED THIS LINE
-                   message?.media_url ||
-                   message?.audio_url ||
-                   message?.message_text; // ADDED THIS LINE
-      }
-      
-      if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
-        console.log('❌ Empty audio URL in message:', message);
+
+      } else if (messageType === 'audio') {
+        // Similar fix for audio messages if needed
+        let audioUrl = safeContent;
+
+        if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
+          audioUrl = message?._original?.media_url ||
+            message?._original?.audio_url ||
+            message?._original?.message_text || // ADDED THIS LINE
+            message?.media_url ||
+            message?.audio_url ||
+            message?.message_text; // ADDED THIS LINE
+        }
+
+        if (!audioUrl || audioUrl === 'undefined' || audioUrl === 'null' || audioUrl === '') {
+          console.log('❌ Empty audio URL in message:', message);
+          return (
+            <div className="space-y-2">
+              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">🎵 Audio</div>
+              <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-500 dark:text-gray-400">
+                Audio not available
+              </div>
+            </div>
+          );
+        }
+
+        console.log('🎵 Rendering audio message with URL:', audioUrl);
+        const finalAudioUrl = getAudioUrl(audioUrl);
+
         return (
-          <div className="space-y-2">
-            <div className="text-sm font-medium text-gray-500 dark:text-gray-400">🎵 Audio</div>
-            <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg text-sm text-gray-500 dark:text-gray-400">
-              Audio not available
+          <div className="flex items-center space-x-3 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const audio = e.currentTarget.nextElementSibling;
+                if (audio.paused) {
+                  audio.play();
+                  e.currentTarget.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
+                } else {
+                  audio.pause();
+                  e.currentTarget.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+                }
+              }}
+              className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+            </button>
+
+            <audio
+              src={finalAudioUrl}
+              onEnded={(e) => {
+                const playButton = e.target.previousElementSibling;
+                playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+              }}
+              onTimeUpdate={(e) => {
+                const progressBar = e.target.nextElementSibling;
+                const progress = (e.target.currentTime / e.target.duration) * 100;
+                progressBar.style.width = `${progress}%`;
+              }}
+              className="hidden"
+            />
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2">
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {message?.sender === 'me' ? 'Sent' : 'Received'}
+                </span>
+              </div>
+              <div className="mt-1 h-1 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full progress-bar" style={{ width: '0%' }}></div>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500 dark:text-gray-400">
+              {message?.status === 'sending' ? (
+                <span className="text-gray-400">Sending...</span>
+              ) : message?.status === 'sent' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              ) : message?.status === 'read' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 12 14 8 10"></polyline>
+                  <polyline points="16 6 12 10 8 6"></polyline>
+                </svg>
+              ) : null}
             </div>
           </div>
         );
+      } else {
+        return <div className="break-words whitespace-pre-wrap">{safeContent}</div>;
       }
-      
-      console.log('🎵 Rendering audio message with URL:', audioUrl);
-      const finalAudioUrl = getAudioUrl(audioUrl);
-      
-      return (
-        <div className="flex items-center space-x-3 p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              const audio = e.currentTarget.nextElementSibling;
-              if (audio.paused) {
-                audio.play();
-                e.currentTarget.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>';
-              } else {
-                audio.pause();
-                e.currentTarget.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-              }
-            }}
-            className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-          </button>
-          
-          <audio 
-            src={finalAudioUrl} 
-            onEnded={(e) => {
-              const playButton = e.target.previousElementSibling;
-              playButton.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
-            }}
-            onTimeUpdate={(e) => {
-              const progressBar = e.target.nextElementSibling;
-              const progress = (e.target.currentTime / e.target.duration) * 100;
-              progressBar.style.width = `${progress}%`;
-            }}
-            className="hidden"
-          />
-          
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {message?.sender === 'me' ? 'Sent' : 'Received'}
-              </span>
-            </div>
-            <div className="mt-1 h-1 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-              <div className="h-full bg-blue-500 rounded-full progress-bar" style={{ width: '0%' }}></div>
-            </div>
-          </div>
-          
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {message?.status === 'sending' ? (
-              <span className="text-gray-400">Sending...</span>
-            ) : message?.status === 'sent' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            ) : message?.status === 'read' ? (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 12 14 8 10"></polyline>
-                <polyline points="16 6 12 10 8 6"></polyline>
-              </svg>
-            ) : null}
-          </div>
-        </div>
-      );
-    } else {
-      return <div className="break-words whitespace-pre-wrap">{safeContent}</div>;
+    } catch (error) {
+      console.error('Error rendering message content:', error);
+      return <div className="break-words whitespace-pre-wrap text-red-500">Error displaying message</div>;
     }
-  } catch (error) {
-    console.error('Error rendering message content:', error);
-    return <div className="break-words whitespace-pre-wrap text-red-500">Error displaying message</div>;
-  }
-};
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -1338,23 +1338,23 @@ const formatMessageTime = (dateString) => {
   return (
     <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
       {/* Top Bar */}
-   
-<Header 
-  userProfile={userProfile} 
-  handleLogout={handleLogout}
-  onSearch={false}
-/>
+
+      <Header
+        userProfile={userProfile}
+        handleLogout={handleLogout}
+        onSearch={false}
+      />
 
       {/* Navbar */}
       <div className="flex-shrink-0 relative">
-        <Navbar 
+        <Navbar
           isDark={theme === 'dark'}
           toggleTheme={toggleTheme}
           userProfile={userProfile}
           handleLogout={handleLogout}
         />
       </div>
-      
+
       {/* Header */}
       <div className="flex-shrink-0 w-full px-4 sm:px-6 lg:px-8 mx-auto flex justify-between items-center h-16 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="flex items-center space-x-3">
@@ -1365,8 +1365,8 @@ const formatMessageTime = (dateString) => {
             </span>
           )}
         </div>
-        
-        <button 
+
+        <button
           onClick={() => !loading && loadChats()}
           className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           disabled={loading}
@@ -1382,13 +1382,13 @@ const formatMessageTime = (dateString) => {
         <div className="flex-shrink-0 mx-4 mt-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           <div className="flex justify-between items-center">
             <span>{error}</span>
-            <button onClick={() => {}} className="text-red-700 hover:text-red-900">
+            <button onClick={() => { }} className="text-red-700 hover:text-red-900">
               <FaTimes className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
-      
+
       {/* Main Chat Area */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Sidebar with chat list */}
@@ -1405,7 +1405,7 @@ const formatMessageTime = (dateString) => {
               />
             </div>
           </div>
-          
+
           <div className="flex-1 overflow-y-auto">
             {loading && chats.length === 0 ? (
               <div className="flex justify-center items-center h-32">
@@ -1426,13 +1426,12 @@ const formatMessageTime = (dateString) => {
                 {filteredChats.map((chat) => {
                   const otherUser = getOtherUser(chat);
                   const isUnread = chat.unreadCount > 0;
-                  
+
                   return (
                     <div
                       key={chat._id}
-                      className={`flex items-center p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 relative group ${
-                        isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                      }`}
+                      className={`flex items-center p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 relative group ${isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                        }`}
                       onClick={() => handleChatSelect(chat)}
                       onMouseEnter={() => setHoveredChatId(chat._id)}
                       onMouseLeave={() => setHoveredChatId(null)}
@@ -1462,61 +1461,61 @@ const formatMessageTime = (dateString) => {
                             )}
                           </div>
                         </div>
-<p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-  {(() => {
-    try {
-      // Get the last message from various possible locations in the chat object
-      const lastMessage = chat.lastMessage || chat.last_message || 
-                         (Array.isArray(chat.messages) && chat.messages.length > 0 ? 
-                           chat.messages[chat.messages.length - 1] : null) ||
-                         (chat.latest_message);
-      
-      // If no message object found at all
-      if (!lastMessage) {
-        return 'Start a conversation';
-      }
-      
-      // Check if message has meaningful content
-      const messageType = lastMessage.message_type || 'text';
-      const content = lastMessage.content || lastMessage.message || '';
-      
-      // Check if the message is from the current user
-      const isCurrentUser = lastMessage.sender === 'me' || 
-                           lastMessage.sender_id === currentUser?.id ||
-                           lastMessage.sender_id === currentUser?._id ||
-                           (lastMessage.senderInfo && lastMessage.senderInfo.id === currentUser?.id);
-      
-      // Format message based on type according to requirements
-      let displayText = '';
-      
-      switch(messageType) {
-        case 'image':
-          displayText = isCurrentUser ? 'You sent an image' : 'Sent a photo';
-          break;
-        case 'audio':
-          displayText = isCurrentUser ? 'You sent an audio' : 'Sent an audio';
-          break;
-        case 'file':
-          displayText = isCurrentUser ? 'You sent a file' : 'Sent a file';
-          break;
-        default:
-          // For text messages, show actual content with truncation
-          if (content && content.trim()) {
-            displayText = content.length > 35 ? content.substring(0, 35) + '...' : content;
-          } else {
-            // If no text content but we have a message object, show appropriate fallback
-            displayText = isCurrentUser ? 'You sent a message' : 'Message received';
-          }
-      }
-      
-      return displayText || 'Start a conversation';
-      
-    } catch (error) {
-      console.error('Error rendering last message:', error);
-      return '...';
-    }
-  })()}
-</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {(() => {
+                            try {
+                              // Get the last message from various possible locations in the chat object
+                              const lastMessage = chat.lastMessage || chat.last_message ||
+                                (Array.isArray(chat.messages) && chat.messages.length > 0 ?
+                                  chat.messages[chat.messages.length - 1] : null) ||
+                                (chat.latest_message);
+
+                              // If no message object found at all
+                              if (!lastMessage) {
+                                return 'Start a conversation';
+                              }
+
+                              // Check if message has meaningful content
+                              const messageType = lastMessage.message_type || 'text';
+                              const content = lastMessage.content || lastMessage.message || '';
+
+                              // Check if the message is from the current user
+                              const isCurrentUser = lastMessage.sender === 'me' ||
+                                lastMessage.sender_id === currentUser?.id ||
+                                lastMessage.sender_id === currentUser?._id ||
+                                (lastMessage.senderInfo && lastMessage.senderInfo.id === currentUser?.id);
+
+                              // Format message based on type according to requirements
+                              let displayText = '';
+
+                              switch (messageType) {
+                                case 'image':
+                                  displayText = isCurrentUser ? 'You sent an image' : 'Sent a photo';
+                                  break;
+                                case 'audio':
+                                  displayText = isCurrentUser ? 'You sent an audio' : 'Sent an audio';
+                                  break;
+                                case 'file':
+                                  displayText = isCurrentUser ? 'You sent a file' : 'Sent a file';
+                                  break;
+                                default:
+                                  // For text messages, show actual content with truncation
+                                  if (content && content.trim()) {
+                                    displayText = content.length > 35 ? content.substring(0, 35) + '...' : content;
+                                  } else {
+                                    // If no text content but we have a message object, show appropriate fallback
+                                    displayText = isCurrentUser ? 'You sent a message' : 'Message received';
+                                  }
+                              }
+
+                              return displayText || 'Start a conversation';
+
+                            } catch (error) {
+                              console.error('Error rendering last message:', error);
+                              return '...';
+                            }
+                          })()}
+                        </p>
                       </div>
                       {/* WhatsApp-style unread message indicator */}
                       {isUnread && chat.unreadCount > 0 && (
@@ -1531,14 +1530,14 @@ const formatMessageTime = (dateString) => {
             )}
           </div>
         </div>
-        
+
         {/* Chat area */}
         {currentChat ? (
           <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-gray-800">
             {/* Chat header */}
             <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <button 
+                <button
                   onClick={() => setActiveChat(null)}
                   className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500"
                 >
@@ -1561,7 +1560,7 @@ const formatMessageTime = (dateString) => {
                 {/* Call and video call buttons have been removed */}
               </div>
             </div>
-            
+
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900 min-h-0">
               {messageLoading ? (
@@ -1590,7 +1589,7 @@ const formatMessageTime = (dateString) => {
                       name: userProfile?.name || 'You',
                       avatar: userProfile?.picture || '/default-avatar.png'
                     } : currentChat?.otherUser);
-                    
+
                     return (
                       <div
                         key={message._id}
@@ -1612,7 +1611,7 @@ const formatMessageTime = (dateString) => {
                             <Avatar user={senderInfo} size="sm" />
                           </div>
                         )}
-                        
+
                         <div className={`flex flex-col max-w-xs md:max-w-md lg:max-w-lg`}>
                           {/* Sender's name for received messages */}
                           {!isCurrentUser && senderInfo && (
@@ -1620,14 +1619,13 @@ const formatMessageTime = (dateString) => {
                               {senderInfo.name}
                             </span>
                           )}
-                          
+
                           <div className="relative">
                             <div
-                              className={`p-4 rounded-2xl ${
-                                isCurrentUser
+                              className={`p-4 rounded-2xl ${isCurrentUser
                                   ? 'bg-[var(--emov-purple)] text-white rounded-br-none'
                                   : 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-bl-none border border-gray-200 dark:border-gray-600'
-                              } shadow-sm`}
+                                } shadow-sm`}
                             >
                               {renderMessageContent(message, isCurrentUser)}
                               <div className={`text-xs mt-2 ${isCurrentUser ? 'text-purple-100' : 'text-gray-500 dark:text-gray-400'} text-right`}>
@@ -1638,7 +1636,7 @@ const formatMessageTime = (dateString) => {
                                 {message.read && isCurrentUser && ' • Read'}
                               </div>
                             </div>
-                            
+
                             {/* Delete button - show on hover for current user's messages, and "Delete for Me" for received messages */}
                             {isCurrentUser && hoveredMessage === message._id && (
                               <button
@@ -1655,7 +1653,7 @@ const formatMessageTime = (dateString) => {
                                 </svg>
                               </button>
                             )}
-                            
+
                             {!isCurrentUser && hoveredReceivedMessage === message._id && (
                               <button
                                 onClick={(e) => {
@@ -1680,7 +1678,7 @@ const formatMessageTime = (dateString) => {
                 </>
               )}
             </div>
-            
+
             {/* Message input */}
             <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
               {/* Selected image preview */}
@@ -1739,8 +1737,8 @@ const formatMessageTime = (dateString) => {
                   <button
                     type="button"
                     onClick={isRecording ? stopRecording : startRecording}
-                    className={`flex-shrink-0 p-3 rounded-full transition-colors ${isRecording 
-                      ? 'text-red-500 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50' 
+                    className={`flex-shrink-0 p-3 rounded-full transition-colors ${isRecording
+                      ? 'text-red-500 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50'
                       : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                     disabled={sendingMessage}
                     onContextMenu={(e) => {
@@ -1751,13 +1749,13 @@ const formatMessageTime = (dateString) => {
                   >
                     {isRecording ? <FaStop className="w-5 h-5" /> : <FaMicrophone className="w-5 h-5" />}
                   </button>
-                  
+
                   {/* Recording indicator */}
                   {showRecordingUI && (
                     <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-xs font-medium px-3 py-1 rounded-full flex items-center space-x-2 shadow-lg">
                       <FaCircle className="animate-pulse" />
                       <span>Recording... {formatTime(recordingTime)}</span>
-                      <button 
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           cancelRecording();
@@ -1792,11 +1790,10 @@ const formatMessageTime = (dateString) => {
                   <button
                     type="submit"
                     disabled={(!newMessage.trim() && !selectedImage && !selectedAudio) || sendingMessage}
-                    className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors ${
-                      (newMessage.trim() || selectedImage || selectedAudio) && !sendingMessage
+                    className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-colors ${(newMessage.trim() || selectedImage || selectedAudio) && !sendingMessage
                         ? 'bg-[var(--emov-purple)] text-white hover:bg-purple-600'
                         : 'bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed'
-                    }`}
+                      }`}
                   >
                     {sendingMessage ? (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -1828,148 +1825,148 @@ const formatMessageTime = (dateString) => {
           </div>
         )}
       </div>
-{/* Compact & Enhanced Delete Message Modal */}
-{deleteModalOpen && (
-  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-    <div className="bg-bg-secondary dark:bg-gray-800 rounded-2xl max-w-sm w-full shadow-2xl border border-border-primary overflow-hidden transform transition-all duration-300 scale-100 animate-modalPop">
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4 text-center relative">
-        <button
-          onClick={handleCloseModal}
-          disabled={deleteLoading}
-          className="absolute top-4 right-4 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
-        >
-          <FaTimes className="w-5 h-5" />
-        </button>
+      {/* Compact & Enhanced Delete Message Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-bg-secondary dark:bg-gray-800 rounded-2xl max-w-sm w-full shadow-2xl border border-border-primary overflow-hidden transform transition-all duration-300 scale-100 animate-modalPop">
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4 text-center relative">
+              <button
+                onClick={handleCloseModal}
+                disabled={deleteLoading}
+                className="absolute top-4 right-4 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
 
-        <div className="mx-auto w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
-          <FaTrash className="w-7 h-7 text-red-600 dark:text-red-400" />
-        </div>
+              <div className="mx-auto w-14 h-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+                <FaTrash className="w-7 h-7 text-red-600 dark:text-red-400" />
+              </div>
 
-        <h3 className="text-xl font-bold text-text-primary mb-2">
-          {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId) 
-            ? 'Delete Message?' 
-            : 'Delete for Me?'}
-        </h3>
-        <p className="text-sm text-text-secondary">
-          {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId)
-            ? 'Choose an option below'
-            : 'This message will only be deleted for you'}
-        </p>
-      </div>
-
-      {/* Options */}
-      <div className="px-6 pb-6 space-y-3">
-        {/* Delete for Me - Always show */}
-        <button
-          onClick={() => handleDeleteMessage("me")}
-          disabled={deleteLoading}
-          className="w-full flex items-center gap-4 p-4 bg-bg-tertiary hover:bg-bg-secondary dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl border border-border-primary transition-all duration-300 disabled:opacity-60 group"
-        >
-          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-            <FaUserSlash className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div className="text-left">
-            <div className="font-semibold text-text-primary">Delete for Me</div>
-            <div className="text-xs text-text-secondary mt-1">Only you will no longer see it</div>
-          </div>
-        </button>
-
-        {/* Delete for Everyone - Only show for current user's messages */}
-        {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId) && (
-          <button
-            onClick={() => handleDeleteMessage("everyone")}
-            disabled={deleteLoading}
-            className="w-full flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl border border-red-400/50 transition-all duration-300 disabled:opacity-60 group"
-          >
-            <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-              <FaTrash className="w-6 h-6 text-red-600 dark:text-red-400" />
+              <h3 className="text-xl font-bold text-text-primary mb-2">
+                {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId)
+                  ? 'Delete Message?'
+                  : 'Delete for Me?'}
+              </h3>
+              <p className="text-sm text-text-secondary">
+                {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId)
+                  ? 'Choose an option below'
+                  : 'This message will only be deleted for you'}
+              </p>
             </div>
-            <div className="text-left">
-              <div className="font-semibold text-text-primary">Delete for Everyone</div>
-              <div className="text-xs text-text-secondary mt-1">Removes message for all</div>
-            </div>
-          </button>
-        )}
-      </div>
 
-      {/* Loading State */}
-      {deleteLoading && (
-        <div className="px-6 pb-5 flex items-center justify-center gap-3">
-          <div className="animate-spin rounded-full h-7 w-7 border-3 border-emov-purple border-t-transparent"></div>
-          <span className="text-text-primary font-medium">Deleting...</span>
+            {/* Options */}
+            <div className="px-6 pb-6 space-y-3">
+              {/* Delete for Me - Always show */}
+              <button
+                onClick={() => handleDeleteMessage("me")}
+                disabled={deleteLoading}
+                className="w-full flex items-center gap-4 p-4 bg-bg-tertiary hover:bg-bg-secondary dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl border border-border-primary transition-all duration-300 disabled:opacity-60 group"
+              >
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <FaUserSlash className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-left">
+                  <div className="font-semibold text-text-primary">Delete for Me</div>
+                  <div className="text-xs text-text-secondary mt-1">Only you will no longer see it</div>
+                </div>
+              </button>
+
+              {/* Delete for Everyone - Only show for current user's messages */}
+              {selectedMessage && (selectedMessage.sender === 'me' || selectedMessage.sender === currentUserId) && (
+                <button
+                  onClick={() => handleDeleteMessage("everyone")}
+                  disabled={deleteLoading}
+                  className="w-full flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-xl border border-red-400/50 transition-all duration-300 disabled:opacity-60 group"
+                >
+                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                    <FaTrash className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-semibold text-text-primary">Delete for Everyone</div>
+                    <div className="text-xs text-text-secondary mt-1">Removes message for all</div>
+                  </div>
+                </button>
+              )}
+            </div>
+
+            {/* Loading State */}
+            {deleteLoading && (
+              <div className="px-6 pb-5 flex items-center justify-center gap-3">
+                <div className="animate-spin rounded-full h-7 w-7 border-3 border-emov-purple border-t-transparent"></div>
+                <span className="text-text-primary font-medium">Deleting...</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
-    </div>
-  </div>
-)}
-   {/* Enhanced Delete Conversation Modal */}
-{isDeleteConversationModalOpen && (
-  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
-    <div className="bg-bg-secondary dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl border border-border-primary overflow-hidden transform transition-all duration-300 scale-100 animate-modalPop">
-      {/* Header */}
-      <div className="px-8 pt-8 pb-6 text-center">
-        <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-5">
-          <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+      {/* Enhanced Delete Conversation Modal */}
+      {isDeleteConversationModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+          <div className="bg-bg-secondary dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl border border-border-primary overflow-hidden transform transition-all duration-300 scale-100 animate-modalPop">
+            {/* Header */}
+            <div className="px-8 pt-8 pb-6 text-center">
+              <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-5">
+                <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-text-primary mb-3">
+                Delete Conversation?
+              </h3>
+              <p className="text-text-secondary leading-relaxed">
+                This action <span className="font-semibold text-red-600 dark:text-red-400">cannot be undone</span>. The entire conversation will be permanently removed.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="px-8 pb-8 flex flex-col sm:flex-row-reverse gap-4">
+              <button
+                onClick={handleDeleteConversation}
+                disabled={isDeletingConversation}
+                className="w-full sm:w-auto px-8 py-4 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 disabled:cursor-not-allowed"
+              >
+                {isDeletingConversation ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Yes, Delete</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsDeleteConversationModalOpen(false);
+                  setConversationToDelete(null);
+                }}
+                disabled={isDeletingConversation}
+                className="w-full sm:w-auto px-8 py-4 bg-bg-tertiary hover:bg-bg-secondary dark:bg-gray-700 dark:hover:bg-gray-600 text-text-primary font-medium rounded-xl border border-border-primary transition-all duration-300 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+
+            {/* Close Button (Top Right) */}
+            <button
+              onClick={() => {
+                setIsDeleteConversationModalOpen(false);
+                setConversationToDelete(null);
+              }}
+              disabled={isDeletingConversation}
+              className="absolute top-6 right-6 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
+            >
+              <FaTimes className="w-6 h-6" />
+            </button>
+          </div>
         </div>
-        <h3 className="text-2xl font-bold text-text-primary mb-3">
-          Delete Conversation?
-        </h3>
-        <p className="text-text-secondary leading-relaxed">
-          This action <span className="font-semibold text-red-600 dark:text-red-400">cannot be undone</span>. The entire conversation will be permanently removed.
-        </p>
-      </div>
-
-      {/* Actions */}
-      <div className="px-8 pb-8 flex flex-col sm:flex-row-reverse gap-4">
-        <button
-          onClick={handleDeleteConversation}
-          disabled={isDeletingConversation}
-          className="w-full sm:w-auto px-8 py-4 bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-3 disabled:cursor-not-allowed"
-        >
-          {isDeletingConversation ? (
-            <>
-              <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-              <span>Deleting...</span>
-            </>
-          ) : (
-            <>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              <span>Yes, Delete</span>
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            setIsDeleteConversationModalOpen(false);
-            setConversationToDelete(null);
-          }}
-          disabled={isDeletingConversation}
-          className="w-full sm:w-auto px-8 py-4 bg-bg-tertiary hover:bg-bg-secondary dark:bg-gray-700 dark:hover:bg-gray-600 text-text-primary font-medium rounded-xl border border-border-primary transition-all duration-300 disabled:opacity-60"
-        >
-          Cancel
-        </button>
-      </div>
-
-      {/* Close Button (Top Right) */}
-      <button
-        onClick={() => {
-          setIsDeleteConversationModalOpen(false);
-          setConversationToDelete(null);
-        }}
-        disabled={isDeletingConversation}
-        className="absolute top-6 right-6 text-text-secondary hover:text-text-primary transition-colors disabled:opacity-50"
-      >
-        <FaTimes className="w-6 h-6" />
-      </button>
-    </div>
-  </div>
-)}
+      )}
       {!currentChat && <MobileBottomNav activePage="chats" />}
     </div>
   );
