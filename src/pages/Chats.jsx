@@ -12,6 +12,7 @@ import chatService from '../services/chatService';
 import { FaTrash, FaUserSlash } from 'react-icons/fa';
 import Header from '../components/Layout/Header';
 import axios from 'axios';
+import OptimizedImage from '../components/OptimizedImage';
 
 // Language translations
 const translations = {
@@ -483,35 +484,31 @@ export default function Chats() {
   };
 
   // Add this helper function for consistent image rendering
-  // Update the renderImageContent function
+  // Update to renderImageContent function
   const renderImageContent = (imageUrl) => {
     console.log('🎨 Rendering image content with URL:', imageUrl);
-
-    // Ensure we have a valid URL before rendering
-    const finalUrl = getImageUrl(imageUrl);
 
     return (
       <div className="space-y-2">
         <div className="text-sm font-medium text-gray-500 dark:text-gray-400">📸 Image</div>
         <div className="relative">
-          <img
-            src={finalUrl}
+          <OptimizedImage
+            src={imageUrl}
             alt="Shared content"
             className="max-w-full h-auto rounded-lg max-h-60 object-contain border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700"
-            onError={(e) => {
-              console.error('❌ Image failed to load:', finalUrl);
-              e.target.style.display = 'none';
-              // Show fallback text
-              const fallback = e.target.parentElement.querySelector('.image-fallback');
-              if (fallback) fallback.style.display = 'block';
+            lazy={true}
+            placeholder="blur"
+            quality={80}
+            maxWidth={400}
+            maxHeight={240}
+            fallbackSrc="/image-placeholder.png"
+            onError={() => {
+              console.error('❌ Image failed to load:', imageUrl);
             }}
             onLoad={() => {
-              console.log('✅ Image loaded successfully:', finalUrl);
+              console.log('✅ Image loaded successfully:', imageUrl);
             }}
           />
-          <div className="image-fallback hidden text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
-            📸 Image not available
-          </div>
         </div>
       </div>
     );

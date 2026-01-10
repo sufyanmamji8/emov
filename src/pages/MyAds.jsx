@@ -8,6 +8,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useUserProfile } from '../hooks/useUserProfile';
 import Header from '../components/Layout/Header';
+import OptimizedImage from '../components/OptimizedImage';
 import toast from 'react-hot-toast'; // assuming you're using react-hot-toast
 
 // Language translations
@@ -259,10 +260,15 @@ const MyAds = () => {
                 >
                   {/* Image Container */}
                   <div className="relative h-56 bg-gray-50 overflow-hidden">
-                    <img
-                      src={getImageUrl(ad.Images?.[0])}
+                    <OptimizedImage
+                      src={ad.Images?.[0]}
                       alt={ad.VehicleName || `${ad.BrandName} ${ad.ModelName}`}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      className="w-full h-full group-hover:scale-110 transition-transform duration-500"
+                      lazy={true}
+                      placeholder="blur"
+                      quality={80}
+                      maxWidth={400}
+                      maxHeight={300}
                     />
                     {/* Exact original emovcheck.png badge */}
                     <img

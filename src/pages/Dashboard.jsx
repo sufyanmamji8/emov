@@ -10,6 +10,7 @@ import MobileBottomNav from '../components/Layout/MobileBottomNav';
 import Header from '../components/Layout/Header'; // Import Header component for consistency
 import More from './More'; // Import More component
 import { useFilterNavigation } from '../hooks/useFilterNavigation';
+import OptimizedImage from '../components/OptimizedImage';
 
 // Dashboard state persistence with localStorage
 const DASHBOARD_CACHE_KEY = 'emov_dashboard_cache';
@@ -33,8 +34,6 @@ const setDashboardCache = (data) => {
 
 // Add this component BEFORE your main Dashboard component
 const SearchResultItem = ({ ad, isDark, handleAdClick}) => {
-  const [imageLoading, setImageLoading] = React.useState(true);
-  
   return (
     <button
       onClick={() => handleAdClick(ad)}
@@ -42,20 +41,16 @@ const SearchResultItem = ({ ad, isDark, handleAdClick}) => {
     >
       <div className="flex items-center space-x-3">
         <div className="relative w-12 h-12">
-          {imageLoading && (
-            <div className={`absolute inset-0 flex items-center justify-center ${isDark ? 'bg-gray-700' : 'bg-gray-200'} rounded-lg`}>
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-emov-purple"></div>
-            </div>
-          )}
-          <img
-            src={ad.Images?.[0] ? `https://api.emov.com.pk/image/${ad.Images[0]}` : '/mockvehicle.png'}
+          <OptimizedImage
+            src={ad.Images?.[0]}
             alt={ad.VehicleName}
-            className={`w-12 h-12 object-cover rounded-lg ${imageLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
-            onLoad={() => setImageLoading(false)}
-            onError={(e) => {
-              e.target.src = '/mockvehicle.png';
-              setImageLoading(false);
-            }}
+            className="w-12 h-12 object-cover rounded-lg"
+            lazy={true}
+            placeholder="blur"
+            quality={75}
+            maxWidth={48}
+            maxHeight={48}
+            fallbackSrc=""
           />
         </div>
         <div className="flex-1 min-w-0">
@@ -914,7 +909,7 @@ function Dashboard({ handleLogout: appLogout }) {
           // Transform the API data to match the expected format
           const transformedData = response.data.data.map(ad => {
             // CORRECT: Use /images/ directory instead of /uploads/
-            let imageUrl = '/mockvehicle.png';
+            let imageUrl = '';
             if (ad.Images && ad.Images.length > 0) {
               const imageFilename = ad.Images[0];
               
@@ -2991,7 +2986,7 @@ function Dashboard({ handleLogout: appLogout }) {
                             src={imageUrl}
                             alt={vehicle.title}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                            onError={(e) => (e.target.src = '/mockvehicle.png')}
+                            onError={(e) => (e.target.src = '')}
                           />
                           {/* Emov Check Badge */}
                           <img

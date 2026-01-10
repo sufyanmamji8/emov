@@ -1,0 +1,101 @@
+/* Image Performance Optimizations */
+
+/* Enable browser-level image caching and optimization */
+img {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+/* Lazy loading placeholder styles */
+.image-lazy-placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Optimized image container */
+.optimized-image-container {
+  position: relative;
+  overflow: hidden;
+  background-color: #f8f9fa;
+}
+
+.optimized-image-container img {
+  transition: opacity 0.3s ease-in-out;
+  will-change: opacity;
+}
+
+.optimized-image-container img.loaded {
+  opacity: 1;
+}
+
+.optimized-image-container img.loading {
+  opacity: 0;
+}
+
+/* Critical image loading for above-the-fold content */
+.critical-image {
+  display: block; /* These images should load immediately - handled by component */
+}
+
+/* Non-critical image loading */
+.non-critical-image {
+  display: block; /* These images should load lazily - handled by component */
+}
+
+/* Image error states */
+.image-error-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Responsive image optimization */
+@media (max-width: 768px) {
+  .responsive-image {
+    max-width: 100%;
+    height: auto;
+    content-visibility: auto;
+    contain-intrinsic-size: 800px 600px;
+  }
+}
+
+/* WebP format support detection */
+@supports (background-image: url('test.webp')) {
+  .webp-supported .image-container {
+    background-image: url('placeholder.webp');
+  }
+}
+
+/* Progressive image loading */
+.progressive-image {
+  filter: blur(5px);
+  transition: filter 0.3s ease-in-out;
+}
+
+.progressive-image.loaded {
+  filter: blur(0);
+}
+
+/* Image compression hints */
+img[data-compress="true"] {
+  image-orientation: from-image;
+  color-scheme: normal;
+}
+
+/* Dark mode optimized images */
+@media (prefers-color-scheme: dark) {
+  .dark-optimized-image {
+    filter: brightness(0.9) contrast(1.1);
+  }
+}

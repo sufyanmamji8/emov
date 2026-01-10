@@ -19,7 +19,6 @@ export default defineConfig({
             console.error('Proxy error:', err);
           });
           proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('API Request:', req.method, req.url);
             // Forward the authorization header if it exists
             if (req.headers.authorization) {
               proxyReq.setHeader('Authorization', req.headers.authorization);
@@ -32,7 +31,6 @@ export default defineConfig({
             proxyRes.headers['Access-Control-Allow-Headers'] = 'X-Requested-With, Content-Type, Authorization';
             proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
             
-            console.log(`API Response: ${req.method} ${req.url} -> ${proxyRes.statusCode}`);
             // Ensure CORS headers are set in the response
             proxyRes.headers['Access-Control-Allow-Origin'] = 'http://localhost:4000';
             proxyRes.headers['Access-Control-Allow-Credentials'] = 'true';
